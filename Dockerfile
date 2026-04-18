@@ -1,7 +1,7 @@
 # -----------------------------
 # Base image
 # -----------------------------
-FROM oven/bun:1.3.5 AS base
+FROM oven/bun:1.3.12 AS base
 
 WORKDIR /app
 
@@ -49,7 +49,7 @@ RUN bun run build
 # -----------------------------
 # Production runner stage
 # -----------------------------
-FROM oven/bun:1.3.5-slim AS runner
+FROM oven/bun:1.3.12-slim AS runner
 
 WORKDIR /app
 
