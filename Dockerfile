@@ -1,20 +1,24 @@
 # -----------------------------
-# Base image
+# Base image (Node runtime with Bun installed for fast installs)
 # -----------------------------
-FROM oven/bun:1.3.5 AS base
+# Bun does not support `better-sqlite3` (oven-sh/bun#4290), so the app runs
+# under Node. Bun is still used for dependency installs via bun.lock.
+FROM node:22-bookworm-slim AS base
 
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl unzip ca-certificates \
+    && curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash \
+    && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
 # Dependencies stage (includes dev deps for build)
 # -----------------------------
 FROM base AS deps
 
-# better-sqlite3 is a native N-API module; prebuilt binary is fetched by its
-# install script, which requires python + build tools if the prebuild lookup
-# fails for the current platform.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -44,12 +48,12 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN bun run build
+RUN node ./node_modules/.bin/next build
 
 # -----------------------------
 # Production runner stage
 # -----------------------------
-FROM oven/bun:1.3.5-slim AS runner
+FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
@@ -79,7 +83,7 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["bun", "./server.js"]
+CMD ["node", "./server.js"]
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget -qO- http://localhost:3000/health || exit 1
