@@ -73,13 +73,15 @@
     "descriptionLink": "ntfy app",
     "descriptionAfter": "ja tellu alloleva URL-i kaudu.",
     "cardTitle": "ntfy teema",
-    "cardDescription": "Täielik URL: {url}",
+    "cardLabel": "Täielik URL:",
     "topicLabel": "Teema",
     "urlPreview": "URL: {base}/{topic}",
     "topicPlaceholder": "<teema>",
     "save": "Salvesta",
     "saving": "Salvestan…",
-    "saved": "Salvestatud"
+    "saved": "Salvestatud",
+    "copy": "Kopeeri",
+    "copied": "Kopeeritud"
   },
   "Admin": {
     "title": "Admin",

@@ -73,13 +73,15 @@
     "descriptionLink": "ntfy app",
     "descriptionAfter": "and subscribe using the URL below.",
     "cardTitle": "ntfy topic",
-    "cardDescription": "Full URL: {url}",
+    "cardLabel": "Full URL:",
     "topicLabel": "Topic",
     "urlPreview": "URL: {base}/{topic}",
     "topicPlaceholder": "<topic>",
     "save": "Save",
     "saving": "Saving…",
-    "saved": "Saved"
+    "saved": "Saved",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "Admin": {
     "title": "Admin",

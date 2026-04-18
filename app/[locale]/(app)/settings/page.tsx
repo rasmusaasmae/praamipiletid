@@ -32,13 +32,10 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle>{t('cardTitle')}</CardTitle>
           <CardDescription>
-            {t.rich('cardDescription', {
-              url: () => (
-                <code className="text-foreground">
-                  {ntfyBase}/{t('topicPlaceholder')}
-                </code>
-              ),
-            })}
+            {t('cardLabel')}{' '}
+            <code className="text-foreground">
+              {ntfyBase}/{t('topicPlaceholder')}
+            </code>
           </CardDescription>
         </CardHeader>
         <CardContent>
