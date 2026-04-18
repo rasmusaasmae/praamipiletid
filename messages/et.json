@@ -1,10 +1,30 @@
 {
   "NavBar": {
     "brand": "Praamipiletid",
+    "home": "Avaleht",
     "trips": "Reisid",
-    "subscriptions": "Tellimused",
     "settings": "Seaded",
     "admin": "Admin"
+  },
+  "Errors": {
+    "invalidData": "Vigased andmed",
+    "missingId": "Puudub id",
+    "tripNotFound": "Reisi ei leitud",
+    "subscriptionExists": "Tellimus on juba olemas",
+    "subscriptionNotFound": "Tellimust ei leitud",
+    "pollIntervalRange": "Väärtus peab olema 5000..600000 ms",
+    "topicInUse": "See teema on juba kasutusel",
+    "topicMin": "Vähemalt 4 tähemärki",
+    "topicMax": "Kuni 64 tähemärki",
+    "topicPattern": "Ainult tähed, numbrid, _ ja -",
+    "topicInvalid": "Vigane teema"
+  },
+  "Home": {
+    "topicTitle": "Sinu teavituste teema",
+    "topicDescription": "Telli see teema ntfy rakenduses, et teavitused kätte saada.",
+    "topicMissing": "Teemat pole veel seadistatud.",
+    "topicMissingLink": "Seadista see Seadete lehel",
+    "addSubscription": "Lisa tellimus"
   },
   "ThemeToggle": {
     "label": "Vaheta teemat",

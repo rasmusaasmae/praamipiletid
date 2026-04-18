@@ -1,10 +1,30 @@
 {
   "NavBar": {
     "brand": "Ferry Tickets",
+    "home": "Home",
     "trips": "Trips",
-    "subscriptions": "Subscriptions",
     "settings": "Settings",
     "admin": "Admin"
+  },
+  "Errors": {
+    "invalidData": "Invalid data",
+    "missingId": "Missing id",
+    "tripNotFound": "Trip not found",
+    "subscriptionExists": "Subscription already exists",
+    "subscriptionNotFound": "Subscription not found",
+    "pollIntervalRange": "Value must be 5000..600000 ms",
+    "topicInUse": "This topic is already in use",
+    "topicMin": "At least 4 characters",
+    "topicMax": "At most 64 characters",
+    "topicPattern": "Only letters, numbers, _ and -",
+    "topicInvalid": "Invalid topic"
+  },
+  "Home": {
+    "topicTitle": "Your notification topic",
+    "topicDescription": "Subscribe to this topic in the ntfy app to receive alerts.",
+    "topicMissing": "No topic set yet.",
+    "topicMissingLink": "Set one up in Settings",
+    "addSubscription": "Add subscription"
   },
   "ThemeToggle": {
     "label": "Toggle theme",

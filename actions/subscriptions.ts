@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
 import { subscriptions } from '@/db/schema'
@@ -26,6 +27,7 @@ export type CreateSubscriptionResult = { ok: true } | { ok: false; error: string
 
 export async function createSubscription(formData: FormData): Promise<CreateSubscriptionResult> {
   const session = await requireUser()
+  const t = await getTranslations('Errors')
 
   const parsed = createSchema.safeParse({
     direction: formData.get('direction'),
@@ -36,13 +38,13 @@ export async function createSubscription(formData: FormData): Promise<CreateSubs
     renotifyMode: formData.get('renotifyMode') ?? 'once_until_depleted',
   })
   if (!parsed.success) {
-    return { ok: false, error: 'Vigased andmed' }
+    return { ok: false, error: t('invalidData') }
   }
 
   const trips = await listTrips(parsed.data.direction, parsed.data.date)
   const trip = trips.find((t) => t.uid === parsed.data.tripUid)
   if (!trip) {
-    return { ok: false, error: 'Reisi ei leitud' }
+    return { ok: false, error: t('tripNotFound') }
   }
 
   try {
@@ -61,12 +63,12 @@ export async function createSubscription(formData: FormData): Promise<CreateSubs
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : ''
     if (msg.includes('UNIQUE')) {
-      return { ok: false, error: 'Tellimus on juba olemas' }
+      return { ok: false, error: t('subscriptionExists') }
     }
     throw err
   }
 
-  revalidatePath('/subscriptions')
+  revalidatePath('/')
   return { ok: true }
 }
 
@@ -79,13 +81,14 @@ const updateSchema = z.object({
 
 export async function updateSubscription(formData: FormData): Promise<CreateSubscriptionResult> {
   const session = await requireUser()
+  const t = await getTranslations('Errors')
   const parsed = updateSchema.safeParse({
     id: formData.get('id'),
     threshold: formData.get('threshold') ?? undefined,
     renotifyMode: formData.get('renotifyMode') ?? undefined,
     active: formData.get('active') ?? undefined,
   })
-  if (!parsed.success) return { ok: false, error: 'Vigased andmed' }
+  if (!parsed.success) return { ok: false, error: t('invalidData') }
 
   const { id, ...patch } = parsed.data
   if (Object.keys(patch).length === 0) return { ok: true }
@@ -96,18 +99,19 @@ export async function updateSubscription(formData: FormData): Promise<CreateSubs
     .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, session.user.id)))
     .returning({ id: subscriptions.id })
 
-  if (res.length === 0) return { ok: false, error: 'Tellimust ei leitud' }
-  revalidatePath('/subscriptions')
+  if (res.length === 0) return { ok: false, error: t('subscriptionNotFound') }
+  revalidatePath('/')
   return { ok: true }
 }
 
 export async function deleteSubscription(formData: FormData): Promise<CreateSubscriptionResult> {
   const session = await requireUser()
+  const t = await getTranslations('Errors')
   const id = String(formData.get('id') ?? '')
-  if (!id) return { ok: false, error: 'Puudub id' }
+  if (!id) return { ok: false, error: t('missingId') }
   await db
     .delete(subscriptions)
     .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, session.user.id)))
-  revalidatePath('/subscriptions')
+  revalidatePath('/')
   return { ok: true }
 }

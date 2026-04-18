@@ -7,7 +7,7 @@ import { redirect } from '@/i18n/navigation'
 export default async function SignInPage() {
   const session = await getSession()
   const locale = await getLocale()
-  if (session) redirect({ href: '/trips', locale })
+  if (session) redirect({ href: '/', locale })
   const t = await getTranslations('SignIn')
   return (
     <main className="flex flex-1 items-center justify-center px-4">

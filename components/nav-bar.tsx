@@ -15,15 +15,15 @@ export async function NavBar({ user }: Props) {
     <header className="border-b border-border">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
-          <Link href="/trips" className="font-semibold">
+          <Link href="/" className="font-semibold">
             {t('brand')}
           </Link>
           <nav className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Link href="/" className="hover:text-foreground">
+              {t('home')}
+            </Link>
             <Link href="/trips" className="hover:text-foreground">
               {t('trips')}
-            </Link>
-            <Link href="/subscriptions" className="hover:text-foreground">
-              {t('subscriptions')}
             </Link>
             <Link href="/settings" className="hover:text-foreground">
               {t('settings')}
