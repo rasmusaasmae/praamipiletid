@@ -21,6 +21,15 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
+  user: {
+    additionalFields: {
+      ntfyTopic: {
+        type: 'string',
+        required: true,
+        input: false,
+      },
+    },
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
