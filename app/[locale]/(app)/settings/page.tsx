@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
 import { user } from '@/db/schema'
 import { requireUser } from '@/lib/session'
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default async function SettingsPage() {
   const session = await requireUser()
+  const t = await getTranslations('Settings')
   const me = await db
     .select({ ntfyTopic: user.ntfyTopic })
     .from(user)
@@ -17,20 +19,26 @@ export default async function SettingsPage() {
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Seaded</h1>
+        <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Seadista oma ntfy teema. Laadi alla{' '}
+          {t('descriptionBefore')}{' '}
           <a className="underline" href="https://ntfy.sh/app" target="_blank" rel="noreferrer">
-            ntfy app
+            {t('descriptionLink')}
           </a>{' '}
-          ja tellu alloleva URL-i kaudu.
+          {t('descriptionAfter')}
         </p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>ntfy teema</CardTitle>
+          <CardTitle>{t('cardTitle')}</CardTitle>
           <CardDescription>
-            Täielik URL: <code className="text-foreground">{ntfyBase}/&lt;teema&gt;</code>
+            {t.rich('cardDescription', {
+              url: () => (
+                <code className="text-foreground">
+                  {ntfyBase}/{t('topicPlaceholder')}
+                </code>
+              ),
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>

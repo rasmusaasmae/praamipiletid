@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { toast } from 'sonner'
+import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,6 +27,8 @@ type UserRow = {
 
 export function AdminUsersTable({ users }: { users: UserRow[] }) {
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations('Admin')
+  const locale = useLocale()
 
   const toggleRole = (userId: string, current: string) => {
     const form = new FormData()
@@ -33,25 +36,27 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
     form.set('role', current === 'admin' ? 'user' : 'admin')
     startTransition(async () => {
       const res = await updateUserRole(form)
-      if (res.ok) toast.success('Roll muudetud')
+      if (res.ok) toast.success(t('roleChanged'))
       else toast.error(res.error)
     })
   }
 
   if (users.length === 0) {
-    return <p className="text-muted-foreground">Kasutajaid pole.</p>
+    return <p className="text-muted-foreground">{t('usersEmpty')}</p>
   }
+
+  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
 
   return (
     <div className="rounded-lg border border-border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Kasutaja</TableHead>
-            <TableHead>Roll</TableHead>
-            <TableHead>Tellimusi</TableHead>
-            <TableHead>Loodud</TableHead>
-            <TableHead className="text-right">Tegevused</TableHead>
+            <TableHead>{t('columnUser')}</TableHead>
+            <TableHead>{t('columnRole')}</TableHead>
+            <TableHead>{t('columnSubCount')}</TableHead>
+            <TableHead>{t('columnCreated')}</TableHead>
+            <TableHead className="text-right">{t('columnActions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -62,15 +67,19 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                 <div className="text-xs text-muted-foreground">{u.email}</div>
               </TableCell>
               <TableCell>
-                {u.role === 'admin' ? <Badge>admin</Badge> : <Badge variant="outline">user</Badge>}
+                {u.role === 'admin' ? (
+                  <Badge>{t('admin')}</Badge>
+                ) : (
+                  <Badge variant="outline">{t('user')}</Badge>
+                )}
                 {u.banned ? (
                   <Badge variant="destructive" className="ml-1">
-                    banned
+                    {t('banned')}
                   </Badge>
                 ) : null}
               </TableCell>
               <TableCell>{u.subCount}</TableCell>
-              <TableCell>{u.createdAt.toLocaleDateString('et-EE')}</TableCell>
+              <TableCell>{u.createdAt.toLocaleDateString(dateTag)}</TableCell>
               <TableCell className="text-right">
                 <Button
                   size="sm"
@@ -78,7 +87,7 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                   disabled={isPending}
                   onClick={() => toggleRole(u.id, u.role)}
                 >
-                  {u.role === 'admin' ? 'Tee tavakasutajaks' : 'Tee adminiks'}
+                  {u.role === 'admin' ? t('roleToUser') : t('roleToAdmin')}
                 </Button>
               </TableCell>
             </TableRow>

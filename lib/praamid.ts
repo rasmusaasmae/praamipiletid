@@ -69,6 +69,19 @@ export async function listTrips(direction: string, date: string, timeShift = 300
   return data.items
 }
 
+export const SHIP_NAMES: Record<string, string> = {
+  LE: 'Leiger',
+  TI: 'Tiiu',
+  TO: 'Tõll',
+  PI: 'Piret',
+  RE: 'Regula',
+  HA: 'Harilaid',
+  MU: 'Muhumaa',
+  SE: 'Sebe',
+  SA: 'Saaremaa',
+  HI: 'Hiiumaa',
+}
+
 export const CAPACITY_LABELS: Record<string, { et: string; en: string }> = {
   sv: { et: 'Väiksed sõidukid', en: 'Small vehicles' },
   bv: { et: 'Suured sõidukid', en: 'Big vehicles' },

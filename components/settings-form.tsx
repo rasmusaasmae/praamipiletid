@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +11,7 @@ import { updateNtfyTopic } from '@/actions/user-settings'
 export function SettingsForm({ currentTopic, ntfyBase }: { currentTopic: string; ntfyBase: string }) {
   const [topic, setTopic] = useState(currentTopic)
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations('Settings')
 
   return (
     <form
@@ -17,14 +19,14 @@ export function SettingsForm({ currentTopic, ntfyBase }: { currentTopic: string;
       action={(formData) =>
         startTransition(async () => {
           const res = await updateNtfyTopic(formData)
-          if (res.ok) toast.success('Salvestatud')
+          if (res.ok) toast.success(t('saved'))
           else toast.error(res.error)
         })
       }
     >
       <div>
         <Label htmlFor="ntfyTopic" className="mb-1 block">
-          Teema
+          {t('topicLabel')}
         </Label>
         <Input
           id="ntfyTopic"
@@ -37,11 +39,11 @@ export function SettingsForm({ currentTopic, ntfyBase }: { currentTopic: string;
           required
         />
         <p className="mt-1 text-xs text-muted-foreground">
-          URL: {ntfyBase}/{topic || '<teema>'}
+          {t('urlPreview', { base: ntfyBase, topic: topic || t('topicPlaceholder') })}
         </p>
       </div>
       <Button type="submit" disabled={isPending || topic === currentTopic} className="self-start">
-        {isPending ? 'Salvestan…' : 'Salvesta'}
+        {isPending ? t('saving') : t('save')}
       </Button>
     </form>
   )

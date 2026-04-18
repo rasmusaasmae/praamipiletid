@@ -1,0 +1,134 @@
+{
+  "NavBar": {
+    "brand": "Ferry Tickets",
+    "trips": "Trips",
+    "subscriptions": "Subscriptions",
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "ThemeToggle": {
+    "label": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "LocaleToggle": {
+    "label": "Change language"
+  },
+  "SignOut": {
+    "button": "Sign out"
+  },
+  "SignIn": {
+    "title": "Ferry Tickets",
+    "description": "Get notified when a ferry slot opens up.",
+    "google": "Sign in with Google",
+    "redirecting": "Redirecting…"
+  },
+  "TripsPage": {
+    "title": "Trips",
+    "description": "Pick a route and date, then subscribe to notifications for a departure.",
+    "loadError": "Failed to load ferry schedule",
+    "empty": "No trips found for this date."
+  },
+  "TripsFilter": {
+    "direction": "Route",
+    "date": "Date"
+  },
+  "TripCard": {
+    "type": "Type",
+    "threshold": "Threshold",
+    "subscribe": "Subscribe",
+    "alreadySubscribed": "Already subscribed",
+    "saving": "Saving…",
+    "subscribed": "Subscription created"
+  },
+  "Subscriptions": {
+    "title": "My subscriptions",
+    "description": "Manage your active notifications. Past trips stay in the history.",
+    "empty": "No subscriptions. Add them from the",
+    "emptyLink": "trips page",
+    "columnTrip": "Trip",
+    "columnType": "Type",
+    "columnThreshold": "Threshold",
+    "columnMode": "Mode",
+    "columnStatus": "Status",
+    "columnActions": "Actions",
+    "statusPast": "Past",
+    "statusActive": "Active",
+    "statusPaused": "Paused",
+    "pause": "Pause",
+    "activate": "Activate",
+    "delete": "Delete",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "renotify": {
+      "once_until_depleted": "Once until depleted",
+      "on_change": "On every change",
+      "every_cycle": "On every check"
+    }
+  },
+  "Settings": {
+    "title": "Settings",
+    "descriptionBefore": "Configure your ntfy topic. Download the",
+    "descriptionLink": "ntfy app",
+    "descriptionAfter": "and subscribe using the URL below.",
+    "cardTitle": "ntfy topic",
+    "cardDescription": "Full URL: {url}",
+    "topicLabel": "Topic",
+    "urlPreview": "URL: {base}/{topic}",
+    "topicPlaceholder": "<topic>",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved"
+  },
+  "Admin": {
+    "title": "Admin",
+    "description": "Manage system settings, users and subscriptions.",
+    "pollTitle": "Poll interval",
+    "pollDescription": "How often we check the praamipiletid.ee API. 5000–600000 ms.",
+    "pollLabel": "Interval (ms)",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "users": "Users",
+    "subscriptions": "Subscriptions",
+    "usersEmpty": "No users.",
+    "subscriptionsEmpty": "No subscriptions.",
+    "columnUser": "User",
+    "columnRole": "Role",
+    "columnSubCount": "Subs",
+    "columnCreated": "Created",
+    "columnTrip": "Trip",
+    "columnType": "Type",
+    "columnThreshold": "Threshold",
+    "columnLast": "Last",
+    "columnStatus": "Status",
+    "columnActions": "Actions",
+    "roleToUser": "Make regular user",
+    "roleToAdmin": "Make admin",
+    "roleChanged": "Role changed",
+    "statusPast": "Past",
+    "statusActive": "Active",
+    "statusPaused": "Paused",
+    "delete": "Delete",
+    "deleted": "Deleted",
+    "banned": "banned",
+    "admin": "admin",
+    "user": "user"
+  },
+  "Capacity": {
+    "sv": "Small vehicles",
+    "bv": "Large vehicles",
+    "pcs": "Passengers",
+    "mc": "Motorcycles",
+    "bc": "Bicycles",
+    "inv": "Disabled vehicle",
+    "dc": "Dangerous cargo"
+  },
+  "Directions": {
+    "VK": "Virtsu → Kuivastu",
+    "KV": "Kuivastu → Virtsu",
+    "RH": "Rohuküla → Heltermaa",
+    "HR": "Heltermaa → Rohuküla"
+  }
+}

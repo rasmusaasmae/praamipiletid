@@ -1,8 +1,9 @@
 import 'server-only'
 import { cache } from 'react'
 import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { getLocale } from 'next-intl/server'
 import { auth } from '@/lib/auth'
+import { redirect } from '@/i18n/navigation'
 
 export const getSession = cache(async () => {
   return auth.api.getSession({ headers: await headers() })
@@ -10,12 +11,18 @@ export const getSession = cache(async () => {
 
 export async function requireUser() {
   const session = await getSession()
-  if (!session) redirect('/sign-in')
+  if (!session) {
+    const locale = await getLocale()
+    throw redirect({ href: '/sign-in', locale })
+  }
   return session
 }
 
 export async function requireAdmin() {
   const session = await requireUser()
-  if (session.user.role !== 'admin') redirect('/')
+  if (session.user.role !== 'admin') {
+    const locale = await getLocale()
+    throw redirect({ href: '/', locale })
+  }
   return session
 }

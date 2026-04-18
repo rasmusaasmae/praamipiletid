@@ -1,0 +1,134 @@
+{
+  "NavBar": {
+    "brand": "Praamipiletid",
+    "trips": "Reisid",
+    "subscriptions": "Tellimused",
+    "settings": "Seaded",
+    "admin": "Admin"
+  },
+  "ThemeToggle": {
+    "label": "Vaheta teemat",
+    "light": "Hele",
+    "dark": "Tume",
+    "system": "Süsteem"
+  },
+  "LocaleToggle": {
+    "label": "Vaheta keelt"
+  },
+  "SignOut": {
+    "button": "Logi välja"
+  },
+  "SignIn": {
+    "title": "Praamipiletid",
+    "description": "Telli teade, kui laevale vabaneb koht.",
+    "google": "Logi sisse Google kontoga",
+    "redirecting": "Suunan…"
+  },
+  "TripsPage": {
+    "title": "Reisid",
+    "description": "Vali suund ja kuupäev, seejärel telli teavitus väljumise kohta.",
+    "loadError": "Laevaliiklust ei saanud laadida",
+    "empty": "Sellel kuupäeval reise ei leitud."
+  },
+  "TripsFilter": {
+    "direction": "Suund",
+    "date": "Kuupäev"
+  },
+  "TripCard": {
+    "type": "Tüüp",
+    "threshold": "Lävi",
+    "subscribe": "Telli",
+    "alreadySubscribed": "Juba tellitud",
+    "saving": "Salvestan…",
+    "subscribed": "Tellimus loodud"
+  },
+  "Subscriptions": {
+    "title": "Minu tellimused",
+    "description": "Halda oma aktiivseid teavitusi. Mineviku reisid jäävad ajalukku.",
+    "empty": "Tellimusi pole. Lisa neid",
+    "emptyLink": "reiside lehelt",
+    "columnTrip": "Reis",
+    "columnType": "Tüüp",
+    "columnThreshold": "Lävi",
+    "columnMode": "Režiim",
+    "columnStatus": "Staatus",
+    "columnActions": "Tegevused",
+    "statusPast": "Möödunud",
+    "statusActive": "Aktiivne",
+    "statusPaused": "Peatatud",
+    "pause": "Peata",
+    "activate": "Aktiveeri",
+    "delete": "Kustuta",
+    "saved": "Salvestatud",
+    "deleted": "Kustutatud",
+    "renotify": {
+      "once_until_depleted": "Üks kord kuni otsa saab",
+      "on_change": "Iga muutus",
+      "every_cycle": "Iga päring"
+    }
+  },
+  "Settings": {
+    "title": "Seaded",
+    "descriptionBefore": "Seadista oma ntfy teema. Laadi alla",
+    "descriptionLink": "ntfy app",
+    "descriptionAfter": "ja tellu alloleva URL-i kaudu.",
+    "cardTitle": "ntfy teema",
+    "cardDescription": "Täielik URL: {url}",
+    "topicLabel": "Teema",
+    "urlPreview": "URL: {base}/{topic}",
+    "topicPlaceholder": "<teema>",
+    "save": "Salvesta",
+    "saving": "Salvestan…",
+    "saved": "Salvestatud"
+  },
+  "Admin": {
+    "title": "Admin",
+    "description": "Halda süsteemi seadeid, kasutajaid ja tellimusi.",
+    "pollTitle": "Pollimise intervall",
+    "pollDescription": "Kui tihti kontrollime praamipiletid.ee API-t. 5000–600000 ms.",
+    "pollLabel": "Intervall (ms)",
+    "save": "Salvesta",
+    "saving": "Salvestan…",
+    "saved": "Salvestatud",
+    "users": "Kasutajad",
+    "subscriptions": "Tellimused",
+    "usersEmpty": "Kasutajaid pole.",
+    "subscriptionsEmpty": "Tellimusi pole.",
+    "columnUser": "Kasutaja",
+    "columnRole": "Roll",
+    "columnSubCount": "Tellimusi",
+    "columnCreated": "Loodud",
+    "columnTrip": "Reis",
+    "columnType": "Tüüp",
+    "columnThreshold": "Lävi",
+    "columnLast": "Viimati",
+    "columnStatus": "Staatus",
+    "columnActions": "Tegevused",
+    "roleToUser": "Tee tavakasutajaks",
+    "roleToAdmin": "Tee adminiks",
+    "roleChanged": "Roll muudetud",
+    "statusPast": "Möödunud",
+    "statusActive": "Aktiivne",
+    "statusPaused": "Peatatud",
+    "delete": "Kustuta",
+    "deleted": "Kustutatud",
+    "banned": "banned",
+    "admin": "admin",
+    "user": "user"
+  },
+  "Capacity": {
+    "sv": "Väiksed sõidukid",
+    "bv": "Suured sõidukid",
+    "pcs": "Reisijad",
+    "mc": "Mootorrattad",
+    "bc": "Jalgrattad",
+    "inv": "Invaliidi sõiduk",
+    "dc": "Ohtlik veos"
+  },
+  "Directions": {
+    "VK": "Virtsu → Kuivastu",
+    "KV": "Kuivastu → Virtsu",
+    "RH": "Rohuküla → Heltermaa",
+    "HR": "Heltermaa → Rohuküla"
+  }
+}

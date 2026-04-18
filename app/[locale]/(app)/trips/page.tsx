@@ -1,4 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm'
+import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
 import { subscriptions } from '@/db/schema'
 import { listTrips } from '@/lib/praamid'
@@ -7,12 +8,7 @@ import { TripsFilter } from '@/components/trips-filter'
 import { TripCard } from '@/components/trip-card'
 import { Card, CardContent } from '@/components/ui/card'
 
-const DIRECTIONS = [
-  { code: 'VK', label: 'Virtsu → Kuivastu' },
-  { code: 'KV', label: 'Kuivastu → Virtsu' },
-  { code: 'RH', label: 'Rohuküla → Heltermaa' },
-  { code: 'HR', label: 'Heltermaa → Rohuküla' },
-] as const
+const DIRECTION_CODES = ['VK', 'KV', 'RH', 'HR'] as const
 
 function todayIso() {
   const d = new Date()
@@ -24,15 +20,21 @@ type SearchParams = Promise<Record<string, string | undefined>>
 export default async function TripsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireUser()
   const params = await searchParams
-  const direction = DIRECTIONS.find((d) => d.code === params.direction)?.code ?? 'HR'
+  const direction = (DIRECTION_CODES as readonly string[]).includes(params.direction ?? '')
+    ? (params.direction as string)
+    : 'HR'
   const date = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : todayIso()
+
+  const t = await getTranslations('TripsPage')
+  const tDir = await getTranslations('Directions')
+  const directions = DIRECTION_CODES.map((code) => ({ code, label: tDir(code) }))
 
   let trips: Awaited<ReturnType<typeof listTrips>> = []
   let error: string | null = null
   try {
     trips = await listTrips(direction, date)
   } catch (err) {
-    error = err instanceof Error ? err.message : 'Laevaliiklust ei saanud laadida'
+    error = err instanceof Error ? err.message : t('loadError')
   }
 
   const myExisting = trips.length
@@ -55,13 +57,11 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Reisid</h1>
-        <p className="text-sm text-muted-foreground">
-          Vali suund ja kuupäev, seejärel telli teavitus väljumise kohta.
-        </p>
+        <h1 className="text-2xl font-semibold">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
-      <TripsFilter directions={DIRECTIONS} currentDirection={direction} currentDate={date} />
+      <TripsFilter directions={directions} currentDirection={direction} currentDate={date} />
 
       {error ? (
         <Card>
@@ -69,9 +69,7 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
         </Card>
       ) : trips.length === 0 ? (
         <Card>
-          <CardContent className="py-6 text-muted-foreground">
-            Sellel kuupäeval reise ei leitud.
-          </CardContent>
+          <CardContent className="py-6 text-muted-foreground">{t('empty')}</CardContent>
         </Card>
       ) : (
         <div className="flex flex-col gap-3">

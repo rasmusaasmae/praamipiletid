@@ -1,4 +1,5 @@
 import { desc, eq, sql } from 'drizzle-orm'
+import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
 import { subscriptions, user } from '@/db/schema'
 import { requireAdmin } from '@/lib/session'
@@ -10,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default async function AdminPage() {
   await requireAdmin()
+  const t = await getTranslations('Admin')
 
   const settings = await getAllSettings()
 
@@ -50,18 +52,14 @@ export default async function AdminPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Admin</h1>
-        <p className="text-sm text-muted-foreground">
-          Halda süsteemi seadeid, kasutajaid ja tellimusi.
-        </p>
+        <h1 className="text-2xl font-semibold">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Pollimise intervall</CardTitle>
-          <CardDescription>
-            Kui tihti kontrollime praamipiletid.ee API-t. 5000–600000 ms.
-          </CardDescription>
+          <CardTitle>{t('pollTitle')}</CardTitle>
+          <CardDescription>{t('pollDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <PollIntervalForm current={settings.pollIntervalMs} />
@@ -70,7 +68,7 @@ export default async function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Kasutajad</CardTitle>
+          <CardTitle>{t('users')}</CardTitle>
         </CardHeader>
         <CardContent>
           <AdminUsersTable users={users} />
@@ -79,7 +77,7 @@ export default async function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tellimused</CardTitle>
+          <CardTitle>{t('subscriptions')}</CardTitle>
         </CardHeader>
         <CardContent>
           <AdminSubscriptionsTable rows={subs} />

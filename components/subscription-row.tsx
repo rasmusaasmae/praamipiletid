@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { toast } from 'sonner'
+import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,23 +15,21 @@ import {
 } from '@/components/ui/select'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { deleteSubscription, updateSubscription } from '@/actions/subscriptions'
-import { CAPACITY_LABELS } from '@/lib/praamid'
 import type { Subscription } from '@/db/schema'
 
-const RENOTIFY_LABELS: Record<string, string> = {
-  once_until_depleted: 'Üks kord kuni otsa saab',
-  on_change: 'Iga muutus',
-  every_cycle: 'Iga päring',
-}
-
-function formatDateTime(d: Date) {
-  const day = d.toLocaleDateString('et-EE')
-  const time = d.toLocaleTimeString('et-EE', { hour: '2-digit', minute: '2-digit' })
-  return `${day} ${time}`
-}
+const RENOTIFY_CODES = ['once_until_depleted', 'on_change', 'every_cycle'] as const
 
 export function SubscriptionRow({ row }: { row: Subscription }) {
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations('Subscriptions')
+  const tCap = useTranslations('Capacity')
+  const tReno = useTranslations('Subscriptions.renotify')
+  const locale = useLocale()
+
+  const formatDateTime = (d: Date) => {
+    const tag = locale === 'et' ? 'et-EE' : 'en-GB'
+    return `${d.toLocaleDateString(tag)} ${d.toLocaleTimeString(tag, { hour: '2-digit', minute: '2-digit' })}`
+  }
 
   const submitUpdate = (field: 'threshold' | 'renotifyMode' | 'active', value: string) => {
     const form = new FormData()
@@ -38,7 +37,7 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
     form.set(field, value)
     startTransition(async () => {
       const res = await updateSubscription(form)
-      if (res.ok) toast.success('Salvestatud')
+      if (res.ok) toast.success(t('saved'))
       else toast.error(res.error)
     })
   }
@@ -48,7 +47,7 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
     form.set('id', row.id)
     startTransition(async () => {
       const res = await deleteSubscription(form)
-      if (res.ok) toast.success('Kustutatud')
+      if (res.ok) toast.success(t('deleted'))
       else toast.error(res.error)
     })
   }
@@ -61,7 +60,7 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
         <div className="font-medium">{row.direction}</div>
         <div className="text-xs text-muted-foreground">{formatDateTime(row.departureAt)}</div>
       </TableCell>
-      <TableCell>{CAPACITY_LABELS[row.capacityType]?.et ?? row.capacityType}</TableCell>
+      <TableCell>{tCap(row.capacityType as 'sv')}</TableCell>
       <TableCell>
         <Input
           type="number"
@@ -83,12 +82,14 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
           disabled={isPending || past}
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue />
+            <SelectValue>
+              {(v: string) => tReno(v as 'once_until_depleted')}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(RENOTIFY_LABELS).map(([code, label]) => (
+            {RENOTIFY_CODES.map((code) => (
               <SelectItem key={code} value={code}>
-                {label}
+                {tReno(code)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -96,11 +97,11 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
       </TableCell>
       <TableCell>
         {past ? (
-          <Badge variant="secondary">Möödunud</Badge>
+          <Badge variant="secondary">{t('statusPast')}</Badge>
         ) : row.active ? (
-          <Badge>Aktiivne</Badge>
+          <Badge>{t('statusActive')}</Badge>
         ) : (
-          <Badge variant="outline">Peatatud</Badge>
+          <Badge variant="outline">{t('statusPaused')}</Badge>
         )}
       </TableCell>
       <TableCell className="space-x-1 text-right">
@@ -111,11 +112,11 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
             disabled={isPending}
             onClick={() => submitUpdate('active', row.active ? '' : 'true')}
           >
-            {row.active ? 'Peata' : 'Aktiveeri'}
+            {row.active ? t('pause') : t('activate')}
           </Button>
         ) : null}
         <Button size="sm" variant="destructive" disabled={isPending} onClick={submitDelete}>
-          Kustuta
+          {t('delete')}
         </Button>
       </TableCell>
     </TableRow>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createSubscription } from '@/actions/subscriptions'
-import { CAPACITY_LABELS, type Trip } from '@/lib/praamid'
+import { SHIP_NAMES, type Trip } from '@/lib/praamid'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
@@ -37,6 +38,8 @@ export function TripCard({ trip, direction, date, existingKey }: Props) {
   const [capacityType, setCapacityType] = useState<string>('sv')
   const [threshold, setThreshold] = useState('1')
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations('TripCard')
+  const tCap = useTranslations('Capacity')
 
   const alreadySubscribed = existingKey.has(`${trip.uid}|${capacityType}`)
 
@@ -52,7 +55,7 @@ export function TripCard({ trip, direction, date, existingKey }: Props) {
     startTransition(async () => {
       const result = await createSubscription(form)
       if (result.ok) {
-        toast.success('Tellimus loodud')
+        toast.success(t('subscribed'))
       } else {
         toast.error(result.error)
       }
@@ -66,16 +69,15 @@ export function TripCard({ trip, direction, date, existingKey }: Props) {
           <div className="flex items-center gap-3">
             <span className="text-lg font-semibold">{formatTime(trip.dtstart)}</span>
             <span className="text-sm text-muted-foreground">→ {formatTime(trip.dtend)}</span>
-            <Badge variant="outline">{trip.ship.code}</Badge>
+            <Badge variant="outline">{SHIP_NAMES[trip.ship.code] ?? trip.ship.code}</Badge>
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
             {CAPACITY_ORDER.map((code) => {
               const v = trip.capacities[code]
               if (v == null) return null
-              const label = CAPACITY_LABELS[code]?.et ?? code
               return (
                 <span key={code} className="rounded-md bg-secondary px-2 py-0.5">
-                  {label}: <span className="font-medium text-foreground">{v}</span>
+                  {tCap(code)}: <span className="font-medium text-foreground">{v}</span>
                 </span>
               )
             })}
@@ -83,22 +85,22 @@ export function TripCard({ trip, direction, date, existingKey }: Props) {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="w-40">
-            <Label className="mb-1 block text-xs">Tüüp</Label>
+            <Label className="mb-1 block text-xs">{t('type')}</Label>
             <Select value={capacityType} onValueChange={(v) => v && setCapacityType(v)}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>{(v: string) => tCap(v as (typeof CAPACITY_ORDER)[number])}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {CAPACITY_ORDER.map((code) => (
                   <SelectItem key={code} value={code}>
-                    {CAPACITY_LABELS[code]?.et ?? code}
+                    {tCap(code)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="w-24">
-            <Label className="mb-1 block text-xs">Lävi</Label>
+            <Label className="mb-1 block text-xs">{t('threshold')}</Label>
             <Input
               type="number"
               min={1}
@@ -107,7 +109,7 @@ export function TripCard({ trip, direction, date, existingKey }: Props) {
             />
           </div>
           <Button disabled={isPending || alreadySubscribed} onClick={onSubscribe}>
-            {alreadySubscribed ? 'Juba tellitud' : isPending ? 'Salvestan…' : 'Telli'}
+            {alreadySubscribed ? t('alreadySubscribed') : isPending ? t('saving') : t('subscribe')}
           </Button>
         </div>
       </CardContent>

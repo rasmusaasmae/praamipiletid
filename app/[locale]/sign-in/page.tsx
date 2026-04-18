@@ -1,17 +1,20 @@
-import { redirect } from 'next/navigation'
+import { getTranslations, getLocale } from 'next-intl/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { GoogleSignInButton } from '@/components/google-sign-in-button'
 import { getSession } from '@/lib/session'
+import { redirect } from '@/i18n/navigation'
 
 export default async function SignInPage() {
   const session = await getSession()
-  if (session) redirect('/trips')
+  const locale = await getLocale()
+  if (session) redirect({ href: '/trips', locale })
+  const t = await getTranslations('SignIn')
   return (
     <main className="flex flex-1 items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Praamipiletid</CardTitle>
-          <CardDescription>Telli teade, kui laevale vabaneb koht.</CardDescription>
+          <CardTitle>{t('title')}</CardTitle>
+          <CardDescription>{t('description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <GoogleSignInButton />

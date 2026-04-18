@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +11,7 @@ import { updatePollInterval } from '@/actions/admin'
 export function PollIntervalForm({ current }: { current: number }) {
   const [value, setValue] = useState(String(current))
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations('Admin')
 
   return (
     <form
@@ -17,14 +19,14 @@ export function PollIntervalForm({ current }: { current: number }) {
       action={(formData) =>
         startTransition(async () => {
           const res = await updatePollInterval(formData)
-          if (res.ok) toast.success('Salvestatud')
+          if (res.ok) toast.success(t('saved'))
           else toast.error(res.error)
         })
       }
     >
       <div className="flex-1">
         <Label htmlFor="pollIntervalMs" className="mb-1 block">
-          Intervall (ms)
+          {t('pollLabel')}
         </Label>
         <Input
           id="pollIntervalMs"
@@ -38,7 +40,7 @@ export function PollIntervalForm({ current }: { current: number }) {
         />
       </div>
       <Button type="submit" disabled={isPending || value === String(current)}>
-        {isPending ? 'Salvestan…' : 'Salvesta'}
+        {isPending ? t('saving') : t('save')}
       </Button>
     </form>
   )

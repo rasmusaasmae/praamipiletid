@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useRouter } from '@/i18n/navigation'
 
 type Props = {
   directions: ReadonlyArray<{ code: string; label: string }>
@@ -21,6 +22,7 @@ type Props = {
 export function TripsFilter({ directions, currentDirection, currentDate }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations('TripsFilter')
 
   const push = (direction: string, date: string) => {
     const params = new URLSearchParams({ direction, date })
@@ -31,7 +33,7 @@ export function TripsFilter({ directions, currentDirection, currentDate }: Props
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px]">
       <div>
         <Label htmlFor="direction" className="mb-1 block">
-          Suund
+          {t('direction')}
         </Label>
         <Select
           value={currentDirection}
@@ -39,7 +41,9 @@ export function TripsFilter({ directions, currentDirection, currentDate }: Props
           disabled={isPending}
         >
           <SelectTrigger id="direction" className="w-full">
-            <SelectValue />
+            <SelectValue>
+              {(v: string) => directions.find((d) => d.code === v)?.label ?? v}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {directions.map((d) => (
@@ -52,7 +56,7 @@ export function TripsFilter({ directions, currentDirection, currentDate }: Props
       </div>
       <div>
         <Label htmlFor="date" className="mb-1 block">
-          Kuupäev
+          {t('date')}
         </Label>
         <Input
           id="date"
