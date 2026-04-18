@@ -1,0 +1,27 @@
+services:
+  app:
+    image: ${IMAGE_NAME:-ghcr.io/rasmusaasmae/praamipiletid}:${IMAGE_TAG:-latest}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    environment:
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      NOTIFIER: ${NOTIFIER:-ntfy}
+      NTFY_BASE_URL: ${NTFY_BASE_URL:-https://ntfy.sh}
+      DATABASE_PATH: /app/data/praamipiletid.db
+    volumes:
+      - praamipiletid_data:/app/data
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  praamipiletid_data:
