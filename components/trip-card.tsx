@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createSubscription } from '@/actions/subscriptions'
+import { createJourney } from '@/actions/journeys'
 import { SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
@@ -47,13 +47,12 @@ export function TripCard({ trip, direction, date, existingKey }: Props) {
     const form = new FormData()
     form.set('direction', direction)
     form.set('date', date)
-    form.set('tripUid', trip.uid)
-    form.set('capacityType', capacityType)
+    form.set('eventUid', trip.uid)
+    form.set('measurementUnit', capacityType)
     form.set('threshold', threshold)
-    form.set('renotifyMode', 'once_until_depleted')
 
     startTransition(async () => {
-      const result = await createSubscription(form)
+      const result = await createJourney(form)
       if (result.ok) {
         toast.success(t('subscribed'))
       } else {

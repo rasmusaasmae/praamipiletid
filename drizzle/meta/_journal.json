@@ -15,6 +15,13 @@
       "when": 1776607296153,
       "tag": "0001_motionless_eddie_brock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776607698546,
+      "tag": "0002_unknown_terror",
+      "breakpoints": true
     }
   ]
 }

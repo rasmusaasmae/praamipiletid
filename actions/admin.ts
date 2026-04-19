@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
-import { subscriptions, user } from '@/db/schema'
+import { journeys, user } from '@/db/schema'
+import { logAudit } from '@/lib/audit'
 import { requireAdmin } from '@/lib/session'
 import { setSetting } from '@/lib/settings'
 
@@ -36,12 +37,25 @@ export async function updateUserRole(formData: FormData): Promise<AdminActionRes
   return { ok: true }
 }
 
-export async function deleteAnySubscription(formData: FormData): Promise<AdminActionResult> {
-  await requireAdmin()
+export async function deleteAnyJourney(formData: FormData): Promise<AdminActionResult> {
+  const session = await requireAdmin()
   const t = await getTranslations('Errors')
   const id = String(formData.get('id') ?? '')
   if (!id) return { ok: false, error: t('missingId') }
-  await db.delete(subscriptions).where(eq(subscriptions.id, id))
+  const target = await db
+    .select({ direction: journeys.direction, userId: journeys.userId })
+    .from(journeys)
+    .where(eq(journeys.id, id))
+    .get()
+  if (!target) return { ok: false, error: t('subscriptionNotFound') }
+  await db.delete(journeys).where(eq(journeys.id, id))
+  await logAudit({
+    type: 'journey.deleted',
+    actor: 'user',
+    userId: session.user.id,
+    journeyId: null,
+    payload: { direction: target.direction },
+  })
   revalidatePath('/admin')
   return { ok: true }
 }

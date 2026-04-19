@@ -6,24 +6,25 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { TableCell, TableRow } from '@/components/ui/table'
-import { deleteSubscription, updateSubscription } from '@/actions/subscriptions'
-import type { Subscription } from '@/db/schema'
+import { deleteJourney, updateJourney } from '@/actions/journeys'
 
-const RENOTIFY_CODES = ['once_until_depleted', 'on_change', 'every_cycle'] as const
+export type JourneyListItem = {
+  id: string
+  direction: string
+  measurementUnit: string
+  threshold: number
+  active: boolean
+  eventUid: string
+  eventDate: string
+  eventDtstart: Date
+  lastCapacity: number | null
+}
 
-export function SubscriptionRow({ row }: { row: Subscription }) {
+export function SubscriptionRow({ row }: { row: JourneyListItem }) {
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('Subscriptions')
   const tCap = useTranslations('Capacity')
-  const tReno = useTranslations('Subscriptions.renotify')
   const tDir = useTranslations('Directions')
   const locale = useLocale()
 
@@ -32,12 +33,12 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
     return d.toLocaleTimeString(tag, { hour: '2-digit', minute: '2-digit' })
   }
 
-  const submitUpdate = (field: 'threshold' | 'renotifyMode' | 'active', value: string) => {
+  const submitUpdate = (field: 'threshold' | 'active', value: string) => {
     const form = new FormData()
     form.set('id', row.id)
     form.set(field, value)
     startTransition(async () => {
-      const res = await updateSubscription(form)
+      const res = await updateJourney(form)
       if (res.ok) toast.success(t('saved'))
       else toast.error(res.error)
     })
@@ -47,25 +48,23 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
     const form = new FormData()
     form.set('id', row.id)
     startTransition(async () => {
-      const res = await deleteSubscription(form)
+      const res = await deleteJourney(form)
       if (res.ok) toast.success(t('deleted'))
       else toast.error(res.error)
     })
   }
 
-  const past = row.departureAt.getTime() < Date.now()
+  const past = row.eventDtstart.getTime() < Date.now()
 
   return (
     <TableRow>
       <TableCell>
-        <div className="text-base font-semibold">
-          {tDir(row.direction as 'VK')}
-        </div>
+        <div className="text-base font-semibold">{tDir(row.direction as 'VK')}</div>
         <div className="text-lg tabular-nums text-muted-foreground">
-          {formatTime(row.departureAt)}
+          {formatTime(row.eventDtstart)}
         </div>
       </TableCell>
-      <TableCell>{tCap(row.capacityType as 'sv')}</TableCell>
+      <TableCell>{tCap(row.measurementUnit as 'sv')}</TableCell>
       <TableCell>
         <Input
           type="number"
@@ -79,26 +78,6 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
             }
           }}
         />
-      </TableCell>
-      <TableCell>
-        <Select
-          value={row.renotifyMode}
-          onValueChange={(v) => v && submitUpdate('renotifyMode', v)}
-          disabled={isPending || past}
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue>
-              {(v: string) => tReno(v as 'once_until_depleted')}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {RENOTIFY_CODES.map((code) => (
-              <SelectItem key={code} value={code}>
-                {tReno(code)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </TableCell>
       <TableCell>
         {past ? (

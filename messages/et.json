@@ -70,7 +70,6 @@
     "columnTrip": "Reis",
     "columnType": "Tüüp",
     "columnThreshold": "Lävi",
-    "columnMode": "Režiim",
     "columnStatus": "Staatus",
     "columnActions": "Tegevused",
     "statusPast": "Möödunud",
@@ -80,12 +79,7 @@
     "activate": "Aktiveeri",
     "delete": "Kustuta",
     "saved": "Salvestatud",
-    "deleted": "Kustutatud",
-    "renotify": {
-      "once_until_depleted": "Üks kord kuni otsa saab",
-      "on_change": "Iga muutus",
-      "every_cycle": "Iga päring"
-    }
+    "deleted": "Kustutatud"
   },
   "Settings": {
     "title": "Seaded",

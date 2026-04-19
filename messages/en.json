@@ -70,7 +70,6 @@
     "columnTrip": "Trip",
     "columnType": "Type",
     "columnThreshold": "Threshold",
-    "columnMode": "Mode",
     "columnStatus": "Status",
     "columnActions": "Actions",
     "statusPast": "Past",
@@ -80,12 +79,7 @@
     "activate": "Activate",
     "delete": "Delete",
     "saved": "Saved",
-    "deleted": "Deleted",
-    "renotify": {
-      "once_until_depleted": "Once until depleted",
-      "on_change": "On every change",
-      "every_cycle": "On every check"
-    }
+    "deleted": "Deleted"
   },
   "Settings": {
     "title": "Settings",

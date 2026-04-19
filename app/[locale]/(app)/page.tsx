@@ -2,7 +2,7 @@ import { asc, eq } from 'drizzle-orm'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { Plus } from 'lucide-react'
 import { db } from '@/db'
-import { subscriptions, user } from '@/db/schema'
+import { journeyOptions, journeys, user } from '@/db/schema'
 import { requireUser } from '@/lib/session'
 import { SubscriptionRow } from '@/components/subscription-row'
 import { TopicCopyButton } from '@/components/topic-copy-button'
@@ -30,10 +30,21 @@ export default async function HomePage() {
       .where(eq(user.id, session.user.id))
       .get(),
     db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.userId, session.user.id))
-      .orderBy(asc(subscriptions.departureAt))
+      .select({
+        id: journeys.id,
+        direction: journeys.direction,
+        measurementUnit: journeys.measurementUnit,
+        threshold: journeys.threshold,
+        active: journeys.active,
+        eventUid: journeyOptions.eventUid,
+        eventDate: journeyOptions.eventDate,
+        eventDtstart: journeyOptions.eventDtstart,
+        lastCapacity: journeyOptions.lastCapacity,
+      })
+      .from(journeys)
+      .innerJoin(journeyOptions, eq(journeyOptions.journeyId, journeys.id))
+      .where(eq(journeys.userId, session.user.id))
+      .orderBy(asc(journeyOptions.eventDtstart))
       .all(),
   ])
 
@@ -44,9 +55,9 @@ export default async function HomePage() {
   const format = await getFormatter()
   const groups = new Map<string, typeof rows>()
   for (const r of rows) {
-    const bucket = groups.get(r.date) ?? []
+    const bucket = groups.get(r.eventDate) ?? []
     bucket.push(r)
-    groups.set(r.date, bucket)
+    groups.set(r.eventDate, bucket)
   }
 
   return (
@@ -108,7 +119,6 @@ export default async function HomePage() {
                 <TableHead>{tSub('columnTrip')}</TableHead>
                 <TableHead>{tSub('columnType')}</TableHead>
                 <TableHead>{tSub('columnThreshold')}</TableHead>
-                <TableHead>{tSub('columnMode')}</TableHead>
                 <TableHead>{tSub('columnStatus')}</TableHead>
                 <TableHead className="text-right">{tSub('columnActions')}</TableHead>
               </TableRow>
@@ -116,7 +126,7 @@ export default async function HomePage() {
             <TableBody>
               {[...groups.entries()].flatMap(([date, subs]) => [
                 <TableRow key={`h-${date}`} className="bg-muted/40 hover:bg-muted/40">
-                  <TableCell colSpan={6} className="py-2 text-sm font-medium text-foreground">
+                  <TableCell colSpan={5} className="py-2 text-sm font-medium text-foreground">
                     {format.dateTime(new Date(`${date}T00:00:00`), {
                       weekday: 'long',
                       day: 'numeric',

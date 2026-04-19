@@ -13,27 +13,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { deleteAnySubscription } from '@/actions/admin'
+import { deleteAnyJourney } from '@/actions/admin'
 
 type Row = {
   id: string
   userEmail: string
   direction: string
-  date: string
-  tripUid: string
-  departureAt: Date
-  capacityType: string
+  measurementUnit: string
   threshold: number
-  renotifyMode: string
   active: boolean
+  eventUid: string
+  eventDate: string
+  eventDtstart: Date
   lastCapacity: number | null
-  lastNotifiedAt: Date | null
 }
 
 export function AdminSubscriptionsTable({ rows }: { rows: Row[] }) {
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('Admin')
   const tCap = useTranslations('Capacity')
+  const tDir = useTranslations('Directions')
   const locale = useLocale()
 
   const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
@@ -44,7 +43,7 @@ export function AdminSubscriptionsTable({ rows }: { rows: Row[] }) {
     const form = new FormData()
     form.set('id', id)
     startTransition(async () => {
-      const res = await deleteAnySubscription(form)
+      const res = await deleteAnyJourney(form)
       if (res.ok) toast.success(t('deleted'))
       else toast.error(res.error)
     })
@@ -70,24 +69,19 @@ export function AdminSubscriptionsTable({ rows }: { rows: Row[] }) {
         </TableHeader>
         <TableBody>
           {rows.map((r) => {
-            const past = r.departureAt.getTime() < Date.now()
+            const past = r.eventDtstart.getTime() < Date.now()
             return (
               <TableRow key={r.id}>
                 <TableCell className="text-xs">{r.userEmail}</TableCell>
                 <TableCell>
-                  <div className="font-medium">{r.direction}</div>
-                  <div className="text-xs text-muted-foreground">{formatDateTime(r.departureAt)}</div>
+                  <div className="font-medium">{tDir(r.direction as 'VK')}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDateTime(r.eventDtstart)}
+                  </div>
                 </TableCell>
-                <TableCell>{tCap(r.capacityType as 'sv')}</TableCell>
+                <TableCell>{tCap(r.measurementUnit as 'sv')}</TableCell>
                 <TableCell>{r.threshold}</TableCell>
-                <TableCell>
-                  {r.lastCapacity != null ? `${r.lastCapacity}` : '—'}
-                  {r.lastNotifiedAt ? (
-                    <div className="text-xs text-muted-foreground">
-                      {r.lastNotifiedAt.toLocaleString(dateTag)}
-                    </div>
-                  ) : null}
-                </TableCell>
+                <TableCell>{r.lastCapacity != null ? `${r.lastCapacity}` : '—'}</TableCell>
                 <TableCell>
                   {past ? (
                     <Badge variant="secondary">{t('statusPast')}</Badge>

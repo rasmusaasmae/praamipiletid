@@ -37,6 +37,9 @@ yarn-error.log*
 # local SQLite database
 /data
 
+# local design/research notes
+/plans
+
 # vercel
 .vercel
 

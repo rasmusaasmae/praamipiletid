@@ -1,7 +1,7 @@
-import { desc, eq, sql } from 'drizzle-orm'
+import { asc, desc, eq, sql } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
-import { subscriptions, user } from '@/db/schema'
+import { journeyOptions, journeys, user } from '@/db/schema'
 import { requireAdmin } from '@/lib/session'
 import { getAllSettings } from '@/lib/settings'
 import { PollIntervalForm } from '@/components/admin/poll-interval-form'
@@ -23,31 +23,38 @@ export default async function AdminPage() {
       role: user.role,
       banned: user.banned,
       createdAt: user.createdAt,
-      subCount: sql<number>`(select count(*) from ${subscriptions} where ${subscriptions.userId} = ${user.id})`,
+      subCount: sql<number>`(select count(*) from ${journeys} where ${journeys.userId} = ${user.id})`,
     })
     .from(user)
     .orderBy(desc(user.createdAt))
     .all()
 
-  const subs = await db
+  const rows = await db
     .select({
-      id: subscriptions.id,
+      id: journeys.id,
       userEmail: user.email,
-      direction: subscriptions.direction,
-      date: subscriptions.date,
-      tripUid: subscriptions.tripUid,
-      departureAt: subscriptions.departureAt,
-      capacityType: subscriptions.capacityType,
-      threshold: subscriptions.threshold,
-      renotifyMode: subscriptions.renotifyMode,
-      active: subscriptions.active,
-      lastCapacity: subscriptions.lastCapacity,
-      lastNotifiedAt: subscriptions.lastNotifiedAt,
+      direction: journeys.direction,
+      measurementUnit: journeys.measurementUnit,
+      threshold: journeys.threshold,
+      active: journeys.active,
+      eventUid: journeyOptions.eventUid,
+      eventDate: journeyOptions.eventDate,
+      eventDtstart: journeyOptions.eventDtstart,
+      lastCapacity: journeyOptions.lastCapacity,
     })
-    .from(subscriptions)
-    .innerJoin(user, eq(user.id, subscriptions.userId))
-    .orderBy(desc(subscriptions.departureAt))
+    .from(journeys)
+    .innerJoin(user, eq(user.id, journeys.userId))
+    .innerJoin(journeyOptions, eq(journeyOptions.journeyId, journeys.id))
+    .orderBy(asc(journeyOptions.priority), desc(journeyOptions.eventDtstart))
     .all()
+
+  const firstByJourney = new Map<string, (typeof rows)[number]>()
+  for (const r of rows) {
+    if (!firstByJourney.has(r.id)) firstByJourney.set(r.id, r)
+  }
+  const subs = [...firstByJourney.values()].sort(
+    (a, b) => b.eventDtstart.getTime() - a.eventDtstart.getTime(),
+  )
 
   return (
     <div className="flex flex-col gap-6">

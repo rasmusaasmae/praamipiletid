@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
-import { subscriptions } from '@/db/schema'
+import { journeyOptions, journeys } from '@/db/schema'
 import { listEvents } from '@/lib/praamid'
 import { requireUser } from '@/lib/session'
 import { TripsFilter } from '@/components/trips-filter'
@@ -39,20 +39,25 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
 
   const myExisting = events.length
     ? await db
-        .select({ tripUid: subscriptions.tripUid, capacityType: subscriptions.capacityType })
-        .from(subscriptions)
+        .select({
+          eventUid: journeyOptions.eventUid,
+          measurementUnit: journeys.measurementUnit,
+        })
+        .from(journeys)
+        .innerJoin(journeyOptions, eq(journeyOptions.journeyId, journeys.id))
         .where(
           and(
-            eq(subscriptions.userId, session.user.id),
+            eq(journeys.userId, session.user.id),
+            eq(journeyOptions.active, true),
             inArray(
-              subscriptions.tripUid,
+              journeyOptions.eventUid,
               events.map((e) => e.uid),
             ),
           ),
         )
         .all()
     : []
-  const existingKey = new Set(myExisting.map((r) => `${r.tripUid}|${r.capacityType}`))
+  const existingKey = new Set(myExisting.map((r) => `${r.eventUid}|${r.measurementUnit}`))
 
   return (
     <div className="flex flex-col gap-6">
