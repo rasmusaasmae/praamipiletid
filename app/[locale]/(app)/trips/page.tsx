@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
 import { subscriptions } from '@/db/schema'
-import { listTrips } from '@/lib/praamid'
+import { listEvents } from '@/lib/praamid'
 import { requireUser } from '@/lib/session'
 import { TripsFilter } from '@/components/trips-filter'
 import { TripCard } from '@/components/trip-card'
@@ -29,15 +29,15 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
   const tDir = await getTranslations('Directions')
   const directions = DIRECTION_CODES.map((code) => ({ code, label: tDir(code) }))
 
-  let trips: Awaited<ReturnType<typeof listTrips>> = []
+  let events: Awaited<ReturnType<typeof listEvents>> = []
   let error: string | null = null
   try {
-    trips = await listTrips(direction, date)
+    events = await listEvents(direction, date)
   } catch (err) {
     error = err instanceof Error ? err.message : t('loadError')
   }
 
-  const myExisting = trips.length
+  const myExisting = events.length
     ? await db
         .select({ tripUid: subscriptions.tripUid, capacityType: subscriptions.capacityType })
         .from(subscriptions)
@@ -46,7 +46,7 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
             eq(subscriptions.userId, session.user.id),
             inArray(
               subscriptions.tripUid,
-              trips.map((t) => t.uid),
+              events.map((e) => e.uid),
             ),
           ),
         )
@@ -67,16 +67,16 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
         <Card>
           <CardContent className="py-6 text-destructive">{error}</CardContent>
         </Card>
-      ) : trips.length === 0 ? (
+      ) : events.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-muted-foreground">{t('empty')}</CardContent>
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {trips.map((trip) => (
+          {events.map((event) => (
             <TripCard
-              key={trip.uid}
-              trip={trip}
+              key={event.uid}
+              trip={event}
               direction={direction}
               date={date}
               existingKey={existingKey}

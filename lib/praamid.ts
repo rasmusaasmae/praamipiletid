@@ -17,7 +17,7 @@ export type CapacityUnit = {
   trailer: boolean
 }
 
-export type TripCapacities = {
+export type Capacities = {
   pcs?: number
   bc?: number
   sv?: number
@@ -28,12 +28,12 @@ export type TripCapacities = {
   [key: string]: number | undefined
 }
 
-export type Trip = {
+export type PraamidEvent = {
   uid: string
   dtstart: string
   dtend: string
   status: string
-  capacities: TripCapacities
+  capacities: Capacities
   ship: { code: string }
   transportationType: { code: string }
 }
@@ -63,9 +63,9 @@ export async function listCapacityUnits(): Promise<CapacityUnit[]> {
   return data.items
 }
 
-export async function listTrips(direction: string, date: string, timeShift = 300): Promise<Trip[]> {
+export async function listEvents(direction: string, date: string, timeShift = 300): Promise<PraamidEvent[]> {
   const url = `${BASE_URL}/events?direction=${encodeURIComponent(direction)}&departure-date=${encodeURIComponent(date)}&time-shift=${timeShift}`
-  const data = await fetchJson<ApiList<Trip>>(url)
+  const data = await fetchJson<ApiList<PraamidEvent>>(url)
   return data.items
 }
 

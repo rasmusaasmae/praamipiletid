@@ -2,7 +2,7 @@ import 'server-only'
 import { and, eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@/db'
 import { subscriptions, user } from '@/db/schema'
-import { CAPACITY_LABELS, listTrips, type Trip } from '@/lib/praamid'
+import { CAPACITY_LABELS, listEvents, type PraamidEvent } from '@/lib/praamid'
 import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
 
@@ -18,15 +18,15 @@ function formatTime(date: Date) {
 }
 
 async function processBatch(dir: string, date: string, subs: SubRow[], timeShift: number) {
-  let trips: Trip[]
+  let events: PraamidEvent[]
   try {
-    trips = await listTrips(dir, date, timeShift)
+    events = await listEvents(dir, date, timeShift)
   } catch (err) {
-    console.error(`[poller] listTrips ${dir} ${date} failed:`, err)
+    console.error(`[poller] listEvents ${dir} ${date} failed:`, err)
     return
   }
 
-  const tripByUid = new Map(trips.map((t) => [t.uid, t]))
+  const eventByUid = new Map(events.map((e) => [e.uid, e]))
   const userIds = Array.from(new Set(subs.map((s) => s.userId)))
   const users = userIds.length
     ? await db
@@ -38,9 +38,9 @@ async function processBatch(dir: string, date: string, subs: SubRow[], timeShift
   const topicByUser = new Map(users.map((u) => [u.id, u.ntfyTopic]))
 
   for (const sub of subs) {
-    const trip = tripByUid.get(sub.tripUid)
-    if (!trip) continue
-    const capacity = trip.capacities?.[sub.capacityType] ?? 0
+    const event = eventByUid.get(sub.tripUid)
+    if (!event) continue
+    const capacity = event.capacities?.[sub.capacityType] ?? 0
     const prev = sub.lastCapacity
     const meetsThreshold = capacity >= sub.threshold
 
@@ -60,7 +60,7 @@ async function processBatch(dir: string, date: string, subs: SubRow[], timeShift
       if (!topic) {
         console.warn(`[poller] no ntfy topic for user ${sub.userId}, skipping`)
       } else {
-        const depart = new Date(trip.dtstart)
+        const depart = new Date(event.dtstart)
         const label = CAPACITY_LABELS[sub.capacityType]?.et ?? sub.capacityType
         const title = `${dir} ${date} ${formatTime(depart)}`
         const msg = `${label}: ${capacity} kohta vaba (lävi ${sub.threshold})`

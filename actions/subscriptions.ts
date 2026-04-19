@@ -7,7 +7,7 @@ import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
 import { subscriptions } from '@/db/schema'
-import { listTrips } from '@/lib/praamid'
+import { listEvents } from '@/lib/praamid'
 import { requireUser } from '@/lib/session'
 
 const directionSchema = z.enum(['VK', 'KV', 'RH', 'HR'])
@@ -41,9 +41,9 @@ export async function createSubscription(formData: FormData): Promise<CreateSubs
     return { ok: false, error: t('invalidData') }
   }
 
-  const trips = await listTrips(parsed.data.direction, parsed.data.date)
-  const trip = trips.find((t) => t.uid === parsed.data.tripUid)
-  if (!trip) {
+  const events = await listEvents(parsed.data.direction, parsed.data.date)
+  const event = events.find((e) => e.uid === parsed.data.tripUid)
+  if (!event) {
     return { ok: false, error: t('tripNotFound') }
   }
 
@@ -54,7 +54,7 @@ export async function createSubscription(formData: FormData): Promise<CreateSubs
       direction: parsed.data.direction,
       date: parsed.data.date,
       tripUid: parsed.data.tripUid,
-      departureAt: new Date(trip.dtstart),
+      departureAt: new Date(event.dtstart),
       capacityType: parsed.data.capacityType,
       threshold: parsed.data.threshold,
       renotifyMode: parsed.data.renotifyMode,

@@ -16,12 +16,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createSubscription } from '@/actions/subscriptions'
-import { SHIP_NAMES, type Trip } from '@/lib/praamid'
+import { SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
 type Props = {
-  trip: Trip
+  trip: PraamidEvent
   direction: string
   date: string
   existingKey: Set<string>
