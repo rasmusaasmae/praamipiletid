@@ -1,19 +1,11 @@
 import { asc, eq } from 'drizzle-orm'
-import { getFormatter, getTranslations } from 'next-intl/server'
+import { getTranslations } from 'next-intl/server'
 import { Plus } from 'lucide-react'
 import { db } from '@/db'
-import { journeyOptions, journeys, user } from '@/db/schema'
+import { journeyOptions, journeys, tickets, user } from '@/db/schema'
 import { requireUser } from '@/lib/session'
-import { SubscriptionRow } from '@/components/subscription-row'
+import { JourneyCard, type JourneyCardData } from '@/components/journey-card'
 import { TopicCopyButton } from '@/components/topic-copy-button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
@@ -23,7 +15,7 @@ export default async function HomePage() {
   const t = await getTranslations('Home')
   const tSub = await getTranslations('Subscriptions')
 
-  const [me, rows] = await Promise.all([
+  const [me, journeyRows, optionRows, ticketRows] = await Promise.all([
     db
       .select({ ntfyTopic: user.ntfyTopic })
       .from(user)
@@ -36,15 +28,34 @@ export default async function HomePage() {
         measurementUnit: journeys.measurementUnit,
         threshold: journeys.threshold,
         active: journeys.active,
+        notify: journeys.notify,
+        edit: journeys.edit,
+      })
+      .from(journeys)
+      .where(eq(journeys.userId, session.user.id))
+      .all(),
+    db
+      .select({
+        id: journeyOptions.id,
+        journeyId: journeyOptions.journeyId,
+        priority: journeyOptions.priority,
+        active: journeyOptions.active,
         eventUid: journeyOptions.eventUid,
         eventDate: journeyOptions.eventDate,
         eventDtstart: journeyOptions.eventDtstart,
         lastCapacity: journeyOptions.lastCapacity,
+        lastCapacityState: journeyOptions.lastCapacityState,
       })
-      .from(journeys)
-      .innerJoin(journeyOptions, eq(journeyOptions.journeyId, journeys.id))
+      .from(journeyOptions)
+      .innerJoin(journeys, eq(journeys.id, journeyOptions.journeyId))
       .where(eq(journeys.userId, session.user.id))
-      .orderBy(asc(journeyOptions.eventDtstart))
+      .orderBy(asc(journeyOptions.priority))
+      .all(),
+    db
+      .select()
+      .from(tickets)
+      .innerJoin(journeys, eq(journeys.id, tickets.journeyId))
+      .where(eq(journeys.userId, session.user.id))
       .all(),
   ])
 
@@ -52,13 +63,25 @@ export default async function HomePage() {
   const topic = me?.ntfyTopic ?? ''
   const fullUrl = topic ? `${ntfyBase}/${topic}` : null
 
-  const format = await getFormatter()
-  const groups = new Map<string, typeof rows>()
-  for (const r of rows) {
-    const bucket = groups.get(r.eventDate) ?? []
-    bucket.push(r)
-    groups.set(r.eventDate, bucket)
+  const optionsByJourney = new Map<string, (typeof optionRows)[number][]>()
+  for (const o of optionRows) {
+    const list = optionsByJourney.get(o.journeyId) ?? []
+    list.push(o)
+    optionsByJourney.set(o.journeyId, list)
   }
+  const ticketByJourney = new Map(ticketRows.map((r) => [r.tickets.journeyId, r.tickets]))
+
+  const cards: JourneyCardData[] = journeyRows
+    .map((j) => ({
+      journey: j,
+      options: optionsByJourney.get(j.id) ?? [],
+      ticket: ticketByJourney.get(j.id) ?? null,
+    }))
+    .sort((a, b) => {
+      const aNext = a.options[0]?.eventDtstart.getTime() ?? Infinity
+      const bNext = b.options[0]?.eventDtstart.getTime() ?? Infinity
+      return aNext - bNext
+    })
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,7 +124,7 @@ export default async function HomePage() {
         </Link>
       </div>
 
-      {rows.length === 0 ? (
+      {cards.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-muted-foreground">
             {tSub('empty')}{' '}
@@ -112,32 +135,10 @@ export default async function HomePage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{tSub('columnTrip')}</TableHead>
-                <TableHead>{tSub('columnType')}</TableHead>
-                <TableHead>{tSub('columnThreshold')}</TableHead>
-                <TableHead>{tSub('columnStatus')}</TableHead>
-                <TableHead className="text-right">{tSub('columnActions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...groups.entries()].flatMap(([date, subs]) => [
-                <TableRow key={`h-${date}`} className="bg-muted/40 hover:bg-muted/40">
-                  <TableCell colSpan={5} className="py-2 text-sm font-medium text-foreground">
-                    {format.dateTime(new Date(`${date}T00:00:00`), {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'long',
-                    })}
-                  </TableCell>
-                </TableRow>,
-                ...subs.map((r) => <SubscriptionRow key={r.id} row={r} />),
-              ])}
-            </TableBody>
-          </Table>
+        <div className="flex flex-col gap-4">
+          {cards.map((card) => (
+            <JourneyCard key={card.journey.id} data={card} />
+          ))}
         </div>
       )}
     </div>

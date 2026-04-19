@@ -60,7 +60,32 @@
     "subscribe": "Telli",
     "alreadySubscribed": "Juba tellitud",
     "saving": "Salvestan…",
-    "subscribed": "Tellimus loodud"
+    "subscribed": "Tellimus loodud",
+    "target": "Lisa",
+    "targetNew": "Uus tellimus",
+    "targetExisting": "{unit} · lävi {threshold}",
+    "willUseUnit": "Kasutab tüüpi {unit}",
+    "addOption": "Lisa valik",
+    "optionAdded": "Valik lisatud"
+  },
+  "Options": {
+    "empty": "Sellel reisil pole veel valikuid.",
+    "past": "Möödunud",
+    "notYetChecked": "Pole veel kontrollitud",
+    "above": "vaba",
+    "below": "alla läve",
+    "moveUp": "Liiguta üles",
+    "moveDown": "Liiguta alla",
+    "remove": "Eemalda valik",
+    "removed": "Valik eemaldatud",
+    "moved": "Liigutatud",
+    "badgeNotify": "Teavitan",
+    "badgeEdit": "Auto-muuda"
+  },
+  "Ticket": {
+    "empty": "Piletit pole lisatud.",
+    "attachSoon": "Lisa (varsti)",
+    "detach": "Eemalda"
   },
   "Subscriptions": {
     "title": "Minu tellimused",

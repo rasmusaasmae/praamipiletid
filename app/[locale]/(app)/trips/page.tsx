@@ -1,11 +1,11 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
 import { journeyOptions, journeys } from '@/db/schema'
 import { listEvents } from '@/lib/praamid'
 import { requireUser } from '@/lib/session'
 import { TripsFilter } from '@/components/trips-filter'
-import { TripCard } from '@/components/trip-card'
+import { TripCard, type JourneyTarget } from '@/components/trip-card'
 import { Card, CardContent } from '@/components/ui/card'
 
 const DIRECTION_CODES = ['VK', 'KV', 'RH', 'HR'] as const
@@ -37,27 +37,41 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
     error = err instanceof Error ? err.message : t('loadError')
   }
 
-  const myExisting = events.length
+  const myJourneys = await db
+    .select({
+      id: journeys.id,
+      measurementUnit: journeys.measurementUnit,
+      threshold: journeys.threshold,
+    })
+    .from(journeys)
+    .where(and(eq(journeys.userId, session.user.id), eq(journeys.direction, direction)))
+    .all()
+
+  const myOptions = myJourneys.length
     ? await db
         .select({
+          journeyId: journeyOptions.journeyId,
           eventUid: journeyOptions.eventUid,
-          measurementUnit: journeys.measurementUnit,
         })
-        .from(journeys)
-        .innerJoin(journeyOptions, eq(journeyOptions.journeyId, journeys.id))
-        .where(
-          and(
-            eq(journeys.userId, session.user.id),
-            eq(journeyOptions.active, true),
-            inArray(
-              journeyOptions.eventUid,
-              events.map((e) => e.uid),
-            ),
-          ),
-        )
+        .from(journeyOptions)
+        .innerJoin(journeys, eq(journeys.id, journeyOptions.journeyId))
+        .where(eq(journeys.userId, session.user.id))
         .all()
     : []
-  const existingKey = new Set(myExisting.map((r) => `${r.eventUid}|${r.measurementUnit}`))
+
+  const optionsByJourney = new Map<string, Set<string>>()
+  for (const o of myOptions) {
+    const set = optionsByJourney.get(o.journeyId) ?? new Set<string>()
+    set.add(o.eventUid)
+    optionsByJourney.set(o.journeyId, set)
+  }
+
+  const targets: JourneyTarget[] = myJourneys.map((j) => ({
+    id: j.id,
+    measurementUnit: j.measurementUnit,
+    threshold: j.threshold,
+    eventUids: [...(optionsByJourney.get(j.id) ?? [])],
+  }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -84,7 +98,7 @@ export default async function TripsPage({ searchParams }: { searchParams: Search
               trip={event}
               direction={direction}
               date={date}
-              existingKey={existingKey}
+              journeys={targets}
             />
           ))}
         </div>

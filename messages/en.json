@@ -60,7 +60,32 @@
     "subscribe": "Subscribe",
     "alreadySubscribed": "Already subscribed",
     "saving": "Saving…",
-    "subscribed": "Subscription created"
+    "subscribed": "Subscription created",
+    "target": "Add to",
+    "targetNew": "New subscription",
+    "targetExisting": "{unit} · threshold {threshold}",
+    "willUseUnit": "Will use {unit}",
+    "addOption": "Add option",
+    "optionAdded": "Option added"
+  },
+  "Options": {
+    "empty": "No options on this journey yet.",
+    "past": "Past",
+    "notYetChecked": "Not checked yet",
+    "above": "free",
+    "below": "below threshold",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove option",
+    "removed": "Option removed",
+    "moved": "Moved",
+    "badgeNotify": "Notifying",
+    "badgeEdit": "Auto-edit"
+  },
+  "Ticket": {
+    "empty": "No ticket attached.",
+    "attachSoon": "Attach (soon)",
+    "detach": "Detach"
   },
   "Subscriptions": {
     "title": "My subscriptions",
