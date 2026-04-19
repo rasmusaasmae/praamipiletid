@@ -153,7 +153,7 @@ export function TripCard({ data }: { data: TripCardData }) {
           </Button>
         </div>
 
-        <TicketSlot ticket={data.ticket} />
+        <TicketSlot tripId={data.trip.id} ticket={data.ticket} />
 
         {sorted.length === 0 ? (
           <p className="text-sm text-muted-foreground">{tOpt('empty')}</p>

@@ -10,7 +10,11 @@
     "missingId": "Missing id",
     "tripNotFound": "Trip not found",
     "eventNotFound": "Event not found",
+    "ticketNotFound": "Ticket not found",
     "optionExists": "Already in this trip",
+    "noCredential": "No praamid.ee session captured yet",
+    "credentialExpired": "praamid.ee session expired",
+    "praamidError": "praamid.ee request failed",
     "pollIntervalRange": "Value must be 5000..600000 ms",
     "topicInUse": "This topic is already in use",
     "topicMin": "At least 4 characters",
@@ -77,8 +81,20 @@
   },
   "Ticket": {
     "empty": "No ticket attached.",
-    "attachSoon": "Attach (soon)",
-    "detach": "Detach"
+    "attach": "Attach",
+    "attachTitle": "Attach a praamid.ee ticket",
+    "attachDescription": "Pick one of your active tickets on this route.",
+    "attachEmpty": "No active tickets match this trip's direction.",
+    "attachConfirm": "Attach",
+    "attachCancel": "Cancel",
+    "attaching": "Attaching…",
+    "attached": "Ticket attached",
+    "detach": "Detach",
+    "detachConfirm": "Detach this ticket from the trip?",
+    "detaching": "Detaching…",
+    "detached": "Ticket detached",
+    "loading": "Loading tickets…",
+    "goToSettings": "Open praamid.ee settings"
   },
   "NewTrip": {
     "title": "New trip",
@@ -141,7 +157,7 @@
     "statusError": "Last error: {lastError}",
     "howToTitle": "How to capture",
     "howToSteps": "Drag this bookmark to your bookmarks bar, open praamid.ee in another tab while logged in, then click the bookmark.",
-    "bookmarkletLabel": "Drag to bookmarks →",
+    "bookmarkletLabel": "Capture praamid session",
     "bookmarkletTitle": "Capture praamid session",
     "refreshNonce": "Refresh bookmarklet",
     "refreshing": "Refreshing…",
@@ -149,7 +165,13 @@
     "forgetConfirm": "Delete the stored praamid session?",
     "forgotten": "Session forgotten",
     "errorNonce": "Could not prepare bookmarklet",
-    "notConfigured": "Credential encryption key is not configured on the server."
+    "notConfigured": "Credential encryption key is not configured on the server.",
+    "captureTitle": "Capturing praamid session",
+    "capturing": "Capturing session…",
+    "captured": "Session captured ✓",
+    "captureFailed": "Capture failed: {error}",
+    "captureMissingData": "Missing capture data — please run the bookmarklet again.",
+    "backToSettings": "Back to settings"
   },
   "Admin": {
     "title": "Admin",

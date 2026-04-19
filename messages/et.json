@@ -10,7 +10,11 @@
     "missingId": "Puudub id",
     "tripNotFound": "Reisi ei leitud",
     "eventNotFound": "Väljumist ei leitud",
+    "ticketNotFound": "Piletit ei leitud",
     "optionExists": "See on juba sellel reisil",
+    "noCredential": "praamid.ee sessiooni pole veel salvestatud",
+    "credentialExpired": "praamid.ee sessioon on aegunud",
+    "praamidError": "praamid.ee päring ebaõnnestus",
     "pollIntervalRange": "Väärtus peab olema 5000..600000 ms",
     "topicInUse": "See teema on juba kasutusel",
     "topicMin": "Vähemalt 4 tähemärki",
@@ -77,8 +81,20 @@
   },
   "Ticket": {
     "empty": "Piletit pole lisatud.",
-    "attachSoon": "Lisa (varsti)",
-    "detach": "Eemalda"
+    "attach": "Lisa pilet",
+    "attachTitle": "Lisa praamid.ee pilet",
+    "attachDescription": "Vali selle suuna aktiivsete piletite seast.",
+    "attachEmpty": "Sellele suunale ei leitud aktiivseid pileteid.",
+    "attachConfirm": "Lisa",
+    "attachCancel": "Tühista",
+    "attaching": "Lisan…",
+    "attached": "Pilet lisatud",
+    "detach": "Eemalda",
+    "detachConfirm": "Eemaldan pileti sellelt reisilt?",
+    "detaching": "Eemaldan…",
+    "detached": "Pilet eemaldatud",
+    "loading": "Laadin pileteid…",
+    "goToSettings": "Ava praamid.ee seaded"
   },
   "NewTrip": {
     "title": "Uus reis",
@@ -141,7 +157,7 @@
     "statusError": "Viimane viga: {lastError}",
     "howToTitle": "Kuidas salvestada",
     "howToSteps": "Lohista see nupp järjehoidjate ribale, ava teises vahelehes praamid.ee (sisse logituna) ja klõpsa järjehoidjat.",
-    "bookmarkletLabel": "Lohista järjehoidjatesse →",
+    "bookmarkletLabel": "Salvesta praamid sessioon",
     "bookmarkletTitle": "Salvesta praamid sessioon",
     "refreshNonce": "Värskenda järjehoidjat",
     "refreshing": "Värskendan…",
@@ -149,7 +165,13 @@
     "forgetConfirm": "Kustutan salvestatud praamid sessiooni?",
     "forgotten": "Sessioon kustutatud",
     "errorNonce": "Järjehoidjat ei saanud ette valmistada",
-    "notConfigured": "Krüpteerimisvõti pole serveris seadistatud."
+    "notConfigured": "Krüpteerimisvõti pole serveris seadistatud.",
+    "captureTitle": "Salvestan praamid sessiooni",
+    "capturing": "Salvestan sessiooni…",
+    "captured": "Sessioon salvestatud ✓",
+    "captureFailed": "Salvestamine ebaõnnestus: {error}",
+    "captureMissingData": "Sessiooni andmed puuduvad — käivita järjehoidja uuesti.",
+    "backToSettings": "Tagasi seadetesse"
   },
   "Admin": {
     "title": "Admin",

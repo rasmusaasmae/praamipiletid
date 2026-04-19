@@ -4,7 +4,12 @@ import { getCredentialStatus } from '@/lib/praamid-credentials'
 import { PraamidBookmarklet } from '@/components/praamid-bookmarklet'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default async function PraamidSettingsPage() {
+export default async function PraamidSettingsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
   const session = await requireUser()
   const t = await getTranslations('Praamid')
   const format = await getFormatter()
@@ -17,6 +22,7 @@ export default async function PraamidSettingsPage() {
     process.env.APP_URL ??
     process.env.BETTER_AUTH_URL ??
     'http://localhost:3000'
+  const captureUrl = `${appUrl}/${locale}/praamid/capture`
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -54,7 +60,7 @@ export default async function PraamidSettingsPage() {
           {!configured ? (
             <p className="text-sm text-destructive">{t('notConfigured')}</p>
           ) : (
-            <PraamidBookmarklet appUrl={appUrl} />
+            <PraamidBookmarklet captureUrl={captureUrl} />
           )}
           {status?.lastError ? (
             <p className="text-sm text-destructive">
