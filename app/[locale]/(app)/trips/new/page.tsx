@@ -9,11 +9,11 @@ export default async function NewTripPage() {
   const tDir = await getTranslations('Directions')
   const tCap = await getTranslations('Capacity')
 
-  const directions = (['VK', 'KV', 'RH', 'HR'] as const).map((code) => ({
+  const directions = (['RH', 'HR', 'VK', 'KV'] as const).map((code) => ({
     code,
     label: tDir(code),
   }))
-  const units = (['sv', 'bv', 'pcs', 'mc', 'bc'] as const).map((code) => ({
+  const units = (['sv', 'bv'] as const).map((code) => ({
     code,
     label: tCap(code),
   }))

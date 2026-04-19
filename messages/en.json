@@ -107,7 +107,7 @@
     "title": "New trip",
     "description": "Pick the direction and what to watch. You'll add events as options next.",
     "direction": "Direction",
-    "measurementUnit": "Watch capacity",
+    "measurementUnit": "Vehicle",
     "notifyLabel": "Send notifications",
     "notifyHelp": "Push to your ntfy topic when a slot opens up.",
     "editLabel": "Automatically swap ticket",

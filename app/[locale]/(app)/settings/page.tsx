@@ -46,7 +46,7 @@ export default async function SettingsPage({
             <div className="flex items-center gap-2">
               <CardTitle>{tP('title')}</CardTitle>
               {status ? (
-                <Badge variant="secondary">{tP('statusActiveBadge')}</Badge>
+                <Badge variant="success">{tP('statusActiveBadge')}</Badge>
               ) : (
                 <Badge variant="outline">{tP('statusMissingBadge')}</Badge>
               )}

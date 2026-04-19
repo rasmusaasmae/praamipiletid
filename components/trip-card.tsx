@@ -49,7 +49,6 @@ export type TripCardData = {
     id: string
     tripId: string
     priority: number
-    active: boolean
     eventUid: string
     eventDate: string
     eventDtstart: Date
@@ -139,7 +138,7 @@ export function TripCard({ data }: { data: TripCardData }) {
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
             <Toggle
-              variant="outline"
+              variant="success"
               pressed={data.trip.notify}
               onPressedChange={(next) => toggleFlag('notify', next)}
               disabled={isPending}
@@ -149,7 +148,7 @@ export function TripCard({ data }: { data: TripCardData }) {
               {tOpt('badgeNotify')}
             </Toggle>
             <Toggle
-              variant="outline"
+              variant="success"
               pressed={data.trip.edit}
               onPressedChange={(next) => toggleFlag('edit', next)}
               disabled={isPending}

@@ -1,0 +1,1 @@
+ALTER TABLE `trip_options` DROP COLUMN `active`;

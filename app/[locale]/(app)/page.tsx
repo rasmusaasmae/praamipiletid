@@ -31,7 +31,6 @@ export default async function HomePage() {
         id: tripOptions.id,
         tripId: tripOptions.tripId,
         priority: tripOptions.priority,
-        active: tripOptions.active,
         eventUid: tripOptions.eventUid,
         eventDate: tripOptions.eventDate,
         eventDtstart: tripOptions.eventDtstart,

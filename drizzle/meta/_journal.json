@@ -64,6 +64,13 @@
       "when": 1776622581624,
       "tag": "0008_change_stop_before_to_datetime",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1776627570614,
+      "tag": "0009_drop_trip_options_active",
+      "breakpoints": true
     }
   ]
 }

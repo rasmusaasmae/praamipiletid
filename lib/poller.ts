@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, gt, inArray } from 'drizzle-orm'
+import { eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@/db'
 import { tickets, tripOptions, trips, user } from '@/db/schema'
 import { CAPACITY_LABELS, listEvents, type PraamidEvent } from '@/lib/praamid'
@@ -7,6 +7,9 @@ import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
 import { processEditForTrip } from '@/lib/edit'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('poller')
 
 let running = false
 let stopRequested = false
@@ -46,7 +49,11 @@ async function processBatch(
   try {
     events = await listEvents(dir, date, timeShift)
   } catch (err) {
-    console.error(`[poller] listEvents ${dir} ${date} failed:`, err)
+    log.error('listEvents failed', {
+      dir,
+      date,
+      error: err instanceof Error ? err.message : String(err),
+    })
     await logAudit({
       type: 'system.poller_tick_error',
       actor: 'system',
@@ -54,6 +61,7 @@ async function processBatch(
     })
     return
   }
+  log.debug('processBatch', { dir, date, rows: rows.length, events: events.length })
 
   const eventByUid = new Map(events.map((e) => [e.uid, e]))
 
@@ -75,7 +83,7 @@ async function processBatch(
     if (transition && row.notify && !isCurrentTicket) {
       const topic = topicByUser.get(row.userId)
       if (!topic) {
-        console.warn(`[poller] no ntfy topic for user ${row.userId}, skipping`)
+        log.warn('no ntfy topic, skipping notify', { userId: row.userId, optionId: row.optionId })
       } else {
         const label = CAPACITY_LABELS[row.measurementUnit]?.et ?? row.measurementUnit
         const title = `${dir} ${date} ${formatTime(row.eventDtstart)}`
@@ -91,6 +99,13 @@ async function processBatch(
             message: msg,
             tag: 'ferry',
           })
+          log.info('notified', {
+            userId: row.userId,
+            tripId: row.tripId,
+            transition,
+            capacity,
+            priority: row.priority,
+          })
           await logAudit({
             type: 'notification.availability_changed',
             actor: 'system',
@@ -105,7 +120,10 @@ async function processBatch(
             },
           })
         } catch (err) {
-          console.error(`[poller] notify failed for option ${row.optionId}:`, err)
+          log.error('notify failed', {
+            optionId: row.optionId,
+            error: err instanceof Error ? err.message : String(err),
+          })
         }
       }
     }
@@ -140,12 +158,7 @@ async function tick() {
     .from(trips)
     .innerJoin(tripOptions, eq(tripOptions.tripId, trips.id))
     .leftJoin(tickets, eq(tickets.tripId, trips.id))
-    .where(
-      and(
-        eq(tripOptions.active, true),
-        gt(tripOptions.eventDtstart, now),
-      ),
-    )
+    .where(gt(tripOptions.eventDtstart, now))
     .all()
 
   const due = rows.filter((r) => r.stopBeforeAt.getTime() > now.getTime())
@@ -201,12 +214,18 @@ async function tick() {
               tag: 'ferry',
             })
           } catch (err) {
-            console.error(`[poller] edit notify failed for trip ${tripId}:`, err)
+            log.error('edit notify failed', {
+              tripId,
+              error: err instanceof Error ? err.message : String(err),
+            })
           }
         }
       }
     } catch (err) {
-      console.error(`[poller] processEditForTrip failed for trip ${tripId}:`, err)
+      log.error('processEditForTrip threw', {
+        tripId,
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 }
@@ -217,11 +236,12 @@ async function loop() {
     try {
       await tick()
     } catch (err) {
-      console.error('[poller] tick failed:', err)
+      log.error('tick failed', { error: err instanceof Error ? err.message : String(err) })
     }
     const { pollIntervalMs } = await getAllSettings()
     const elapsed = Date.now() - started
     const delay = Math.max(1000, pollIntervalMs - elapsed)
+    log.debug('tick complete', { elapsedMs: elapsed, nextDelayMs: delay })
     await new Promise((r) => setTimeout(r, delay))
   }
 }
@@ -230,9 +250,9 @@ export function startPoller() {
   if (running) return
   running = true
   stopRequested = false
-  console.log('[poller] starting')
+  log.info('starting')
   loop().catch((err) => {
-    console.error('[poller] loop crashed:', err)
+    log.error('loop crashed', { error: err instanceof Error ? err.message : String(err) })
     running = false
   })
 }

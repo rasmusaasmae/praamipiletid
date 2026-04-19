@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { tickets, tripOptions, trips } from '@/db/schema'
 import {
@@ -18,6 +18,9 @@ import {
 } from '@/lib/praamid-credentials'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('edit')
 
 const CREDENTIAL_BUFFER_MS = 15 * 60 * 1000
 const TRIP_BACKOFF_MS = 10 * 60 * 1000
@@ -41,6 +44,27 @@ export type EditOutcome =
     }
 
 export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
+  log.debug('start', { tripId })
+  const outcome = await runEdit(tripId)
+  if (outcome.kind === 'succeeded') {
+    log.info('succeeded', {
+      tripId,
+      newTicketNumber: outcome.newTicketNumber,
+      invoiceNumber: outcome.invoiceNumber,
+    })
+  } else if (outcome.kind === 'failed') {
+    log.error('failed', { tripId, stage: outcome.stage, reason: outcome.reason })
+  } else if (outcome.kind === 'rolled_back') {
+    log.warn('rolled_back', { tripId, reason: outcome.reason })
+  } else if (outcome.kind === 'idempotency_paused') {
+    log.warn('idempotency_paused', { tripId, reason: outcome.reason })
+  } else {
+    log.debug(outcome.kind, { tripId, ...('reason' in outcome ? { reason: outcome.reason } : {}) })
+  }
+  return outcome
+}
+
+async function runEdit(tripId: string): Promise<EditOutcome> {
   const { editGloballyEnabled } = await getAllSettings()
   if (!editGloballyEnabled) {
     return { kind: 'gate_blocked', reason: 'edit_disabled' }
@@ -96,7 +120,7 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
       lastCapacityState: tripOptions.lastCapacityState,
     })
     .from(tripOptions)
-    .where(and(eq(tripOptions.tripId, tripId), eq(tripOptions.active, true)))
+    .where(eq(tripOptions.tripId, tripId))
     .all()
 
   const now = Date.now()
@@ -112,8 +136,22 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
     .filter((o) => o.priority < currentPriority)
     .sort((a, b) => a.priority - b.priority)[0]
 
-  if (!target) return { kind: 'no_target' }
+  if (!target) {
+    log.debug('no_target', {
+      tripId,
+      currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
+      consideredCount: options.length,
+    })
+    return { kind: 'no_target' }
+  }
 
+  log.info('attempting', {
+    tripId,
+    fromEventUid: ticket.eventUid,
+    toEventUid: target.eventUid,
+    toPriority: target.priority,
+    currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
+  })
   lastAttemptAt.set(tripId, Date.now())
   await logAudit({
     type: 'edit.attempted',
@@ -256,24 +294,20 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
   )
   if (!newTicket) return fail('internal', 'new_ticket_not_found')
 
-  db.transaction((tx) => {
-    tx.update(tickets)
-      .set({
-        ticketCode: newTicket.ticketCode,
-        ticketNumber: newTicket.ticketNumber,
-        bookingUid: newTicket.bookingUid,
-        eventUid: newTicket.event.uid,
-        ticketDate: newTicket.ticketDate,
-        eventDtstart: new Date(newTicket.event.dtstart),
-        capturedAt: new Date(),
-      })
-      .where(eq(tickets.tripId, tripId))
-      .run()
-    tx.update(tripOptions)
-      .set({ active: false })
-      .where(eq(tripOptions.id, target.id))
-      .run()
-  })
+  db.update(tickets)
+    .set({
+      ticketCode: newTicket.ticketCode,
+      ticketNumber: newTicket.ticketNumber,
+      bookingUid: newTicket.bookingUid,
+      eventUid: newTicket.event.uid,
+      ticketDate: newTicket.ticketDate,
+      eventDtstart: new Date(newTicket.event.dtstart),
+      capturedAt: new Date(),
+    })
+    .where(eq(tickets.tripId, tripId))
+    .run()
+
+  lastAttemptAt.delete(tripId)
 
   await logAudit({
     type: 'edit.succeeded',

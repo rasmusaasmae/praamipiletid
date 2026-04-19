@@ -64,7 +64,6 @@ export const tripOptions = sqliteTable(
       .notNull()
       .references(() => trips.id, { onDelete: 'cascade' }),
     priority: integer('priority').notNull(),
-    active: integer('active', { mode: 'boolean' }).default(true).notNull(),
     eventUid: text('event_uid').notNull(),
     eventDate: text('event_date').notNull(),
     eventDtstart: integer('event_dtstart', { mode: 'timestamp_ms' }).notNull(),
