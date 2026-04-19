@@ -11,6 +11,7 @@ services:
       ADMIN_EMAILS: ${ADMIN_EMAILS}
       NOTIFIER: ${NOTIFIER:-ntfy}
       NTFY_BASE_URL: ${NTFY_BASE_URL:-https://ntfy.sh}
+      PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
       DATABASE_PATH: /app/data/praamipiletid.db
     volumes:
       - praamipiletid_data:/app/data
