@@ -21,7 +21,7 @@
     "topicMax": "Kuni 64 tähemärki",
     "topicPattern": "Ainult tähed, numbrid, _ ja -",
     "topicInvalid": "Vigane teema",
-    "editRequiresTicket": "Lisa pilet enne auto-muutmise sisselülitamist"
+    "editRequiresTicket": "Lisa pilet enne automaatse vahetuse sisselülitamist"
   },
   "Home": {
     "topicTitle": "Sinu teavituste teema",
@@ -78,7 +78,7 @@
     "moved": "Liigutatud",
     "addOption": "Lisa valik",
     "badgeNotify": "Teavita",
-    "badgeEdit": "Auto-muuda",
+    "badgeEdit": "Auto-vahetus",
     "current": "praegune",
     "stopBeforeLabel": "Lävi (min enne väljumist)"
   },
@@ -108,8 +108,8 @@
     "thresholdHelp": "Teavita, kui vabu kohti on vähemalt nii palju.",
     "notifyLabel": "Saada teavitusi",
     "notifyHelp": "Saada teavitus ntfy teemasse, kui lävi ületatakse.",
-    "editLabel": "Auto-muuda piletit (varsti)",
-    "editHelp": "Liiguta pilet automaatselt, kui parem väljumine vabaneb.",
+    "editLabel": "Automaatselt vaheta pilet",
+    "editHelp": "Pilet vahetatakse automaatselt eelistusjärjekorras parema vastu.",
     "submit": "Loo reis",
     "creating": "Loon…",
     "cancel": "Tühista",
@@ -183,8 +183,8 @@
     "pollTitle": "Pollimise intervall",
     "pollDescription": "Kui tihti kontrollime praamipiletid.ee API-t. 5000–600000 ms.",
     "pollLabel": "Intervall (ms)",
-    "editTitle": "Auto-muutmine (globaalne)",
-    "editDescription": "Lülita automaatne piletite muutmine kõigi kasutajate jaoks sisse või välja.",
+    "editTitle": "Automaatne vahetus (globaalne)",
+    "editDescription": "Lülita automaatne piletite vahetamine kõigi kasutajate jaoks sisse või välja.",
     "editBadgeEnabled": "Sees",
     "editBadgeDisabled": "Väljas",
     "editEnable": "Lülita sisse",

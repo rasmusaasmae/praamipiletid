@@ -21,7 +21,7 @@
     "topicMax": "At most 64 characters",
     "topicPattern": "Only letters, numbers, _ and -",
     "topicInvalid": "Invalid topic",
-    "editRequiresTicket": "Attach a ticket before enabling auto-edit"
+    "editRequiresTicket": "Attach a ticket before enabling automatic swap"
   },
   "Home": {
     "topicTitle": "Your notification topic",
@@ -78,7 +78,7 @@
     "moved": "Moved",
     "addOption": "Add option",
     "badgeNotify": "Notify",
-    "badgeEdit": "Auto-edit",
+    "badgeEdit": "Auto-swap",
     "current": "current",
     "stopBeforeLabel": "Cutoff (min before departure)"
   },
@@ -108,8 +108,8 @@
     "thresholdHelp": "Notify when free slots reach this number or more.",
     "notifyLabel": "Send notifications",
     "notifyHelp": "Push to your ntfy topic when the threshold is crossed.",
-    "editLabel": "Auto-edit ticket (soon)",
-    "editHelp": "Automatically move your ticket when a better option opens.",
+    "editLabel": "Automatically swap ticket",
+    "editHelp": "Ticket will be swapped automatically to a higher priority preference.",
     "submit": "Create trip",
     "creating": "Creating…",
     "cancel": "Cancel",
@@ -183,8 +183,8 @@
     "pollTitle": "Poll interval",
     "pollDescription": "How often we check the praamipiletid.ee API. 5000–600000 ms.",
     "pollLabel": "Interval (ms)",
-    "editTitle": "Auto-edit (global)",
-    "editDescription": "Globally enable or disable automatic ticket edits across all users.",
+    "editTitle": "Auto-swap (global)",
+    "editDescription": "Globally enable or disable automatic ticket swaps across all users.",
     "editBadgeEnabled": "Enabled",
     "editBadgeDisabled": "Disabled",
     "editEnable": "Enable globally",
