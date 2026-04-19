@@ -26,6 +26,10 @@ export type AuditPayload = {
     threshold: number
     priority: number
   }
+  'notification.credential_expiring': {
+    expiresAt: string
+    hoursLeft: number
+  }
   'edit.attempted': {
     fromEventUid: string
     toEventUid: string

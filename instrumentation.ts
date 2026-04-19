@@ -12,4 +12,7 @@ export async function register() {
 
   const { startPoller } = await import('@/lib/poller')
   startPoller()
+
+  const { startCredentialExpiryWatcher } = await import('@/lib/credential-expiry')
+  startCredentialExpiryWatcher()
 }
