@@ -4,7 +4,7 @@ import { db } from '@/db'
 import { auditLogs } from '@/db/schema'
 
 export type AuditPayload = {
-  'trip.created': { direction: string; measurementUnit: string; threshold: number }
+  'trip.created': { direction: string; measurementUnit: string }
   'trip.updated': { changes: Record<string, unknown> }
   'trip.deleted': { direction: string }
   'option.added': { eventUid: string; priority: number }
@@ -18,12 +18,11 @@ export type AuditPayload = {
   'credential.verified': Record<string, never>
   'credential.expired': Record<string, never>
   'credential.forgotten': Record<string, never>
-  'notification.threshold_crossed': {
+  'notification.availability_changed': {
     eventUid: string
     from: 'above' | 'below' | null
     to: 'above' | 'below'
     capacity: number
-    threshold: number
     priority: number
   }
   'notification.credential_expiring': {

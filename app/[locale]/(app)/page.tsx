@@ -26,7 +26,6 @@ export default async function HomePage() {
         id: trips.id,
         direction: trips.direction,
         measurementUnit: trips.measurementUnit,
-        threshold: trips.threshold,
         active: trips.active,
         notify: trips.notify,
         edit: trips.edit,

@@ -51,7 +51,6 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
       id: trips.id,
       userId: trips.userId,
       direction: trips.direction,
-      threshold: trips.threshold,
       edit: trips.edit,
       active: trips.active,
     })
@@ -109,9 +108,7 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
     .filter((o) => o.eventUid !== ticket.eventUid)
     .filter((o) => o.eventDtstart.getTime() - o.stopBeforeMinutes * 60_000 > now)
     .filter(
-      (o) =>
-        o.lastCapacityState === 'above' &&
-        (o.lastCapacity ?? 0) >= trip.threshold,
+      (o) => o.lastCapacityState === 'above' && (o.lastCapacity ?? 0) >= 1,
     )
     .filter((o) => o.priority < currentPriority)
     .sort((a, b) => a.priority - b.priority)[0]

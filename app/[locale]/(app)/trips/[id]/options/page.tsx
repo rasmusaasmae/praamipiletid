@@ -42,7 +42,6 @@ export default async function AddOptionPage({
       id: trips.id,
       direction: trips.direction,
       measurementUnit: trips.measurementUnit,
-      threshold: trips.threshold,
     })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.userId, session.user.id)))
@@ -87,7 +86,7 @@ export default async function AddOptionPage({
         </Link>
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
-          {tDir(direction)} · {tCap(trip.measurementUnit as 'sv')} · {trip.threshold}+
+          {tDir(direction)} · {tCap(trip.measurementUnit as 'sv')}
         </p>
       </div>
 

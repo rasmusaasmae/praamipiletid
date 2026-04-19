@@ -24,7 +24,6 @@ export type TripCardData = {
     id: string
     direction: string
     measurementUnit: string
-    threshold: number
     active: boolean
     notify: boolean
     edit: boolean
@@ -117,9 +116,6 @@ export function TripCard({ data }: { data: TripCardData }) {
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
             <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
-            <Badge variant="secondary">
-              {t('columnThreshold')}: {data.trip.threshold}
-            </Badge>
           </div>
           <div className="flex items-center gap-2">
             {allPast ? (
@@ -195,7 +191,9 @@ export function TripCard({ data }: { data: TripCardData }) {
                           ? tOpt('past')
                           : option.lastCapacity == null
                             ? tOpt('notYetChecked')
-                            : `${option.lastCapacity} ${tOpt(state === 'above' ? 'above' : 'below')}`}
+                            : state === 'above'
+                              ? `${option.lastCapacity} ${tOpt('above')}`
+                              : tOpt('below')}
                       </span>
                     </div>
                   </div>

@@ -43,6 +43,13 @@
       "when": 1776617968121,
       "tag": "0005_move_stop_before_minutes_to_options",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1776621328913,
+      "tag": "0006_robust_vermin",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,6 @@ import { useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { createTrip } from '@/actions/trips'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -30,7 +29,6 @@ export function NewTripForm({ directions, units }: Props) {
 
   const [direction, setDirection] = useState(directions[0]?.code ?? 'HR')
   const [unit, setUnit] = useState(units[0]?.code ?? 'sv')
-  const [threshold, setThreshold] = useState('1')
   const [notify, setNotify] = useState(true)
   const [edit, setEdit] = useState(false)
 
@@ -39,7 +37,6 @@ export function NewTripForm({ directions, units }: Props) {
     const form = new FormData()
     form.set('direction', direction)
     form.set('measurementUnit', unit)
-    form.set('threshold', threshold)
     if (notify) form.set('notify', 'true')
     if (edit) form.set('edit', 'true')
 
@@ -90,19 +87,6 @@ export function NewTripForm({ directions, units }: Props) {
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="threshold">{t('threshold')}</Label>
-        <Input
-          id="threshold"
-          type="number"
-          min={1}
-          max={999}
-          value={threshold}
-          onChange={(e) => setThreshold(e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">{t('thresholdHelp')}</p>
       </div>
 
       <div className="flex flex-col gap-3 rounded-md border border-border p-3">

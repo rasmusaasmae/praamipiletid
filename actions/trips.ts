@@ -17,7 +17,6 @@ const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const createSchema = z.object({
   direction: directionSchema,
   measurementUnit: z.string().min(1),
-  threshold: z.coerce.number().int().min(1).max(999),
   notify: z.coerce.boolean().optional(),
   edit: z.coerce.boolean().optional(),
 })
@@ -34,7 +33,6 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
   const parsed = createSchema.safeParse({
     direction: formData.get('direction'),
     measurementUnit: formData.get('measurementUnit'),
-    threshold: formData.get('threshold'),
     notify: formData.get('notify') ?? undefined,
     edit: formData.get('edit') ?? undefined,
   })
@@ -47,7 +45,6 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
     userId: session.user.id,
     direction: parsed.data.direction,
     measurementUnit: parsed.data.measurementUnit,
-    threshold: parsed.data.threshold,
     notify: parsed.data.notify ?? true,
     edit: false,
     active: true,
@@ -61,7 +58,6 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
     payload: {
       direction: parsed.data.direction,
       measurementUnit: parsed.data.measurementUnit,
-      threshold: parsed.data.threshold,
     },
   })
 
@@ -71,7 +67,6 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
 
 const updateSchema = z.object({
   id: z.string().min(1),
-  threshold: z.coerce.number().int().min(1).max(999).optional(),
   active: z.coerce.boolean().optional(),
   notify: z.coerce.boolean().optional(),
   edit: z.coerce.boolean().optional(),
@@ -82,7 +77,6 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
   const t = await getTranslations('Errors')
   const parsed = updateSchema.safeParse({
     id: formData.get('id'),
-    threshold: formData.get('threshold') ?? undefined,
     active: formData.get('active') ?? undefined,
     notify: formData.get('notify') ?? undefined,
     edit: formData.get('edit') ?? undefined,

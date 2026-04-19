@@ -17,7 +17,6 @@ type JoinedOption = {
   userId: string
   direction: string
   measurementUnit: string
-  threshold: number
   notify: boolean
   edit: boolean
   stopBeforeMinutes: number
@@ -62,7 +61,7 @@ async function processBatch(
     const event = eventByUid.get(row.eventUid)
     if (!event) continue
     const capacity = event.capacities?.[row.measurementUnit] ?? 0
-    const nextState: 'above' | 'below' = capacity >= row.threshold ? 'above' : 'below'
+    const nextState: 'above' | 'below' = capacity >= 1 ? 'above' : 'below'
     const prevState = row.lastCapacityState as 'above' | 'below' | null
 
     const transition: 'opened' | 'closed' | null =
@@ -82,8 +81,8 @@ async function processBatch(
         const title = `${dir} ${date} ${formatTime(row.eventDtstart)}`
         const msg =
           transition === 'opened'
-            ? `${label}: ${capacity} kohta vaba (lävi ${row.threshold})`
-            : `${label}: kinni (${capacity} alla läve ${row.threshold})`
+            ? `${label}: ${capacity} kohta vaba`
+            : `${label}: kinni`
         try {
           await getNotifier().send({
             userId: row.userId,
@@ -93,7 +92,7 @@ async function processBatch(
             tag: 'ferry',
           })
           await logAudit({
-            type: 'notification.threshold_crossed',
+            type: 'notification.availability_changed',
             actor: 'system',
             userId: row.userId,
             tripId: row.tripId,
@@ -102,7 +101,6 @@ async function processBatch(
               from: prevState,
               to: nextState,
               capacity,
-              threshold: row.threshold,
               priority: row.priority,
             },
           })
@@ -128,7 +126,6 @@ async function tick() {
       userId: trips.userId,
       direction: trips.direction,
       measurementUnit: trips.measurementUnit,
-      threshold: trips.threshold,
       notify: trips.notify,
       edit: trips.edit,
       stopBeforeMinutes: tripOptions.stopBeforeMinutes,
@@ -187,7 +184,7 @@ async function tick() {
     if (!r.edit) continue
     if (r.currentTicketEventUid === r.eventUid) continue
     if (r.lastCapacityState !== 'above') continue
-    if ((r.lastCapacity ?? 0) < r.threshold) continue
+    if ((r.lastCapacity ?? 0) < 1) continue
     editTripIds.add(r.tripId)
     userByTrip.set(r.tripId, r.userId)
   }

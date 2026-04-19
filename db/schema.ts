@@ -22,7 +22,6 @@ export const trips = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     direction: text('direction').notNull(),
     measurementUnit: text('measurement_unit').notNull(),
-    threshold: integer('threshold').default(1).notNull(),
     notify: integer('notify', { mode: 'boolean' }).default(true).notNull(),
     edit: integer('edit', { mode: 'boolean' }).default(false).notNull(),
     active: integer('active', { mode: 'boolean' }).default(true).notNull(),

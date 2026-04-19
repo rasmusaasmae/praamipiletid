@@ -20,7 +20,6 @@ type Row = {
   userEmail: string
   direction: string
   measurementUnit: string
-  threshold: number
   active: boolean
   eventUid: string
   eventDate: string
@@ -61,7 +60,6 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
             <TableHead>{t('columnUser')}</TableHead>
             <TableHead>{t('columnTrip')}</TableHead>
             <TableHead>{t('columnType')}</TableHead>
-            <TableHead>{t('columnThreshold')}</TableHead>
             <TableHead>{t('columnLast')}</TableHead>
             <TableHead>{t('columnStatus')}</TableHead>
             <TableHead className="text-right">{t('columnActions')}</TableHead>
@@ -80,7 +78,6 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
                   </div>
                 </TableCell>
                 <TableCell>{tCap(r.measurementUnit as 'sv')}</TableCell>
-                <TableCell>{r.threshold}</TableCell>
                 <TableCell>{r.lastCapacity != null ? `${r.lastCapacity}` : '—'}</TableCell>
                 <TableCell>
                   {past ? (

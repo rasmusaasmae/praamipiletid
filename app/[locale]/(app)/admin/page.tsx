@@ -37,7 +37,6 @@ export default async function AdminPage() {
       userEmail: user.email,
       direction: trips.direction,
       measurementUnit: trips.measurementUnit,
-      threshold: trips.threshold,
       active: trips.active,
       eventUid: tripOptions.eventUid,
       eventDate: tripOptions.eventDate,
