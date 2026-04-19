@@ -1,7 +1,7 @@
-import { and, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
-import { tripOptions, trips } from '@/db/schema'
+import { tickets, tripOptions, trips } from '@/db/schema'
 import { listEvents } from '@/lib/praamid'
 import { requireUser } from '@/lib/session'
 import { Link } from '@/i18n/navigation'
@@ -61,7 +61,27 @@ export default async function AddOptionPage({
   }
 
   const direction = trip.direction as DirectionCode
-  const date = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : todayIso()
+
+  const existingOptions = await db
+    .select({ eventUid: tripOptions.eventUid, eventDate: tripOptions.eventDate })
+    .from(tripOptions)
+    .where(eq(tripOptions.tripId, trip.id))
+    .orderBy(asc(tripOptions.priority))
+    .all()
+  const takenUids = new Set(existingOptions.map((o) => o.eventUid))
+
+  const ticket = await db
+    .select({ eventDtstart: tickets.eventDtstart })
+    .from(tickets)
+    .where(eq(tickets.tripId, trip.id))
+    .get()
+  const ticketDate = ticket
+    ? `${ticket.eventDtstart.getFullYear()}-${String(ticket.eventDtstart.getMonth() + 1).padStart(2, '0')}-${String(ticket.eventDtstart.getDate()).padStart(2, '0')}`
+    : null
+
+  const fallbackDate = existingOptions[0]?.eventDate ?? ticketDate ?? todayIso()
+  const date =
+    query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : fallbackDate
 
   let events: Awaited<ReturnType<typeof listEvents>> = []
   let error: string | null = null
@@ -70,13 +90,6 @@ export default async function AddOptionPage({
   } catch (err) {
     error = err instanceof Error ? err.message : t('loadError')
   }
-
-  const existingOptions = await db
-    .select({ eventUid: tripOptions.eventUid })
-    .from(tripOptions)
-    .where(eq(tripOptions.tripId, trip.id))
-    .all()
-  const takenUids = new Set(existingOptions.map((o) => o.eventUid))
 
   return (
     <div className="flex flex-col gap-6">
