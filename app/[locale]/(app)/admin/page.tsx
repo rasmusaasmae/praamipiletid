@@ -8,6 +8,7 @@ import { PollIntervalForm } from '@/components/admin/poll-interval-form'
 import { EditEnabledForm } from '@/components/admin/edit-enabled-form'
 import { AdminUsersTable } from '@/components/admin/admin-users-table'
 import { AdminTripsTable } from '@/components/admin/admin-trips-table'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function AdminPage() {
@@ -76,7 +77,14 @@ export default async function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('editTitle')}</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>{t('editTitle')}</CardTitle>
+            {settings.editGloballyEnabled ? (
+              <Badge variant="secondary">{t('editBadgeEnabled')}</Badge>
+            ) : (
+              <Badge variant="outline">{t('editBadgeDisabled')}</Badge>
+            )}
+          </div>
           <CardDescription>{t('editDescription')}</CardDescription>
         </CardHeader>
         <CardContent>

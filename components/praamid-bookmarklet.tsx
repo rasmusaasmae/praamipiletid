@@ -60,7 +60,7 @@ export function PraamidBookmarklet({ captureUrl }: Props) {
   if (!nonce) return null
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex w-fit flex-col items-center gap-1">
       <a
         ref={linkRef}
         title={t('bookmarkletTitle')}

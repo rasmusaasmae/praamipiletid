@@ -12,7 +12,6 @@ export function EditEnabledForm({ enabled }: { enabled: boolean }) {
 
   return (
     <form
-      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       action={(formData) =>
         startTransition(async () => {
           const res = await setEditGloballyEnabled(formData)
@@ -21,13 +20,6 @@ export function EditEnabledForm({ enabled }: { enabled: boolean }) {
         })
       }
     >
-      <div className="text-sm">
-        {enabled ? (
-          <span className="font-medium text-foreground">{t('editStatusOn')}</span>
-        ) : (
-          <span className="font-medium text-muted-foreground">{t('editStatusOff')}</span>
-        )}
-      </div>
       <input type="hidden" name="enabled" value={enabled ? '0' : '1'} />
       <Button type="submit" variant={enabled ? 'destructive' : 'default'} disabled={isPending}>
         {isPending ? t('saving') : enabled ? t('editDisable') : t('editEnable')}
