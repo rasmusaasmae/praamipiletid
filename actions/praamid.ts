@@ -12,7 +12,7 @@ export async function forgetPraamidCredential(): Promise<ActionResult> {
   const t = await getTranslations('Errors')
   try {
     await forgetCredential(session.user.id)
-    revalidatePath('/settings/praamid')
+    revalidatePath('/settings')
     return { ok: true }
   } catch {
     return { ok: false, error: t('invalidData') }

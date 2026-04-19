@@ -102,7 +102,7 @@ export function AttachTicketDialog({ tripId, disabled }: Props) {
           <div className="flex flex-col gap-2">
             <p className="text-sm text-destructive">{listError}</p>
             <Link
-              href="/settings/praamid"
+              href="/settings#praamid"
               className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
               onClick={() => setOpen(false)}
             >

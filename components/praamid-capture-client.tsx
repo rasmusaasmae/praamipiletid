@@ -90,7 +90,7 @@ export function PraamidCaptureClient() {
         </>
       )}
       <Link
-        href="/settings/praamid"
+        href="/settings#praamid"
         className={buttonVariants({ variant: 'outline', size: 'sm' })}
       >
         {t('backToSettings')}
