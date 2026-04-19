@@ -24,7 +24,6 @@ export const trips = sqliteTable(
     measurementUnit: text('measurement_unit').notNull(),
     notify: integer('notify', { mode: 'boolean' }).default(true).notNull(),
     edit: integer('edit', { mode: 'boolean' }).default(false).notNull(),
-    active: integer('active', { mode: 'boolean' }).default(true).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
@@ -33,10 +32,7 @@ export const trips = sqliteTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [
-    index('trips_user_id_idx').on(table.userId),
-    index('trips_active_idx').on(table.active),
-  ],
+  (table) => [index('trips_user_id_idx').on(table.userId)],
 )
 
 export const tickets = sqliteTable(
@@ -72,7 +68,7 @@ export const tripOptions = sqliteTable(
     eventUid: text('event_uid').notNull(),
     eventDate: text('event_date').notNull(),
     eventDtstart: integer('event_dtstart', { mode: 'timestamp_ms' }).notNull(),
-    stopBeforeMinutes: integer('stop_before_minutes').default(60).notNull(),
+    stopBeforeAt: integer('stop_before_at', { mode: 'timestamp_ms' }).notNull(),
     lastCapacity: integer('last_capacity'),
     lastCapacityState: text('last_capacity_state'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })

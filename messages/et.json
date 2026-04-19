@@ -24,10 +24,6 @@
     "editRequiresTicket": "Lisa pilet enne automaatse vahetuse sisselülitamist"
   },
   "Home": {
-    "topicTitle": "Sinu teavituste teema",
-    "topicDescription": "Telli see teema ntfy rakenduses, et teavitused kätte saada.",
-    "topicMissing": "Teemat pole veel seadistatud.",
-    "topicMissingLink": "Seadista see Seadete lehel",
     "addTrip": "Lisa reis"
   },
   "ThemeToggle": {
@@ -77,10 +73,18 @@
     "removed": "Valik eemaldatud",
     "moved": "Liigutatud",
     "addOption": "Lisa valik",
-    "badgeNotify": "Teavita",
-    "badgeEdit": "Auto-vahetus",
+    "badgeNotify": "Teavitused",
+    "badgeEdit": "Automaatselt vaheta pilet",
     "current": "praegune",
-    "stopBeforeLabel": "Piir (min enne väljumist)"
+    "cutoffAt": "(lõikepunkt {time})",
+    "cutoffAtDated": "(lõikepunkt {date} kell {time})",
+    "cutoffEditTitle": "Määra lõikepunkt",
+    "cutoffTooltip": "Pärast seda hetke ei saada selle valiku kohta enam teavitusi ega tehta automaatset vahetust.",
+    "cutoffDate": "Kuupäev",
+    "cutoffTime": "Kellaaeg",
+    "cutoffSave": "Salvesta",
+    "cutoffCancel": "Tühista",
+    "cutoffMustBeBeforeStart": "Lõikepunkt peab olema enne väljumist"
   },
   "Ticket": {
     "empty": "Piletit pole lisatud.",
@@ -123,10 +127,6 @@
     "columnStatus": "Staatus",
     "columnActions": "Tegevused",
     "statusPast": "Möödunud",
-    "statusActive": "Aktiivne",
-    "statusPaused": "Peatatud",
-    "pause": "Peata",
-    "activate": "Aktiveeri",
     "delete": "Kustuta",
     "saved": "Salvestatud",
     "deleted": "Kustutatud"
@@ -206,8 +206,6 @@
     "roleToAdmin": "Tee adminiks",
     "roleChanged": "Roll muudetud",
     "statusPast": "Möödunud",
-    "statusActive": "Aktiivne",
-    "statusPaused": "Peatatud",
     "delete": "Kustuta",
     "deleted": "Kustutatud",
     "banned": "banned",

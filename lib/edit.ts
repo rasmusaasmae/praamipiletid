@@ -52,13 +52,12 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
       userId: trips.userId,
       direction: trips.direction,
       edit: trips.edit,
-      active: trips.active,
     })
     .from(trips)
     .where(eq(trips.id, tripId))
     .get()
   if (!trip) return { kind: 'gate_blocked', reason: 'trip_missing' }
-  if (!trip.edit || !trip.active) {
+  if (!trip.edit) {
     return { kind: 'gate_blocked', reason: 'trip_not_eligible' }
   }
 
@@ -92,7 +91,7 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
       eventUid: tripOptions.eventUid,
       eventDate: tripOptions.eventDate,
       eventDtstart: tripOptions.eventDtstart,
-      stopBeforeMinutes: tripOptions.stopBeforeMinutes,
+      stopBeforeAt: tripOptions.stopBeforeAt,
       lastCapacity: tripOptions.lastCapacity,
       lastCapacityState: tripOptions.lastCapacityState,
     })
@@ -106,7 +105,7 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
 
   const target = options
     .filter((o) => o.eventUid !== ticket.eventUid)
-    .filter((o) => o.eventDtstart.getTime() - o.stopBeforeMinutes * 60_000 > now)
+    .filter((o) => o.stopBeforeAt.getTime() > now)
     .filter(
       (o) => o.lastCapacityState === 'above' && (o.lastCapacity ?? 0) >= 1,
     )

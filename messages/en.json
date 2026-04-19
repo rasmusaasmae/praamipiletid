@@ -24,10 +24,6 @@
     "editRequiresTicket": "Attach a ticket before enabling automatic swap"
   },
   "Home": {
-    "topicTitle": "Your notification topic",
-    "topicDescription": "Subscribe to this topic in the ntfy app to receive alerts.",
-    "topicMissing": "No topic set yet.",
-    "topicMissingLink": "Set one up in Settings",
     "addTrip": "Add trip"
   },
   "ThemeToggle": {
@@ -77,10 +73,18 @@
     "removed": "Option removed",
     "moved": "Moved",
     "addOption": "Add option",
-    "badgeNotify": "Notify",
-    "badgeEdit": "Auto-swap",
+    "badgeNotify": "Notifications",
+    "badgeEdit": "Automatically swap ticket",
     "current": "current",
-    "stopBeforeLabel": "Cutoff (min before departure)"
+    "cutoffAt": "(cutoff at {time})",
+    "cutoffAtDated": "(cutoff at {date} {time})",
+    "cutoffEditTitle": "Set cutoff",
+    "cutoffTooltip": "After this moment we stop notifying or auto-swapping for this option.",
+    "cutoffDate": "Date",
+    "cutoffTime": "Time",
+    "cutoffSave": "Save",
+    "cutoffCancel": "Cancel",
+    "cutoffMustBeBeforeStart": "Cutoff must be before the departure time"
   },
   "Ticket": {
     "empty": "No ticket attached.",
@@ -123,10 +127,6 @@
     "columnStatus": "Status",
     "columnActions": "Actions",
     "statusPast": "Past",
-    "statusActive": "Active",
-    "statusPaused": "Paused",
-    "pause": "Pause",
-    "activate": "Activate",
     "delete": "Delete",
     "saved": "Saved",
     "deleted": "Deleted"
@@ -206,8 +206,6 @@
     "roleToAdmin": "Make admin",
     "roleChanged": "Role changed",
     "statusPast": "Past",
-    "statusActive": "Active",
-    "statusPaused": "Paused",
     "delete": "Delete",
     "deleted": "Deleted",
     "banned": "banned",

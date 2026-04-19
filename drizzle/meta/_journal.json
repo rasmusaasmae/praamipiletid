@@ -50,6 +50,20 @@
       "when": 1776621328913,
       "tag": "0006_robust_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1776621880912,
+      "tag": "0007_slimy_lenny_balinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1776622581624,
+      "tag": "0008_change_stop_before_to_datetime",
+      "breakpoints": true
     }
   ]
 }

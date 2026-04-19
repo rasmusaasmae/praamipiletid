@@ -19,7 +19,7 @@ type JoinedOption = {
   measurementUnit: string
   notify: boolean
   edit: boolean
-  stopBeforeMinutes: number
+  stopBeforeAt: Date
   priority: number
   eventUid: string
   eventDate: string
@@ -128,7 +128,7 @@ async function tick() {
       measurementUnit: trips.measurementUnit,
       notify: trips.notify,
       edit: trips.edit,
-      stopBeforeMinutes: tripOptions.stopBeforeMinutes,
+      stopBeforeAt: tripOptions.stopBeforeAt,
       priority: tripOptions.priority,
       eventUid: tripOptions.eventUid,
       eventDate: tripOptions.eventDate,
@@ -142,16 +142,13 @@ async function tick() {
     .leftJoin(tickets, eq(tickets.tripId, trips.id))
     .where(
       and(
-        eq(trips.active, true),
         eq(tripOptions.active, true),
         gt(tripOptions.eventDtstart, now),
       ),
     )
     .all()
 
-  const due = rows.filter(
-    (r) => r.eventDtstart.getTime() - now.getTime() > r.stopBeforeMinutes * 60_000,
-  )
+  const due = rows.filter((r) => r.stopBeforeAt.getTime() > now.getTime())
   if (due.length === 0) return
 
   const userIds = Array.from(new Set(due.map((r) => r.userId)))

@@ -20,7 +20,6 @@ type Row = {
   userEmail: string
   direction: string
   measurementUnit: string
-  active: boolean
   eventUid: string
   eventDate: string
   eventDtstart: Date
@@ -80,13 +79,7 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
                 <TableCell>{tCap(r.measurementUnit as 'sv')}</TableCell>
                 <TableCell>{r.lastCapacity != null ? `${r.lastCapacity}` : '—'}</TableCell>
                 <TableCell>
-                  {past ? (
-                    <Badge variant="secondary">{t('statusPast')}</Badge>
-                  ) : r.active ? (
-                    <Badge>{t('statusActive')}</Badge>
-                  ) : (
-                    <Badge variant="outline">{t('statusPaused')}</Badge>
-                  )}
+                  {past ? <Badge variant="secondary">{t('statusPast')}</Badge> : null}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button

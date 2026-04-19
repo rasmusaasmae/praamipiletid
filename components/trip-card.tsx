@@ -3,11 +3,29 @@
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { useLocale, useTranslations } from 'next-intl'
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { et, enGB } from 'react-day-picker/locale'
+import { ArrowDown, ArrowRightLeft, ArrowUp, Bell, Plus, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Toggle } from '@/components/ui/toggle'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Link } from '@/i18n/navigation'
 import { TicketSlot } from '@/components/ticket-slot'
 import {
@@ -24,7 +42,6 @@ export type TripCardData = {
     id: string
     direction: string
     measurementUnit: string
-    active: boolean
     notify: boolean
     edit: boolean
   }
@@ -36,7 +53,7 @@ export type TripCardData = {
     eventUid: string
     eventDate: string
     eventDtstart: Date
-    stopBeforeMinutes: number
+    stopBeforeAt: Date
     lastCapacity: number | null
     lastCapacityState: string | null
   }>
@@ -57,22 +74,12 @@ export function TripCard({ data }: { data: TripCardData }) {
   const formatTime = (d: Date) =>
     d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })
 
-  const allPast =
-    data.options.length > 0 && data.options.every((o) => o.eventDtstart.getTime() < Date.now())
-
   const submit = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, okMsg: string) =>
     startTransition(async () => {
       const res = await fn()
       if (res.ok) toast.success(okMsg)
       else toast.error(res.error)
     })
-
-  const toggleActive = () => {
-    const form = new FormData()
-    form.set('id', data.trip.id)
-    form.set('active', data.trip.active ? '' : 'true')
-    submit(() => updateTrip(form), t('saved'))
-  }
 
   const toggleFlag = (flag: 'notify' | 'edit', next: boolean) => {
     const form = new FormData()
@@ -100,197 +107,296 @@ export function TripCard({ data }: { data: TripCardData }) {
     submit(() => moveOption(form), tOpt('moved'))
   }
 
-  const onSaveStopBefore = (id: string, minutes: number) => {
+  const onSaveStopBefore = (id: string, stopBeforeAt: Date) => {
     const form = new FormData()
     form.set('id', id)
-    form.set('stopBeforeMinutes', String(minutes))
+    form.set('stopBeforeAt', String(stopBeforeAt.getTime()))
     submit(() => updateOption(form), t('saved'))
   }
 
   const sorted = [...data.options].sort((a, b) => a.priority - b.priority)
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div className="flex flex-col gap-1">
+    <TooltipProvider>
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
             <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
           </div>
-          <div className="flex items-center gap-2">
-            {allPast ? (
-              <Badge variant="secondary">{t('statusPast')}</Badge>
-            ) : data.trip.active ? (
-              <Badge>{t('statusActive')}</Badge>
-            ) : (
-              <Badge variant="outline">{t('statusPaused')}</Badge>
-            )}
+          <Button
+            size="icon"
+            variant="ghost"
+            disabled={isPending}
+            onClick={onDeleteTrip}
+            aria-label={t('delete')}
+            title={t('delete')}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </CardHeader>
+
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Toggle
+              variant="outline"
+              pressed={data.trip.notify}
+              onPressedChange={(next) => toggleFlag('notify', next)}
+              disabled={isPending}
+              aria-label={tOpt('badgeNotify')}
+            >
+              <Bell />
+              {tOpt('badgeNotify')}
+            </Toggle>
+            <Toggle
+              variant="outline"
+              pressed={data.trip.edit}
+              onPressedChange={(next) => toggleFlag('edit', next)}
+              disabled={isPending}
+              aria-label={tOpt('badgeEdit')}
+            >
+              <ArrowRightLeft />
+              {tOpt('badgeEdit')}
+            </Toggle>
           </div>
-        </div>
-        <div className="flex gap-2">
-          {!allPast ? (
-            <Button size="sm" variant="secondary" disabled={isPending} onClick={toggleActive}>
-              {data.trip.active ? t('pause') : t('activate')}
-            </Button>
+
+          <TicketSlot tripId={data.trip.id} ticket={data.ticket} />
+
+          {sorted.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{tOpt('empty')}</p>
           ) : null}
-          <Button size="sm" variant="destructive" disabled={isPending} onClick={onDeleteTrip}>
-            {t('delete')}
-          </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-3">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={data.trip.notify ? 'default' : 'outline'}
-            disabled={isPending}
-            onClick={() => toggleFlag('notify', !data.trip.notify)}
-          >
-            {tOpt('badgeNotify')}
-          </Button>
-          <Button
-            size="sm"
-            variant={data.trip.edit ? 'default' : 'outline'}
-            disabled={isPending}
-            onClick={() => toggleFlag('edit', !data.trip.edit)}
-          >
-            {tOpt('badgeEdit')}
-          </Button>
-        </div>
-
-        <TicketSlot tripId={data.trip.id} ticket={data.ticket} />
-
-        {sorted.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{tOpt('empty')}</p>
-        ) : null}
-        {sorted.length > 0 ? (
-          <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
-            {sorted.map((option, idx) => {
-              const past = option.eventDtstart.getTime() < Date.now()
-              const state = option.lastCapacityState
-              const isCurrent = data.ticket?.eventUid === option.eventUid
-              return (
-                <li
-                  key={option.id}
-                  className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">
-                      {idx + 1}
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="flex items-center gap-2 font-medium">
-                        {formatDate(option.eventDtstart)} · {formatTime(option.eventDtstart)}
-                        {isCurrent ? (
-                          <Badge variant="secondary">{tOpt('current')}</Badge>
-                        ) : null}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {past
-                          ? tOpt('past')
-                          : option.lastCapacity == null
-                            ? tOpt('notYetChecked')
-                            : state === 'above'
-                              ? `${option.lastCapacity} ${tOpt('above')}`
-                              : tOpt('below')}
-                      </span>
+          {sorted.length > 0 ? (
+            <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+              {sorted.map((option, idx) => {
+                const past = option.eventDtstart.getTime() < Date.now()
+                const state = option.lastCapacityState
+                const isCurrent = data.ticket?.eventUid === option.eventUid
+                return (
+                  <li
+                    key={option.id}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center">
+                        <div className="flex flex-col">
+                          <button
+                            type="button"
+                            disabled={isPending || idx === 0}
+                            onClick={() => onMoveOption(option.id, 'up')}
+                            aria-label={tOpt('moveUp')}
+                            className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                          >
+                            <ArrowUp className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isPending || idx === sorted.length - 1}
+                            onClick={() => onMoveOption(option.id, 'down')}
+                            aria-label={tOpt('moveDown')}
+                            className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+                          >
+                            <ArrowDown className="size-3.5" />
+                          </button>
+                        </div>
+                        <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">
+                          {idx + 1}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
+                          <CutoffEditor
+                            eventStart={option.eventDtstart}
+                            stopBeforeAt={option.stopBeforeAt}
+                            disabled={isPending || past}
+                            locale={locale}
+                            onSave={(d) => onSaveStopBefore(option.id, d)}
+                            titleText={`${formatDate(option.eventDtstart)} · ${formatTime(option.eventDtstart)}`}
+                          />
+                          {isCurrent ? (
+                            <Badge variant="secondary">{tOpt('current')}</Badge>
+                          ) : null}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {past
+                            ? tOpt('past')
+                            : option.lastCapacity == null
+                              ? tOpt('notYetChecked')
+                              : state === 'above'
+                                ? `${option.lastCapacity} ${tOpt('above')}`
+                                : tOpt('below')}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <StopBeforeInput
-                      value={option.stopBeforeMinutes}
-                      disabled={isPending}
-                      label={tOpt('stopBeforeLabel')}
-                      onSave={(m) => onSaveStopBefore(option.id, m)}
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      disabled={isPending || idx === 0}
-                      onClick={() => onMoveOption(option.id, 'up')}
-                      aria-label={tOpt('moveUp')}
-                    >
-                      <ArrowUp className="size-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      disabled={isPending || idx === sorted.length - 1}
-                      onClick={() => onMoveOption(option.id, 'down')}
-                      aria-label={tOpt('moveDown')}
-                    >
-                      <ArrowDown className="size-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      disabled={isPending}
-                      onClick={() => onRemoveOption(option.id)}
-                      aria-label={tOpt('remove')}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        ) : null}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={isPending}
+                        onClick={() => onRemoveOption(option.id)}
+                        aria-label={tOpt('remove')}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
 
-        <Link
-          href={`/trips/${data.trip.id}/options`}
-          className={buttonVariants({ variant: 'outline', size: 'sm' })}
-        >
-          <Plus className="size-4" />
-          {tOpt('addOption')}
-        </Link>
-      </CardContent>
-    </Card>
+          <Link
+            href={`/trips/${data.trip.id}/options`}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            <Plus className="size-4" />
+            {tOpt('addOption')}
+          </Link>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   )
 }
 
-function StopBeforeInput({
-  value,
+function CutoffEditor({
+  eventStart,
+  stopBeforeAt,
   disabled,
-  label,
+  locale,
   onSave,
+  titleText,
 }: {
-  value: number
+  eventStart: Date
+  stopBeforeAt: Date
   disabled: boolean
-  label: string
-  onSave: (minutes: number) => void
+  locale: string
+  onSave: (cutoff: Date) => void
+  titleText: string
 }) {
-  const [draft, setDraft] = useState(String(value))
-  const commit = () => {
-    const n = Number(draft)
-    if (!Number.isFinite(n) || n < 0 || n > 720) {
-      setDraft(String(value))
+  const tOpt = useTranslations('Options')
+  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
+  const dpLocale = locale === 'et' ? et : enGB
+
+  const sameInstant = stopBeforeAt.getTime() === eventStart.getTime()
+  const sameDay =
+    stopBeforeAt.getFullYear() === eventStart.getFullYear() &&
+    stopBeforeAt.getMonth() === eventStart.getMonth() &&
+    stopBeforeAt.getDate() === eventStart.getDate()
+
+  const cutoffLabel = sameInstant
+    ? null
+    : sameDay
+      ? tOpt('cutoffAt', {
+          time: stopBeforeAt.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' }),
+        })
+      : tOpt('cutoffAtDated', {
+          date: stopBeforeAt.toLocaleDateString(dateTag, {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+          }),
+          time: stopBeforeAt.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' }),
+        })
+
+  const [open, setOpen] = useState(false)
+
+  const startOfDay = (d: Date) => {
+    const c = new Date(d)
+    c.setHours(0, 0, 0, 0)
+    return c
+  }
+  const eventDayStart = startOfDay(eventStart)
+
+  const [draftDate, setDraftDate] = useState<Date>(startOfDay(stopBeforeAt))
+  const [draftTime, setDraftTime] = useState<string>(
+    `${stopBeforeAt.getHours().toString().padStart(2, '0')}:${stopBeforeAt.getMinutes().toString().padStart(2, '0')}`,
+  )
+
+  const onOpenChange = (next: boolean) => {
+    if (next) {
+      setDraftDate(startOfDay(stopBeforeAt))
+      setDraftTime(
+        `${stopBeforeAt.getHours().toString().padStart(2, '0')}:${stopBeforeAt.getMinutes().toString().padStart(2, '0')}`,
+      )
+    }
+    setOpen(next)
+  }
+
+  const onCommit = () => {
+    const [hStr, mStr] = draftTime.split(':')
+    const h = Number(hStr)
+    const m = Number(mStr)
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return
+    const combined = new Date(draftDate)
+    combined.setHours(h, m, 0, 0)
+    if (combined.getTime() >= eventStart.getTime()) {
+      toast.error(tOpt('cutoffMustBeBeforeStart'))
       return
     }
-    if (n === value) return
-    onSave(n)
+    setOpen(false)
+    onSave(combined)
   }
+
   return (
-    <Input
-      type="number"
-      inputMode="numeric"
-      min={0}
-      max={720}
-      step={5}
-      value={draft}
-      disabled={disabled}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          ;(e.currentTarget as HTMLInputElement).blur()
-        }
-      }}
-      title={label}
-      aria-label={label}
-      className="h-8 w-16 text-xs tabular-nums"
-    />
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={
+                <button
+                  type="button"
+                  disabled={disabled}
+                  className="inline-flex items-baseline gap-1 rounded text-left disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <span>{titleText}</span>
+                  {cutoffLabel ? (
+                    <span className="text-xs font-normal text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground">
+                      {cutoffLabel}
+                    </span>
+                  ) : null}
+                </button>
+              }
+            />
+          }
+        />
+        <TooltipContent>{tOpt('cutoffTooltip')}</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="start" className="w-auto">
+        <PopoverHeader>
+          <PopoverTitle>{tOpt('cutoffEditTitle')}</PopoverTitle>
+          <PopoverDescription>{tOpt('cutoffTooltip')}</PopoverDescription>
+        </PopoverHeader>
+        <Calendar
+          mode="single"
+          selected={draftDate}
+          onSelect={(d) => {
+            if (d) setDraftDate(startOfDay(d))
+          }}
+          disabled={(d) => d.getTime() > eventDayStart.getTime()}
+          defaultMonth={draftDate}
+          locale={dpLocale}
+        />
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="cutoff-time" className="text-xs">
+            {tOpt('cutoffTime')}
+          </Label>
+          <Input
+            id="cutoff-time"
+            type="time"
+            value={draftTime}
+            onChange={(e) => setDraftTime(e.target.value)}
+            className="h-8 text-sm tabular-nums"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+            {tOpt('cutoffCancel')}
+          </Button>
+          <Button size="sm" onClick={onCommit}>
+            {tOpt('cutoffSave')}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

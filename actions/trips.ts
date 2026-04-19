@@ -47,7 +47,6 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
     measurementUnit: parsed.data.measurementUnit,
     notify: parsed.data.notify ?? true,
     edit: false,
-    active: true,
   })
 
   await logAudit({
@@ -67,7 +66,6 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
 
 const updateSchema = z.object({
   id: z.string().min(1),
-  active: z.coerce.boolean().optional(),
   notify: z.coerce.boolean().optional(),
   edit: z.coerce.boolean().optional(),
 })
@@ -77,7 +75,6 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
   const t = await getTranslations('Errors')
   const parsed = updateSchema.safeParse({
     id: formData.get('id'),
-    active: formData.get('active') ?? undefined,
     notify: formData.get('notify') ?? undefined,
     edit: formData.get('edit') ?? undefined,
   })
@@ -120,7 +117,7 @@ const addOptionSchema = z.object({
   tripId: z.string().min(1),
   eventUid: z.string().min(1),
   date: dateSchema,
-  stopBeforeMinutes: z.coerce.number().int().min(0).max(720).optional(),
+  stopBeforeAt: z.coerce.number().int().optional(),
 })
 
 export async function addOption(formData: FormData): Promise<ActionResult> {
@@ -131,7 +128,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     tripId: formData.get('tripId'),
     eventUid: formData.get('eventUid'),
     date: formData.get('date'),
-    stopBeforeMinutes: formData.get('stopBeforeMinutes') ?? undefined,
+    stopBeforeAt: formData.get('stopBeforeAt') ?? undefined,
   })
   if (!parsed.success) return { ok: false, error: t('invalidData') }
 
@@ -166,6 +163,15 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     .get()
   const nextPriority = (top?.priority ?? 0) + 1
 
+  const eventStart = new Date(event.dtstart)
+  const stopBeforeAt =
+    parsed.data.stopBeforeAt !== undefined
+      ? new Date(parsed.data.stopBeforeAt)
+      : new Date(eventStart.getTime() - 60 * 60_000)
+  if (stopBeforeAt.getTime() >= eventStart.getTime()) {
+    return { ok: false, error: t('invalidData') }
+  }
+
   const optionId = randomUUID()
   await db.insert(tripOptions).values({
     id: optionId,
@@ -174,10 +180,8 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     active: true,
     eventUid: parsed.data.eventUid,
     eventDate: parsed.data.date,
-    eventDtstart: new Date(event.dtstart),
-    ...(parsed.data.stopBeforeMinutes !== undefined
-      ? { stopBeforeMinutes: parsed.data.stopBeforeMinutes }
-      : {}),
+    eventDtstart: eventStart,
+    stopBeforeAt,
   })
 
   await logAudit({
@@ -194,7 +198,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
 
 const updateOptionSchema = z.object({
   id: z.string().min(1),
-  stopBeforeMinutes: z.coerce.number().int().min(0).max(720),
+  stopBeforeAt: z.coerce.number().int(),
 })
 
 export async function updateOption(formData: FormData): Promise<ActionResult> {
@@ -202,21 +206,29 @@ export async function updateOption(formData: FormData): Promise<ActionResult> {
   const t = await getTranslations('Errors')
   const parsed = updateOptionSchema.safeParse({
     id: formData.get('id'),
-    stopBeforeMinutes: formData.get('stopBeforeMinutes'),
+    stopBeforeAt: formData.get('stopBeforeAt'),
   })
   if (!parsed.success) return { ok: false, error: t('invalidData') }
 
   const owned = await db
-    .select({ id: tripOptions.id, tripId: tripOptions.tripId })
+    .select({
+      id: tripOptions.id,
+      tripId: tripOptions.tripId,
+      eventDtstart: tripOptions.eventDtstart,
+    })
     .from(tripOptions)
     .innerJoin(trips, eq(trips.id, tripOptions.tripId))
     .where(and(eq(tripOptions.id, parsed.data.id), eq(trips.userId, session.user.id)))
     .get()
   if (!owned) return { ok: false, error: t('tripNotFound') }
 
+  if (parsed.data.stopBeforeAt >= owned.eventDtstart.getTime()) {
+    return { ok: false, error: t('invalidData') }
+  }
+
   await db
     .update(tripOptions)
-    .set({ stopBeforeMinutes: parsed.data.stopBeforeMinutes })
+    .set({ stopBeforeAt: new Date(parsed.data.stopBeforeAt) })
     .where(eq(tripOptions.id, parsed.data.id))
 
   revalidatePath('/')
