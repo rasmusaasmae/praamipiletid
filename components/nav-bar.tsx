@@ -1,11 +1,9 @@
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
-import { SignOutButton } from '@/components/sign-out-button'
-import { ThemeToggle } from '@/components/theme-toggle'
-import { LocaleToggle } from '@/components/locale-toggle'
+import { AvatarMenu } from '@/components/avatar-menu'
 
 type Props = {
-  user: { name: string; email: string; role: string }
+  user: { name: string; email: string; image: string | null; role: string }
 }
 
 export async function NavBar({ user }: Props) {
@@ -13,12 +11,12 @@ export async function NavBar({ user }: Props) {
   const isAdmin = user.role === 'admin'
   return (
     <header className="border-b border-border">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-4">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/" className="font-semibold">
             {t('brand')}
           </Link>
-          <nav className="flex items-center gap-3 text-sm text-muted-foreground">
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground sm:gap-3">
             <Link href="/" className="hover:text-foreground">
               {t('home')}
             </Link>
@@ -35,12 +33,7 @@ export async function NavBar({ user }: Props) {
             ) : null}
           </nav>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-muted-foreground">{user.email}</span>
-          <LocaleToggle />
-          <ThemeToggle />
-          <SignOutButton />
-        </div>
+        <AvatarMenu user={{ email: user.email, image: user.image }} />
       </div>
     </header>
   )

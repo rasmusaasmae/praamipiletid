@@ -24,11 +24,12 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
   const t = useTranslations('Subscriptions')
   const tCap = useTranslations('Capacity')
   const tReno = useTranslations('Subscriptions.renotify')
+  const tDir = useTranslations('Directions')
   const locale = useLocale()
 
-  const formatDateTime = (d: Date) => {
+  const formatTime = (d: Date) => {
     const tag = locale === 'et' ? 'et-EE' : 'en-GB'
-    return `${d.toLocaleDateString(tag)} ${d.toLocaleTimeString(tag, { hour: '2-digit', minute: '2-digit' })}`
+    return d.toLocaleTimeString(tag, { hour: '2-digit', minute: '2-digit' })
   }
 
   const submitUpdate = (field: 'threshold' | 'renotifyMode' | 'active', value: string) => {
@@ -57,8 +58,12 @@ export function SubscriptionRow({ row }: { row: Subscription }) {
   return (
     <TableRow>
       <TableCell>
-        <div className="font-medium">{row.direction}</div>
-        <div className="text-xs text-muted-foreground">{formatDateTime(row.departureAt)}</div>
+        <div className="text-base font-semibold">
+          {tDir(row.direction as 'VK')}
+        </div>
+        <div className="text-lg tabular-nums text-muted-foreground">
+          {formatTime(row.departureAt)}
+        </div>
       </TableCell>
       <TableCell>{tCap(row.capacityType as 'sv')}</TableCell>
       <TableCell>

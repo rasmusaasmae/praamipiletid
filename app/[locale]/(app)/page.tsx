@@ -1,5 +1,5 @@
-import { desc, eq } from 'drizzle-orm'
-import { getTranslations } from 'next-intl/server'
+import { asc, eq } from 'drizzle-orm'
+import { getFormatter, getTranslations } from 'next-intl/server'
 import { Plus } from 'lucide-react'
 import { db } from '@/db'
 import { subscriptions, user } from '@/db/schema'
@@ -9,6 +9,7 @@ import { TopicCopyButton } from '@/components/topic-copy-button'
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -32,13 +33,21 @@ export default async function HomePage() {
       .select()
       .from(subscriptions)
       .where(eq(subscriptions.userId, session.user.id))
-      .orderBy(desc(subscriptions.departureAt))
+      .orderBy(asc(subscriptions.departureAt))
       .all(),
   ])
 
   const ntfyBase = process.env.NTFY_BASE_URL ?? 'https://ntfy.sh'
   const topic = me?.ntfyTopic ?? ''
   const fullUrl = topic ? `${ntfyBase}/${topic}` : null
+
+  const format = await getFormatter()
+  const groups = new Map<string, typeof rows>()
+  for (const r of rows) {
+    const bucket = groups.get(r.date) ?? []
+    bucket.push(r)
+    groups.set(r.date, bucket)
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,9 +114,18 @@ export default async function HomePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
-                <SubscriptionRow key={r.id} row={r} />
-              ))}
+              {[...groups.entries()].flatMap(([date, subs]) => [
+                <TableRow key={`h-${date}`} className="bg-muted/40 hover:bg-muted/40">
+                  <TableCell colSpan={6} className="py-2 text-sm font-medium text-foreground">
+                    {format.dateTime(new Date(`${date}T00:00:00`), {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    })}
+                  </TableCell>
+                </TableRow>,
+                ...subs.map((r) => <SubscriptionRow key={r.id} row={r} />),
+              ])}
             </TableBody>
           </Table>
         </div>
