@@ -36,6 +36,9 @@ export type PraamidEvent = {
   capacities: Capacities
   ship: { code: string }
   transportationType: { code: string }
+  pricelist?: { code: string }
+  highPrice?: boolean
+  isNextDay?: boolean
 }
 
 type ApiList<T> = { totalCount: number; items: T[] }

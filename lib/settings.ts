@@ -6,9 +6,10 @@ import { settings } from '@/db/schema'
 const DEFAULTS: Record<string, number> = {
   pollIntervalMs: 15_000,
   pollTimeShift: 300,
+  editGloballyEnabled: 0,
 }
 
-export type SettingsKey = 'pollIntervalMs' | 'pollTimeShift'
+export type SettingsKey = 'pollIntervalMs' | 'pollTimeShift' | 'editGloballyEnabled'
 
 export async function getSetting(key: SettingsKey): Promise<number> {
   const row = await db.select().from(settings).where(eq(settings.key, key)).get()
@@ -32,6 +33,8 @@ export async function getAllSettings() {
   return {
     pollIntervalMs: Number(map.get('pollIntervalMs') ?? DEFAULTS.pollIntervalMs),
     pollTimeShift: Number(map.get('pollTimeShift') ?? DEFAULTS.pollTimeShift),
+    editGloballyEnabled:
+      Number(map.get('editGloballyEnabled') ?? DEFAULTS.editGloballyEnabled) !== 0,
   }
 }
 

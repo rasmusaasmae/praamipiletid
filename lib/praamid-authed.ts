@@ -33,6 +33,11 @@ export type TicketEvent = {
   dtend: string
   transportationType: CodeName
   ship: CodeName
+  pricelist?: CodeName
+  status?: string
+  highPrice?: boolean
+  isNextDay?: boolean
+  capacities?: Record<string, number | undefined>
 }
 
 export type TicketDirection = CodeName & {
