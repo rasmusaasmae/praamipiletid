@@ -6,6 +6,7 @@ import { CAPACITY_LABELS, listEvents, type PraamidEvent } from '@/lib/praamid'
 import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
+import { processEditForTrip } from '@/lib/edit'
 
 let running = false
 let stopRequested = false
@@ -18,6 +19,7 @@ type JoinedOption = {
   measurementUnit: string
   threshold: number
   notify: boolean
+  edit: boolean
   stopBeforeMinutes: number
   priority: number
   eventUid: string
@@ -128,6 +130,7 @@ async function tick() {
       measurementUnit: trips.measurementUnit,
       threshold: trips.threshold,
       notify: trips.notify,
+      edit: trips.edit,
       stopBeforeMinutes: trips.stopBeforeMinutes,
       priority: tripOptions.priority,
       eventUid: tripOptions.eventUid,
@@ -176,6 +179,41 @@ async function tick() {
   for (const [key, batch] of batches) {
     const [dir, date] = key.split('|') as [string, string]
     await processBatch(dir, date, batch, topicByUser, pollTimeShift)
+  }
+
+  const editTripIds = new Set<string>()
+  const userByTrip = new Map<string, string>()
+  for (const r of due) {
+    if (!r.edit) continue
+    if (r.currentTicketEventUid === r.eventUid) continue
+    if (r.lastCapacityState !== 'above') continue
+    if ((r.lastCapacity ?? 0) < r.threshold) continue
+    editTripIds.add(r.tripId)
+    userByTrip.set(r.tripId, r.userId)
+  }
+  for (const tripId of editTripIds) {
+    try {
+      const outcome = await processEditForTrip(tripId)
+      if (outcome.kind === 'succeeded') {
+        const userId = userByTrip.get(tripId)
+        const topic = userId ? topicByUser.get(userId) : null
+        if (topic) {
+          try {
+            await getNotifier().send({
+              userId: userId!,
+              userTopic: topic,
+              title: 'Pilet uuendatud',
+              message: `Uus pilet ${outcome.newTicketNumber} (arve ${outcome.invoiceNumber})`,
+              tag: 'ferry',
+            })
+          } catch (err) {
+            console.error(`[poller] edit notify failed for trip ${tripId}:`, err)
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`[poller] processEditForTrip failed for trip ${tripId}:`, err)
+    }
   }
 }
 
