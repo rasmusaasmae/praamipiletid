@@ -77,7 +77,8 @@
     "moved": "Moved",
     "addOption": "Add option",
     "badgeNotify": "Notify",
-    "badgeEdit": "Auto-edit"
+    "badgeEdit": "Auto-edit",
+    "current": "current"
   },
   "Ticket": {
     "empty": "No ticket attached.",

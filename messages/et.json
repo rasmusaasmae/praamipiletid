@@ -77,7 +77,8 @@
     "moved": "Liigutatud",
     "addOption": "Lisa valik",
     "badgeNotify": "Teavita",
-    "badgeEdit": "Auto-muuda"
+    "badgeEdit": "Auto-muuda",
+    "current": "praegune"
   },
   "Ticket": {
     "empty": "Piletit pole lisatud.",

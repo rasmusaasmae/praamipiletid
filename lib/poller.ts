@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@/db'
-import { tripOptions, trips, user } from '@/db/schema'
+import { tickets, tripOptions, trips, user } from '@/db/schema'
 import { CAPACITY_LABELS, listEvents, type PraamidEvent } from '@/lib/praamid'
 import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
@@ -25,6 +25,7 @@ type JoinedOption = {
   eventDtstart: Date
   lastCapacity: number | null
   lastCapacityState: string | null
+  currentTicketEventUid: string | null
 }
 
 function formatTime(date: Date) {
@@ -63,8 +64,9 @@ async function processBatch(
     const prevState = row.lastCapacityState as 'above' | 'below' | null
 
     const crossedUp = nextState === 'above' && prevState !== 'above'
+    const isCurrentTicket = row.currentTicketEventUid === row.eventUid
 
-    if (crossedUp && row.notify) {
+    if (crossedUp && row.notify && !isCurrentTicket) {
       const topic = topicByUser.get(row.userId)
       if (!topic) {
         console.warn(`[poller] no ntfy topic for user ${row.userId}, skipping`)
@@ -125,9 +127,11 @@ async function tick() {
       eventDtstart: tripOptions.eventDtstart,
       lastCapacity: tripOptions.lastCapacity,
       lastCapacityState: tripOptions.lastCapacityState,
+      currentTicketEventUid: tickets.eventUid,
     })
     .from(trips)
     .innerJoin(tripOptions, eq(tripOptions.tripId, trips.id))
+    .leftJoin(tickets, eq(tickets.tripId, trips.id))
     .where(
       and(
         eq(trips.active, true),

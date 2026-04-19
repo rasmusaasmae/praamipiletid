@@ -163,6 +163,7 @@ export function TripCard({ data }: { data: TripCardData }) {
             {sorted.map((option, idx) => {
               const past = option.eventDtstart.getTime() < Date.now()
               const state = option.lastCapacityState
+              const isCurrent = data.ticket?.eventUid === option.eventUid
               return (
                 <li
                   key={option.id}
@@ -173,8 +174,11 @@ export function TripCard({ data }: { data: TripCardData }) {
                       {idx + 1}
                     </span>
                     <div className="flex flex-col">
-                      <span className="font-medium">
+                      <span className="flex items-center gap-2 font-medium">
                         {formatDate(option.eventDtstart)} · {formatTime(option.eventDtstart)}
+                        {isCurrent ? (
+                          <Badge variant="secondary">{tOpt('current')}</Badge>
+                        ) : null}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {past

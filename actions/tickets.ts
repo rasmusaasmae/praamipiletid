@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
-import { tickets, tripOptions, trips } from '@/db/schema'
+import { tickets, trips } from '@/db/schema'
 import {
   getCredential,
   invalidateCredential,
@@ -134,11 +134,22 @@ export async function attachTicket(formData: FormData): Promise<ActionResult> {
     return { ok: false, error: errT('invalidData') }
   }
 
-  db.transaction((tx) => {
-    const now = new Date()
-    tx.insert(tickets)
-      .values({
-        tripId: trip.id,
+  const now = new Date()
+  await db
+    .insert(tickets)
+    .values({
+      tripId: trip.id,
+      ticketCode: raw.ticketCode,
+      ticketNumber: raw.ticketNumber,
+      bookingUid: raw.bookingUid,
+      eventUid: raw.event.uid,
+      ticketDate: raw.ticketDate,
+      eventDtstart,
+      capturedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: tickets.tripId,
+      set: {
         ticketCode: raw.ticketCode,
         ticketNumber: raw.ticketNumber,
         bookingUid: raw.bookingUid,
@@ -146,32 +157,8 @@ export async function attachTicket(formData: FormData): Promise<ActionResult> {
         ticketDate: raw.ticketDate,
         eventDtstart,
         capturedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: tickets.tripId,
-        set: {
-          ticketCode: raw.ticketCode,
-          ticketNumber: raw.ticketNumber,
-          bookingUid: raw.bookingUid,
-          eventUid: raw.event.uid,
-          ticketDate: raw.ticketDate,
-          eventDtstart,
-          capturedAt: now,
-        },
-      })
-      .run()
-
-    tx.update(tripOptions)
-      .set({ active: false })
-      .where(
-        and(
-          eq(tripOptions.tripId, trip.id),
-          eq(tripOptions.eventUid, raw.event.uid),
-          eq(tripOptions.active, true),
-        ),
-      )
-      .run()
-  })
+      },
+    })
 
   await logAudit({
     type: 'ticket.attached',
