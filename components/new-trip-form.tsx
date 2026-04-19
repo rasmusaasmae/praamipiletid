@@ -59,8 +59,10 @@ export function NewTripForm({ directions, units }: Props) {
       <div className="flex flex-col gap-2">
         <Label htmlFor="direction">{t('direction')}</Label>
         <Select value={direction} onValueChange={(v) => v && setDirection(v)}>
-          <SelectTrigger id="direction">
-            <SelectValue />
+          <SelectTrigger id="direction" className="w-full">
+            <SelectValue>
+              {(v: string) => directions.find((d) => d.code === v)?.label ?? v}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {directions.map((d) => (
@@ -75,8 +77,10 @@ export function NewTripForm({ directions, units }: Props) {
       <div className="flex flex-col gap-2">
         <Label htmlFor="unit">{t('measurementUnit')}</Label>
         <Select value={unit} onValueChange={(v) => v && setUnit(v)}>
-          <SelectTrigger id="unit">
-            <SelectValue />
+          <SelectTrigger id="unit" className="w-full">
+            <SelectValue>
+              {(v: string) => units.find((u) => u.code === v)?.label ?? v}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {units.map((u) => (
