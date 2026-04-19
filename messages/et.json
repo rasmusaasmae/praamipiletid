@@ -103,6 +103,26 @@
     "copy": "Kopeeri",
     "copied": "Kopeeritud"
   },
+  "Praamid": {
+    "title": "praamid.ee sessioon",
+    "description": "Kasutame sinu praamid.ee sessiooni, et pileteid automaatselt uuendada, kui parem väljumine vabaneb. Token kehtib kuni 7 päeva — pärast tuleb uuesti salvestada.",
+    "statusMissing": "Sessiooni pole veel salvestatud.",
+    "statusCaptured": "Salvestatud {capturedAt}",
+    "statusExpires": "Aegub {expiresAt}",
+    "statusLastVerified": "Viimati kontrollitud {lastVerifiedAt}",
+    "statusError": "Viimane viga: {lastError}",
+    "howToTitle": "Kuidas salvestada",
+    "howToSteps": "Lohista see nupp järjehoidjate ribale, ava teises vahelehes praamid.ee (sisse logituna) ja klõpsa järjehoidjat.",
+    "bookmarkletLabel": "Lohista järjehoidjatesse →",
+    "bookmarkletTitle": "Salvesta praamid sessioon",
+    "refreshNonce": "Värskenda järjehoidjat",
+    "refreshing": "Värskendan…",
+    "forget": "Kustuta sessioon",
+    "forgetConfirm": "Kustutan salvestatud praamid sessiooni?",
+    "forgotten": "Sessioon kustutatud",
+    "errorNonce": "Järjehoidjat ei saanud ette valmistada",
+    "notConfigured": "Krüpteerimisvõti pole serveris seadistatud."
+  },
   "Admin": {
     "title": "Admin",
     "description": "Halda süsteemi seadeid, kasutajaid ja tellimusi.",

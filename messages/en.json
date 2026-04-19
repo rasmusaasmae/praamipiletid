@@ -103,6 +103,26 @@
     "copy": "Copy",
     "copied": "Copied"
   },
+  "Praamid": {
+    "title": "praamid.ee session",
+    "description": "We replay your praamid.ee session to auto-update tickets when a better slot opens. Session tokens last up to 7 days — you'll need to re-capture after that.",
+    "statusMissing": "No session captured yet.",
+    "statusCaptured": "Captured {capturedAt}",
+    "statusExpires": "Expires {expiresAt}",
+    "statusLastVerified": "Last verified {lastVerifiedAt}",
+    "statusError": "Last error: {lastError}",
+    "howToTitle": "How to capture",
+    "howToSteps": "Drag this bookmark to your bookmarks bar, open praamid.ee in another tab while logged in, then click the bookmark.",
+    "bookmarkletLabel": "Drag to bookmarks →",
+    "bookmarkletTitle": "Capture praamid session",
+    "refreshNonce": "Refresh bookmarklet",
+    "refreshing": "Refreshing…",
+    "forget": "Forget session",
+    "forgetConfirm": "Delete the stored praamid session?",
+    "forgotten": "Session forgotten",
+    "errorNonce": "Could not prepare bookmarklet",
+    "notConfigured": "Credential encryption key is not configured on the server."
+  },
   "Admin": {
     "title": "Admin",
     "description": "Manage system settings, users and subscriptions.",
