@@ -52,7 +52,6 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
       userId: trips.userId,
       direction: trips.direction,
       threshold: trips.threshold,
-      stopBeforeMinutes: trips.stopBeforeMinutes,
       edit: trips.edit,
       active: trips.active,
     })
@@ -94,6 +93,7 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
       eventUid: tripOptions.eventUid,
       eventDate: tripOptions.eventDate,
       eventDtstart: tripOptions.eventDtstart,
+      stopBeforeMinutes: tripOptions.stopBeforeMinutes,
       lastCapacity: tripOptions.lastCapacity,
       lastCapacityState: tripOptions.lastCapacityState,
     })
@@ -102,13 +102,12 @@ export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
     .all()
 
   const now = Date.now()
-  const cutoffMs = trip.stopBeforeMinutes * 60_000
   const currentOption = options.find((o) => o.eventUid === ticket.eventUid)
   const currentPriority = currentOption?.priority ?? Number.POSITIVE_INFINITY
 
   const target = options
     .filter((o) => o.eventUid !== ticket.eventUid)
-    .filter((o) => o.eventDtstart.getTime() - cutoffMs > now)
+    .filter((o) => o.eventDtstart.getTime() - o.stopBeforeMinutes * 60_000 > now)
     .filter(
       (o) =>
         o.lastCapacityState === 'above' &&

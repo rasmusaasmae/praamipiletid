@@ -1,18 +1,20 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { useLocale, useTranslations } from 'next-intl'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { TicketSlot } from '@/components/ticket-slot'
 import {
   deleteTrip,
   moveOption,
   removeOption,
+  updateOption,
   updateTrip,
 } from '@/actions/trips'
 import type { Ticket } from '@/db/schema'
@@ -35,6 +37,7 @@ export type TripCardData = {
     eventUid: string
     eventDate: string
     eventDtstart: Date
+    stopBeforeMinutes: number
     lastCapacity: number | null
     lastCapacityState: string | null
   }>
@@ -96,6 +99,13 @@ export function TripCard({ data }: { data: TripCardData }) {
     form.set('id', id)
     form.set('direction', direction)
     submit(() => moveOption(form), tOpt('moved'))
+  }
+
+  const onSaveStopBefore = (id: string, minutes: number) => {
+    const form = new FormData()
+    form.set('id', id)
+    form.set('stopBeforeMinutes', String(minutes))
+    submit(() => updateOption(form), t('saved'))
   }
 
   const sorted = [...data.options].sort((a, b) => a.priority - b.priority)
@@ -190,6 +200,12 @@ export function TripCard({ data }: { data: TripCardData }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <StopBeforeInput
+                      value={option.stopBeforeMinutes}
+                      disabled={isPending}
+                      label={tOpt('stopBeforeLabel')}
+                      onSave={(m) => onSaveStopBefore(option.id, m)}
+                    />
                     <Button
                       size="icon"
                       variant="ghost"
@@ -233,5 +249,50 @@ export function TripCard({ data }: { data: TripCardData }) {
         </Link>
       </CardContent>
     </Card>
+  )
+}
+
+function StopBeforeInput({
+  value,
+  disabled,
+  label,
+  onSave,
+}: {
+  value: number
+  disabled: boolean
+  label: string
+  onSave: (minutes: number) => void
+}) {
+  const [draft, setDraft] = useState(String(value))
+  const commit = () => {
+    const n = Number(draft)
+    if (!Number.isFinite(n) || n < 0 || n > 720) {
+      setDraft(String(value))
+      return
+    }
+    if (n === value) return
+    onSave(n)
+  }
+  return (
+    <Input
+      type="number"
+      inputMode="numeric"
+      min={0}
+      max={720}
+      step={5}
+      value={draft}
+      disabled={disabled}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          ;(e.currentTarget as HTMLInputElement).blur()
+        }
+      }}
+      title={label}
+      aria-label={label}
+      className="h-8 w-16 text-xs tabular-nums"
+    />
   )
 }

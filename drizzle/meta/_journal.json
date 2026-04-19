@@ -36,6 +36,13 @@
       "when": 1776610459001,
       "tag": "0004_rename_journey_to_trip",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1776617968121,
+      "tag": "0005_move_stop_before_minutes_to_options",
+      "breakpoints": true
     }
   ]
 }

@@ -25,7 +25,6 @@ export const trips = sqliteTable(
     threshold: integer('threshold').default(1).notNull(),
     notify: integer('notify', { mode: 'boolean' }).default(true).notNull(),
     edit: integer('edit', { mode: 'boolean' }).default(false).notNull(),
-    stopBeforeMinutes: integer('stop_before_minutes').default(60).notNull(),
     active: integer('active', { mode: 'boolean' }).default(true).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -74,6 +73,7 @@ export const tripOptions = sqliteTable(
     eventUid: text('event_uid').notNull(),
     eventDate: text('event_date').notNull(),
     eventDtstart: integer('event_dtstart', { mode: 'timestamp_ms' }).notNull(),
+    stopBeforeMinutes: integer('stop_before_minutes').default(60).notNull(),
     lastCapacity: integer('last_capacity'),
     lastCapacityState: text('last_capacity_state'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })

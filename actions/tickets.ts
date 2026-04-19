@@ -62,11 +62,7 @@ export async function listAttachableTickets(tripId: string): Promise<ListAttacha
   const errT = await getTranslations('Errors')
 
   const trip = await db
-    .select({
-      id: trips.id,
-      direction: trips.direction,
-      stopBeforeMinutes: trips.stopBeforeMinutes,
-    })
+    .select({ id: trips.id, direction: trips.direction })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.userId, session.user.id)))
     .get()
@@ -76,14 +72,13 @@ export async function listAttachableTickets(tripId: string): Promise<ListAttacha
   if (!fetched.ok) return fetched
 
   const now = Date.now()
-  const cutoffMs = trip.stopBeforeMinutes * 60_000
 
   const results: AttachableTicket[] = fetched.tickets
     .filter((raw) => raw.status.code === 'ACTIVE')
     .filter((raw) => raw.direction.code === trip.direction)
     .filter((raw) => {
       const ts = Date.parse(raw.event.dtstart)
-      return !Number.isNaN(ts) && ts - cutoffMs > now
+      return !Number.isNaN(ts) && ts > now
     })
     .map((raw) => ({
       ticketCode: raw.ticketCode,

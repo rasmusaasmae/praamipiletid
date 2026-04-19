@@ -43,6 +43,7 @@ export default async function HomePage() {
         eventUid: tripOptions.eventUid,
         eventDate: tripOptions.eventDate,
         eventDtstart: tripOptions.eventDtstart,
+        stopBeforeMinutes: tripOptions.stopBeforeMinutes,
         lastCapacity: tripOptions.lastCapacity,
         lastCapacityState: tripOptions.lastCapacityState,
       })

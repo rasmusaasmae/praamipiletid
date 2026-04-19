@@ -50,7 +50,6 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
     threshold: parsed.data.threshold,
     notify: parsed.data.notify ?? true,
     edit: false,
-    stopBeforeMinutes: 60,
     active: true,
   })
 
@@ -127,6 +126,7 @@ const addOptionSchema = z.object({
   tripId: z.string().min(1),
   eventUid: z.string().min(1),
   date: dateSchema,
+  stopBeforeMinutes: z.coerce.number().int().min(0).max(720).optional(),
 })
 
 export async function addOption(formData: FormData): Promise<ActionResult> {
@@ -137,6 +137,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     tripId: formData.get('tripId'),
     eventUid: formData.get('eventUid'),
     date: formData.get('date'),
+    stopBeforeMinutes: formData.get('stopBeforeMinutes') ?? undefined,
   })
   if (!parsed.success) return { ok: false, error: t('invalidData') }
 
@@ -180,6 +181,9 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     eventUid: parsed.data.eventUid,
     eventDate: parsed.data.date,
     eventDtstart: new Date(event.dtstart),
+    ...(parsed.data.stopBeforeMinutes !== undefined
+      ? { stopBeforeMinutes: parsed.data.stopBeforeMinutes }
+      : {}),
   })
 
   await logAudit({
@@ -189,6 +193,37 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     tripId: trip.id,
     payload: { eventUid: parsed.data.eventUid, priority: nextPriority },
   })
+
+  revalidatePath('/')
+  return { ok: true }
+}
+
+const updateOptionSchema = z.object({
+  id: z.string().min(1),
+  stopBeforeMinutes: z.coerce.number().int().min(0).max(720),
+})
+
+export async function updateOption(formData: FormData): Promise<ActionResult> {
+  const session = await requireUser()
+  const t = await getTranslations('Errors')
+  const parsed = updateOptionSchema.safeParse({
+    id: formData.get('id'),
+    stopBeforeMinutes: formData.get('stopBeforeMinutes'),
+  })
+  if (!parsed.success) return { ok: false, error: t('invalidData') }
+
+  const owned = await db
+    .select({ id: tripOptions.id, tripId: tripOptions.tripId })
+    .from(tripOptions)
+    .innerJoin(trips, eq(trips.id, tripOptions.tripId))
+    .where(and(eq(tripOptions.id, parsed.data.id), eq(trips.userId, session.user.id)))
+    .get()
+  if (!owned) return { ok: false, error: t('tripNotFound') }
+
+  await db
+    .update(tripOptions)
+    .set({ stopBeforeMinutes: parsed.data.stopBeforeMinutes })
+    .where(eq(tripOptions.id, parsed.data.id))
 
   revalidatePath('/')
   return { ok: true }

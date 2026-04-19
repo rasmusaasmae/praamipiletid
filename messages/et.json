@@ -79,7 +79,8 @@
     "addOption": "Lisa valik",
     "badgeNotify": "Teavita",
     "badgeEdit": "Auto-muuda",
-    "current": "praegune"
+    "current": "praegune",
+    "stopBeforeLabel": "Lävi (min enne väljumist)"
   },
   "Ticket": {
     "empty": "Piletit pole lisatud.",

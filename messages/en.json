@@ -79,7 +79,8 @@
     "addOption": "Add option",
     "badgeNotify": "Notify",
     "badgeEdit": "Auto-edit",
-    "current": "current"
+    "current": "current",
+    "stopBeforeLabel": "Cutoff (min before departure)"
   },
   "Ticket": {
     "empty": "No ticket attached.",

@@ -131,7 +131,7 @@ async function tick() {
       threshold: trips.threshold,
       notify: trips.notify,
       edit: trips.edit,
-      stopBeforeMinutes: trips.stopBeforeMinutes,
+      stopBeforeMinutes: tripOptions.stopBeforeMinutes,
       priority: tripOptions.priority,
       eventUid: tripOptions.eventUid,
       eventDate: tripOptions.eventDate,
