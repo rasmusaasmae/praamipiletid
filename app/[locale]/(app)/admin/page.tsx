@@ -5,6 +5,7 @@ import { tripOptions, trips, user } from '@/db/schema'
 import { requireAdmin } from '@/lib/session'
 import { getAllSettings } from '@/lib/settings'
 import { PollIntervalForm } from '@/components/admin/poll-interval-form'
+import { EditEnabledForm } from '@/components/admin/edit-enabled-form'
 import { AdminUsersTable } from '@/components/admin/admin-users-table'
 import { AdminTripsTable } from '@/components/admin/admin-trips-table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -70,6 +71,16 @@ export default async function AdminPage() {
         </CardHeader>
         <CardContent>
           <PollIntervalForm current={settings.pollIntervalMs} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('editTitle')}</CardTitle>
+          <CardDescription>{t('editDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EditEnabledForm enabled={settings.editGloballyEnabled} />
         </CardContent>
       </Card>
 

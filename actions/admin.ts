@@ -24,6 +24,16 @@ export async function updatePollInterval(formData: FormData): Promise<AdminActio
   return { ok: true }
 }
 
+export async function setEditGloballyEnabled(formData: FormData): Promise<AdminActionResult> {
+  await requireAdmin()
+  const t = await getTranslations('Errors')
+  const raw = String(formData.get('enabled') ?? '')
+  if (raw !== '0' && raw !== '1') return { ok: false, error: t('invalidData') }
+  await setSetting('editGloballyEnabled', raw === '1' ? 1 : 0)
+  revalidatePath('/admin')
+  return { ok: true }
+}
+
 const roleSchema = z.enum(['user', 'admin'])
 
 export async function updateUserRole(formData: FormData): Promise<AdminActionResult> {
