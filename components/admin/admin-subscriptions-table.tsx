@@ -50,7 +50,7 @@ export function AdminSubscriptionsTable({ rows }: { rows: Row[] }) {
   }
 
   if (rows.length === 0) {
-    return <p className="text-muted-foreground">{t('subscriptionsEmpty')}</p>
+    return <p className="text-muted-foreground">{t('journeysEmpty')}</p>
   }
 
   return (

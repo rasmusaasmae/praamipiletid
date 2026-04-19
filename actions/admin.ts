@@ -47,7 +47,7 @@ export async function deleteAnyJourney(formData: FormData): Promise<AdminActionR
     .from(journeys)
     .where(eq(journeys.id, id))
     .get()
-  if (!target) return { ok: false, error: t('subscriptionNotFound') }
+  if (!target) return { ok: false, error: t('journeyNotFound') }
   await db.delete(journeys).where(eq(journeys.id, id))
   await logAudit({
     type: 'journey.deleted',

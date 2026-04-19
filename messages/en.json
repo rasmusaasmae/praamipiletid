@@ -10,8 +10,8 @@
     "invalidData": "Invalid data",
     "missingId": "Missing id",
     "tripNotFound": "Trip not found",
-    "subscriptionExists": "Subscription already exists",
-    "subscriptionNotFound": "Subscription not found",
+    "journeyExists": "Journey already exists",
+    "journeyNotFound": "Journey not found",
     "pollIntervalRange": "Value must be 5000..600000 ms",
     "topicInUse": "This topic is already in use",
     "topicMin": "At least 4 characters",
@@ -24,7 +24,7 @@
     "topicDescription": "Subscribe to this topic in the ntfy app to receive alerts.",
     "topicMissing": "No topic set yet.",
     "topicMissingLink": "Set one up in Settings",
-    "addSubscription": "Add subscription"
+    "addJourney": "Add journey"
   },
   "ThemeToggle": {
     "label": "Toggle theme",
@@ -87,10 +87,10 @@
     "attachSoon": "Attach (soon)",
     "detach": "Detach"
   },
-  "Subscriptions": {
-    "title": "My subscriptions",
-    "description": "Manage your active notifications. Past trips stay in the history.",
-    "empty": "No subscriptions. Add them from the",
+  "Journeys": {
+    "title": "My journeys",
+    "description": "Manage your active journeys. Past ones stay in the history.",
+    "empty": "No journeys yet. Add one from the",
     "emptyLink": "trips page",
     "columnTrip": "Trip",
     "columnType": "Type",
@@ -144,7 +144,7 @@
   },
   "Admin": {
     "title": "Admin",
-    "description": "Manage system settings, users and subscriptions.",
+    "description": "Manage system settings, users and journeys.",
     "pollTitle": "Poll interval",
     "pollDescription": "How often we check the praamipiletid.ee API. 5000–600000 ms.",
     "pollLabel": "Interval (ms)",
@@ -152,9 +152,9 @@
     "saving": "Saving…",
     "saved": "Saved",
     "users": "Users",
-    "subscriptions": "Subscriptions",
+    "journeys": "Journeys",
     "usersEmpty": "No users.",
-    "subscriptionsEmpty": "No subscriptions.",
+    "journeysEmpty": "No journeys.",
     "columnUser": "User",
     "columnRole": "Role",
     "columnSubCount": "Subs",

@@ -84,7 +84,7 @@ export default async function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('subscriptions')}</CardTitle>
+          <CardTitle>{t('journeys')}</CardTitle>
         </CardHeader>
         <CardContent>
           <AdminSubscriptionsTable rows={subs} />

@@ -13,7 +13,7 @@ import { Link } from '@/i18n/navigation'
 export default async function HomePage() {
   const session = await requireUser()
   const t = await getTranslations('Home')
-  const tSub = await getTranslations('Subscriptions')
+  const tJ = await getTranslations('Journeys')
 
   const [me, journeyRows, optionRows, ticketRows] = await Promise.all([
     db
@@ -115,21 +115,21 @@ export default async function HomePage() {
 
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold">{tSub('title')}</h2>
-          <p className="text-sm text-muted-foreground">{tSub('description')}</p>
+          <h2 className="text-2xl font-semibold">{tJ('title')}</h2>
+          <p className="text-sm text-muted-foreground">{tJ('description')}</p>
         </div>
         <Link href="/trips" className={buttonVariants()}>
           <Plus className="size-4" />
-          {t('addSubscription')}
+          {t('addJourney')}
         </Link>
       </div>
 
       {cards.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-muted-foreground">
-            {tSub('empty')}{' '}
+            {tJ('empty')}{' '}
             <Link className="underline" href="/trips">
-              {tSub('emptyLink')}
+              {tJ('emptyLink')}
             </Link>
             .
           </CardContent>

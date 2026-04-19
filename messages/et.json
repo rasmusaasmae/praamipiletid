@@ -9,9 +9,9 @@
   "Errors": {
     "invalidData": "Vigased andmed",
     "missingId": "Puudub id",
-    "tripNotFound": "Reisi ei leitud",
-    "subscriptionExists": "Tellimus on juba olemas",
-    "subscriptionNotFound": "Tellimust ei leitud",
+    "tripNotFound": "Väljumist ei leitud",
+    "journeyExists": "Reis on juba olemas",
+    "journeyNotFound": "Reisi ei leitud",
     "pollIntervalRange": "Väärtus peab olema 5000..600000 ms",
     "topicInUse": "See teema on juba kasutusel",
     "topicMin": "Vähemalt 4 tähemärki",
@@ -24,7 +24,7 @@
     "topicDescription": "Telli see teema ntfy rakenduses, et teavitused kätte saada.",
     "topicMissing": "Teemat pole veel seadistatud.",
     "topicMissingLink": "Seadista see Seadete lehel",
-    "addSubscription": "Lisa tellimus"
+    "addJourney": "Lisa reis"
   },
   "ThemeToggle": {
     "label": "Vaheta teemat",
@@ -87,12 +87,12 @@
     "attachSoon": "Lisa (varsti)",
     "detach": "Eemalda"
   },
-  "Subscriptions": {
-    "title": "Minu tellimused",
-    "description": "Halda oma aktiivseid teavitusi. Mineviku reisid jäävad ajalukku.",
-    "empty": "Tellimusi pole. Lisa neid",
-    "emptyLink": "reiside lehelt",
-    "columnTrip": "Reis",
+  "Journeys": {
+    "title": "Minu reisid",
+    "description": "Halda oma aktiivseid reise. Möödunud reisid jäävad ajalukku.",
+    "empty": "Reise pole veel. Lisa neid",
+    "emptyLink": "väljumiste lehelt",
+    "columnTrip": "Väljumine",
     "columnType": "Tüüp",
     "columnThreshold": "Lävi",
     "columnStatus": "Staatus",
@@ -144,7 +144,7 @@
   },
   "Admin": {
     "title": "Admin",
-    "description": "Halda süsteemi seadeid, kasutajaid ja tellimusi.",
+    "description": "Halda süsteemi seadeid, kasutajaid ja reise.",
     "pollTitle": "Pollimise intervall",
     "pollDescription": "Kui tihti kontrollime praamipiletid.ee API-t. 5000–600000 ms.",
     "pollLabel": "Intervall (ms)",
@@ -152,9 +152,9 @@
     "saving": "Salvestan…",
     "saved": "Salvestatud",
     "users": "Kasutajad",
-    "subscriptions": "Tellimused",
+    "journeys": "Reisid",
     "usersEmpty": "Kasutajaid pole.",
-    "subscriptionsEmpty": "Tellimusi pole.",
+    "journeysEmpty": "Reise pole.",
     "columnUser": "Kasutaja",
     "columnRole": "Roll",
     "columnSubCount": "Tellimusi",

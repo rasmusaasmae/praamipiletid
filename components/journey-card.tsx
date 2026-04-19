@@ -42,7 +42,7 @@ export type JourneyCardData = {
 
 export function JourneyCard({ data }: { data: JourneyCardData }) {
   const [isPending, startTransition] = useTransition()
-  const t = useTranslations('Subscriptions')
+  const t = useTranslations('Journeys')
   const tOpt = useTranslations('Options')
   const tCap = useTranslations('Capacity')
   const tDir = useTranslations('Directions')

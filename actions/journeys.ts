@@ -55,7 +55,7 @@ export async function createJourney(formData: FormData): Promise<ActionResult> {
       ),
     )
     .get()
-  if (existing) return { ok: false, error: t('subscriptionExists') }
+  if (existing) return { ok: false, error: t('journeyExists') }
 
   const journeyId = randomUUID()
   const optionId = randomUUID()
@@ -136,7 +136,7 @@ export async function updateJourney(formData: FormData): Promise<ActionResult> {
     .where(and(eq(journeys.id, id), eq(journeys.userId, session.user.id)))
     .returning({ id: journeys.id })
 
-  if (res.length === 0) return { ok: false, error: t('subscriptionNotFound') }
+  if (res.length === 0) return { ok: false, error: t('journeyNotFound') }
 
   await logAudit({
     type: 'journey.updated',
@@ -172,7 +172,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     .from(journeys)
     .where(and(eq(journeys.id, parsed.data.journeyId), eq(journeys.userId, session.user.id)))
     .get()
-  if (!journey) return { ok: false, error: t('subscriptionNotFound') }
+  if (!journey) return { ok: false, error: t('journeyNotFound') }
 
   const events = await listEvents(journey.direction, parsed.data.date)
   const event = events.find((e) => e.uid === parsed.data.eventUid)
@@ -188,7 +188,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
       ),
     )
     .get()
-  if (duplicate) return { ok: false, error: t('subscriptionExists') }
+  if (duplicate) return { ok: false, error: t('journeyExists') }
 
   const top = await db
     .select({ priority: journeyOptions.priority })
@@ -238,7 +238,7 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
     .innerJoin(journeys, eq(journeys.id, journeyOptions.journeyId))
     .where(and(eq(journeyOptions.id, id), eq(journeys.userId, session.user.id)))
     .get()
-  if (!existing) return { ok: false, error: t('subscriptionNotFound') }
+  if (!existing) return { ok: false, error: t('journeyNotFound') }
 
   await db.delete(journeyOptions).where(eq(journeyOptions.id, id))
 
@@ -279,7 +279,7 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
     .innerJoin(journeys, eq(journeys.id, journeyOptions.journeyId))
     .where(and(eq(journeyOptions.id, parsed.data.id), eq(journeys.userId, session.user.id)))
     .get()
-  if (!current) return { ok: false, error: t('subscriptionNotFound') }
+  if (!current) return { ok: false, error: t('journeyNotFound') }
 
   const neighborFilter =
     parsed.data.direction === 'up'
@@ -355,7 +355,7 @@ export async function deleteJourney(formData: FormData): Promise<ActionResult> {
     .from(journeys)
     .where(and(eq(journeys.id, id), eq(journeys.userId, session.user.id)))
     .get()
-  if (!existing) return { ok: false, error: t('subscriptionNotFound') }
+  if (!existing) return { ok: false, error: t('journeyNotFound') }
 
   await db.delete(journeys).where(eq(journeys.id, id))
 
