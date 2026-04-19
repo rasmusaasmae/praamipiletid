@@ -17,16 +17,24 @@ type Props = {
   directions: ReadonlyArray<{ code: string; label: string }>
   currentDirection: string
   currentDate: string
+  tripId: string
+  directionLocked?: boolean
 }
 
-export function TripsFilter({ directions, currentDirection, currentDate }: Props) {
+export function TripsFilter({
+  directions,
+  currentDirection,
+  currentDate,
+  tripId,
+  directionLocked,
+}: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('TripsFilter')
 
-  const push = (direction: string, date: string) => {
-    const params = new URLSearchParams({ direction, date })
-    startTransition(() => router.push(`/trips?${params.toString()}`))
+  const push = (_direction: string, date: string) => {
+    const qs = new URLSearchParams({ date })
+    startTransition(() => router.push(`/trips/${tripId}/options?${qs.toString()}`))
   }
 
   return (
@@ -38,7 +46,7 @@ export function TripsFilter({ directions, currentDirection, currentDate }: Props
         <Select
           value={currentDirection}
           onValueChange={(v) => v && push(v, currentDate)}
-          disabled={isPending}
+          disabled={isPending || directionLocked}
         >
           <SelectTrigger id="direction" className="w-full">
             <SelectValue>

@@ -2,9 +2,9 @@ import { asc, eq } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { Plus } from 'lucide-react'
 import { db } from '@/db'
-import { journeyOptions, journeys, tickets, user } from '@/db/schema'
+import { tripOptions, trips, tickets, user } from '@/db/schema'
 import { requireUser } from '@/lib/session'
-import { JourneyCard, type JourneyCardData } from '@/components/journey-card'
+import { TripCard, type TripCardData } from '@/components/trip-card'
 import { TopicCopyButton } from '@/components/topic-copy-button'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,9 +13,9 @@ import { Link } from '@/i18n/navigation'
 export default async function HomePage() {
   const session = await requireUser()
   const t = await getTranslations('Home')
-  const tJ = await getTranslations('Journeys')
+  const tT = await getTranslations('Trips')
 
-  const [me, journeyRows, optionRows, ticketRows] = await Promise.all([
+  const [me, tripRows, optionRows, ticketRows] = await Promise.all([
     db
       .select({ ntfyTopic: user.ntfyTopic })
       .from(user)
@@ -23,39 +23,39 @@ export default async function HomePage() {
       .get(),
     db
       .select({
-        id: journeys.id,
-        direction: journeys.direction,
-        measurementUnit: journeys.measurementUnit,
-        threshold: journeys.threshold,
-        active: journeys.active,
-        notify: journeys.notify,
-        edit: journeys.edit,
+        id: trips.id,
+        direction: trips.direction,
+        measurementUnit: trips.measurementUnit,
+        threshold: trips.threshold,
+        active: trips.active,
+        notify: trips.notify,
+        edit: trips.edit,
       })
-      .from(journeys)
-      .where(eq(journeys.userId, session.user.id))
+      .from(trips)
+      .where(eq(trips.userId, session.user.id))
       .all(),
     db
       .select({
-        id: journeyOptions.id,
-        journeyId: journeyOptions.journeyId,
-        priority: journeyOptions.priority,
-        active: journeyOptions.active,
-        eventUid: journeyOptions.eventUid,
-        eventDate: journeyOptions.eventDate,
-        eventDtstart: journeyOptions.eventDtstart,
-        lastCapacity: journeyOptions.lastCapacity,
-        lastCapacityState: journeyOptions.lastCapacityState,
+        id: tripOptions.id,
+        tripId: tripOptions.tripId,
+        priority: tripOptions.priority,
+        active: tripOptions.active,
+        eventUid: tripOptions.eventUid,
+        eventDate: tripOptions.eventDate,
+        eventDtstart: tripOptions.eventDtstart,
+        lastCapacity: tripOptions.lastCapacity,
+        lastCapacityState: tripOptions.lastCapacityState,
       })
-      .from(journeyOptions)
-      .innerJoin(journeys, eq(journeys.id, journeyOptions.journeyId))
-      .where(eq(journeys.userId, session.user.id))
-      .orderBy(asc(journeyOptions.priority))
+      .from(tripOptions)
+      .innerJoin(trips, eq(trips.id, tripOptions.tripId))
+      .where(eq(trips.userId, session.user.id))
+      .orderBy(asc(tripOptions.priority))
       .all(),
     db
       .select()
       .from(tickets)
-      .innerJoin(journeys, eq(journeys.id, tickets.journeyId))
-      .where(eq(journeys.userId, session.user.id))
+      .innerJoin(trips, eq(trips.id, tickets.tripId))
+      .where(eq(trips.userId, session.user.id))
       .all(),
   ])
 
@@ -63,19 +63,19 @@ export default async function HomePage() {
   const topic = me?.ntfyTopic ?? ''
   const fullUrl = topic ? `${ntfyBase}/${topic}` : null
 
-  const optionsByJourney = new Map<string, (typeof optionRows)[number][]>()
+  const optionsByTrip = new Map<string, (typeof optionRows)[number][]>()
   for (const o of optionRows) {
-    const list = optionsByJourney.get(o.journeyId) ?? []
+    const list = optionsByTrip.get(o.tripId) ?? []
     list.push(o)
-    optionsByJourney.set(o.journeyId, list)
+    optionsByTrip.set(o.tripId, list)
   }
-  const ticketByJourney = new Map(ticketRows.map((r) => [r.tickets.journeyId, r.tickets]))
+  const ticketByTrip = new Map(ticketRows.map((r) => [r.tickets.tripId, r.tickets]))
 
-  const cards: JourneyCardData[] = journeyRows
-    .map((j) => ({
-      journey: j,
-      options: optionsByJourney.get(j.id) ?? [],
-      ticket: ticketByJourney.get(j.id) ?? null,
+  const cards: TripCardData[] = tripRows
+    .map((trip) => ({
+      trip,
+      options: optionsByTrip.get(trip.id) ?? [],
+      ticket: ticketByTrip.get(trip.id) ?? null,
     }))
     .sort((a, b) => {
       const aNext = a.options[0]?.eventDtstart.getTime() ?? Infinity
@@ -115,21 +115,21 @@ export default async function HomePage() {
 
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold">{tJ('title')}</h2>
-          <p className="text-sm text-muted-foreground">{tJ('description')}</p>
+          <h2 className="text-2xl font-semibold">{tT('title')}</h2>
+          <p className="text-sm text-muted-foreground">{tT('description')}</p>
         </div>
-        <Link href="/trips" className={buttonVariants()}>
+        <Link href="/trips/new" className={buttonVariants()}>
           <Plus className="size-4" />
-          {t('addJourney')}
+          {t('addTrip')}
         </Link>
       </div>
 
       {cards.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-muted-foreground">
-            {tJ('empty')}{' '}
-            <Link className="underline" href="/trips">
-              {tJ('emptyLink')}
+            {tT('empty')}{' '}
+            <Link className="underline" href="/trips/new">
+              {tT('emptyLink')}
             </Link>
             .
           </CardContent>
@@ -137,7 +137,7 @@ export default async function HomePage() {
       ) : (
         <div className="flex flex-col gap-4">
           {cards.map((card) => (
-            <JourneyCard key={card.journey.id} data={card} />
+            <TripCard key={card.trip.id} data={card} />
           ))}
         </div>
       )}

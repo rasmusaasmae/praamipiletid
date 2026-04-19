@@ -2,16 +2,15 @@
   "NavBar": {
     "brand": "Praamipiletid",
     "home": "Avaleht",
-    "trips": "Reisid",
     "settings": "Seaded",
     "admin": "Admin"
   },
   "Errors": {
     "invalidData": "Vigased andmed",
     "missingId": "Puudub id",
-    "tripNotFound": "Väljumist ei leitud",
-    "journeyExists": "Reis on juba olemas",
-    "journeyNotFound": "Reisi ei leitud",
+    "tripNotFound": "Reisi ei leitud",
+    "eventNotFound": "Väljumist ei leitud",
+    "optionExists": "See on juba sellel reisil",
     "pollIntervalRange": "Väärtus peab olema 5000..600000 ms",
     "topicInUse": "See teema on juba kasutusel",
     "topicMin": "Vähemalt 4 tähemärki",
@@ -24,7 +23,7 @@
     "topicDescription": "Telli see teema ntfy rakenduses, et teavitused kätte saada.",
     "topicMissing": "Teemat pole veel seadistatud.",
     "topicMissingLink": "Seadista see Seadete lehel",
-    "addJourney": "Lisa reis"
+    "addTrip": "Lisa reis"
   },
   "ThemeToggle": {
     "label": "Vaheta teemat",
@@ -44,28 +43,21 @@
     "google": "Logi sisse Google kontoga",
     "redirecting": "Suunan…"
   },
-  "TripsPage": {
-    "title": "Reisid",
-    "description": "Vali suund ja kuupäev, seejärel telli teavitus väljumise kohta.",
+  "AddOption": {
+    "title": "Lisa reisile valik",
     "loadError": "Laevaliiklust ei saanud laadida",
-    "empty": "Sellel kuupäeval reise ei leitud."
+    "empty": "Sellel kuupäeval väljumisi ei leitud.",
+    "tripNotFound": "Reisi ei leitud.",
+    "backHome": "Tagasi reiside juurde"
   },
   "TripsFilter": {
     "direction": "Suund",
     "date": "Kuupäev"
   },
-  "TripCard": {
-    "type": "Tüüp",
-    "threshold": "Lävi",
-    "subscribe": "Telli",
-    "alreadySubscribed": "Juba tellitud",
+  "EventCard": {
     "saving": "Salvestan…",
-    "subscribed": "Tellimus loodud",
-    "target": "Lisa",
-    "targetNew": "Uus tellimus",
-    "targetExisting": "{unit} · lävi {threshold}",
-    "willUseUnit": "Kasutab tüüpi {unit}",
     "addOption": "Lisa valik",
+    "alreadyAdded": "Juba lisatud",
     "optionAdded": "Valik lisatud"
   },
   "Options": {
@@ -79,7 +71,8 @@
     "remove": "Eemalda valik",
     "removed": "Valik eemaldatud",
     "moved": "Liigutatud",
-    "badgeNotify": "Teavitan",
+    "addOption": "Lisa valik",
+    "badgeNotify": "Teavita",
     "badgeEdit": "Auto-muuda"
   },
   "Ticket": {
@@ -87,12 +80,28 @@
     "attachSoon": "Lisa (varsti)",
     "detach": "Eemalda"
   },
-  "Journeys": {
+  "NewTrip": {
+    "title": "Uus reis",
+    "description": "Vali suund ja mida jälgida. Väljumised lisad valikutena järgmises sammus.",
+    "direction": "Suund",
+    "measurementUnit": "Jälgi mahutavust",
+    "threshold": "Lävi",
+    "thresholdHelp": "Teavita, kui vabu kohti on vähemalt nii palju.",
+    "notifyLabel": "Saada teavitusi",
+    "notifyHelp": "Saada teavitus ntfy teemasse, kui lävi ületatakse.",
+    "editLabel": "Auto-muuda piletit (varsti)",
+    "editHelp": "Liiguta pilet automaatselt, kui parem väljumine vabaneb.",
+    "submit": "Loo reis",
+    "creating": "Loon…",
+    "cancel": "Tühista",
+    "created": "Reis loodud"
+  },
+  "Trips": {
     "title": "Minu reisid",
     "description": "Halda oma aktiivseid reise. Möödunud reisid jäävad ajalukku.",
-    "empty": "Reise pole veel. Lisa neid",
-    "emptyLink": "väljumiste lehelt",
-    "columnTrip": "Väljumine",
+    "empty": "Reise pole veel. Loo uus",
+    "emptyLink": "uue reisi lehel",
+    "columnTrip": "Reis",
     "columnType": "Tüüp",
     "columnThreshold": "Lävi",
     "columnStatus": "Staatus",
@@ -152,12 +161,12 @@
     "saving": "Salvestan…",
     "saved": "Salvestatud",
     "users": "Kasutajad",
-    "journeys": "Reisid",
+    "trips": "Reisid",
     "usersEmpty": "Kasutajaid pole.",
-    "journeysEmpty": "Reise pole.",
+    "tripsEmpty": "Reise pole.",
     "columnUser": "Kasutaja",
     "columnRole": "Roll",
-    "columnSubCount": "Tellimusi",
+    "columnSubCount": "Reise",
     "columnCreated": "Loodud",
     "columnTrip": "Reis",
     "columnType": "Tüüp",

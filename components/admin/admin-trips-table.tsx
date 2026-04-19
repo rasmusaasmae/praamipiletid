@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { deleteAnyJourney } from '@/actions/admin'
+import { deleteAnyTrip } from '@/actions/admin'
 
 type Row = {
   id: string
@@ -28,7 +28,7 @@ type Row = {
   lastCapacity: number | null
 }
 
-export function AdminSubscriptionsTable({ rows }: { rows: Row[] }) {
+export function AdminTripsTable({ rows }: { rows: Row[] }) {
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('Admin')
   const tCap = useTranslations('Capacity')
@@ -43,14 +43,14 @@ export function AdminSubscriptionsTable({ rows }: { rows: Row[] }) {
     const form = new FormData()
     form.set('id', id)
     startTransition(async () => {
-      const res = await deleteAnyJourney(form)
+      const res = await deleteAnyTrip(form)
       if (res.ok) toast.success(t('deleted'))
       else toast.error(res.error)
     })
   }
 
   if (rows.length === 0) {
-    return <p className="text-muted-foreground">{t('journeysEmpty')}</p>
+    return <p className="text-muted-foreground">{t('tripsEmpty')}</p>
   }
 
   return (

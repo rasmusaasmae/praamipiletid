@@ -4,9 +4,9 @@ import { db } from '@/db'
 import { auditLogs } from '@/db/schema'
 
 export type AuditPayload = {
-  'journey.created': { direction: string; measurementUnit: string; threshold: number }
-  'journey.updated': { changes: Record<string, unknown> }
-  'journey.deleted': { direction: string }
+  'trip.created': { direction: string; measurementUnit: string; threshold: number }
+  'trip.updated': { changes: Record<string, unknown> }
+  'trip.deleted': { direction: string }
   'option.added': { eventUid: string; priority: number }
   'option.removed': { eventUid: string; priority: number }
   'option.reordered': { from: number; to: number; eventUid: string }
@@ -57,7 +57,7 @@ export type LogAuditArgs<T extends AuditType> = {
   type: T
   actor: 'user' | 'system'
   userId?: string | null
-  journeyId?: string | null
+  tripId?: string | null
   payload: AuditPayload[T]
 }
 
@@ -67,7 +67,7 @@ export async function logAudit<T extends AuditType>(args: LogAuditArgs<T>): Prom
     userId: args.userId ?? null,
     actor: args.actor,
     type: args.type,
-    journeyId: args.journeyId ?? null,
+    tripId: args.tripId ?? null,
     payload: JSON.stringify(args.payload),
   })
 }

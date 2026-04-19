@@ -2,7 +2,6 @@
   "NavBar": {
     "brand": "Ferry Tickets",
     "home": "Home",
-    "trips": "Trips",
     "settings": "Settings",
     "admin": "Admin"
   },
@@ -10,8 +9,8 @@
     "invalidData": "Invalid data",
     "missingId": "Missing id",
     "tripNotFound": "Trip not found",
-    "journeyExists": "Journey already exists",
-    "journeyNotFound": "Journey not found",
+    "eventNotFound": "Event not found",
+    "optionExists": "Already in this trip",
     "pollIntervalRange": "Value must be 5000..600000 ms",
     "topicInUse": "This topic is already in use",
     "topicMin": "At least 4 characters",
@@ -24,7 +23,7 @@
     "topicDescription": "Subscribe to this topic in the ntfy app to receive alerts.",
     "topicMissing": "No topic set yet.",
     "topicMissingLink": "Set one up in Settings",
-    "addJourney": "Add journey"
+    "addTrip": "Add trip"
   },
   "ThemeToggle": {
     "label": "Toggle theme",
@@ -44,32 +43,25 @@
     "google": "Sign in with Google",
     "redirecting": "Redirecting…"
   },
-  "TripsPage": {
-    "title": "Trips",
-    "description": "Pick a route and date, then subscribe to notifications for a departure.",
+  "AddOption": {
+    "title": "Add option to trip",
     "loadError": "Failed to load ferry schedule",
-    "empty": "No trips found for this date."
+    "empty": "No events found for this date.",
+    "tripNotFound": "Trip not found.",
+    "backHome": "Back to trips"
   },
   "TripsFilter": {
     "direction": "Route",
     "date": "Date"
   },
-  "TripCard": {
-    "type": "Type",
-    "threshold": "Threshold",
-    "subscribe": "Subscribe",
-    "alreadySubscribed": "Already subscribed",
+  "EventCard": {
     "saving": "Saving…",
-    "subscribed": "Subscription created",
-    "target": "Add to",
-    "targetNew": "New subscription",
-    "targetExisting": "{unit} · threshold {threshold}",
-    "willUseUnit": "Will use {unit}",
     "addOption": "Add option",
+    "alreadyAdded": "Already added",
     "optionAdded": "Option added"
   },
   "Options": {
-    "empty": "No options on this journey yet.",
+    "empty": "No options on this trip yet.",
     "past": "Past",
     "notYetChecked": "Not checked yet",
     "above": "free",
@@ -79,7 +71,8 @@
     "remove": "Remove option",
     "removed": "Option removed",
     "moved": "Moved",
-    "badgeNotify": "Notifying",
+    "addOption": "Add option",
+    "badgeNotify": "Notify",
     "badgeEdit": "Auto-edit"
   },
   "Ticket": {
@@ -87,11 +80,27 @@
     "attachSoon": "Attach (soon)",
     "detach": "Detach"
   },
-  "Journeys": {
-    "title": "My journeys",
-    "description": "Manage your active journeys. Past ones stay in the history.",
-    "empty": "No journeys yet. Add one from the",
-    "emptyLink": "trips page",
+  "NewTrip": {
+    "title": "New trip",
+    "description": "Pick the direction and what to watch. You'll add events as options next.",
+    "direction": "Direction",
+    "measurementUnit": "Watch capacity",
+    "threshold": "Threshold",
+    "thresholdHelp": "Notify when free slots reach this number or more.",
+    "notifyLabel": "Send notifications",
+    "notifyHelp": "Push to your ntfy topic when the threshold is crossed.",
+    "editLabel": "Auto-edit ticket (soon)",
+    "editHelp": "Automatically move your ticket when a better option opens.",
+    "submit": "Create trip",
+    "creating": "Creating…",
+    "cancel": "Cancel",
+    "created": "Trip created"
+  },
+  "Trips": {
+    "title": "My trips",
+    "description": "Manage your active trips. Past ones stay in the history.",
+    "empty": "No trips yet. Create one on the",
+    "emptyLink": "new trip page",
     "columnTrip": "Trip",
     "columnType": "Type",
     "columnThreshold": "Threshold",
@@ -144,7 +153,7 @@
   },
   "Admin": {
     "title": "Admin",
-    "description": "Manage system settings, users and journeys.",
+    "description": "Manage system settings, users and trips.",
     "pollTitle": "Poll interval",
     "pollDescription": "How often we check the praamipiletid.ee API. 5000–600000 ms.",
     "pollLabel": "Interval (ms)",
@@ -152,12 +161,12 @@
     "saving": "Saving…",
     "saved": "Saved",
     "users": "Users",
-    "journeys": "Journeys",
+    "trips": "Trips",
     "usersEmpty": "No users.",
-    "journeysEmpty": "No journeys.",
+    "tripsEmpty": "No trips.",
     "columnUser": "User",
     "columnRole": "Role",
-    "columnSubCount": "Subs",
+    "columnSubCount": "Trips",
     "columnCreated": "Created",
     "columnTrip": "Trip",
     "columnType": "Type",

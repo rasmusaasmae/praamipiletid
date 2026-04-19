@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@/db'
-import { journeyOptions, journeys, user } from '@/db/schema'
+import { tripOptions, trips, user } from '@/db/schema'
 import { CAPACITY_LABELS, listEvents, type PraamidEvent } from '@/lib/praamid'
 import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
@@ -12,7 +12,7 @@ let stopRequested = false
 
 type JoinedOption = {
   optionId: string
-  journeyId: string
+  tripId: string
   userId: string
   direction: string
   measurementUnit: string
@@ -84,7 +84,7 @@ async function processBatch(
             type: 'notification.threshold_crossed',
             actor: 'system',
             userId: row.userId,
-            journeyId: row.journeyId,
+            tripId: row.tripId,
             payload: {
               eventUid: row.eventUid,
               from: prevState,
@@ -101,9 +101,9 @@ async function processBatch(
     }
 
     await db
-      .update(journeyOptions)
+      .update(tripOptions)
       .set({ lastCapacity: capacity, lastCapacityState: nextState })
-      .where(eq(journeyOptions.id, row.optionId))
+      .where(eq(tripOptions.id, row.optionId))
   }
 }
 
@@ -111,28 +111,28 @@ async function tick() {
   const now = new Date()
   const rows = await db
     .select({
-      optionId: journeyOptions.id,
-      journeyId: journeys.id,
-      userId: journeys.userId,
-      direction: journeys.direction,
-      measurementUnit: journeys.measurementUnit,
-      threshold: journeys.threshold,
-      notify: journeys.notify,
-      stopBeforeMinutes: journeys.stopBeforeMinutes,
-      priority: journeyOptions.priority,
-      eventUid: journeyOptions.eventUid,
-      eventDate: journeyOptions.eventDate,
-      eventDtstart: journeyOptions.eventDtstart,
-      lastCapacity: journeyOptions.lastCapacity,
-      lastCapacityState: journeyOptions.lastCapacityState,
+      optionId: tripOptions.id,
+      tripId: trips.id,
+      userId: trips.userId,
+      direction: trips.direction,
+      measurementUnit: trips.measurementUnit,
+      threshold: trips.threshold,
+      notify: trips.notify,
+      stopBeforeMinutes: trips.stopBeforeMinutes,
+      priority: tripOptions.priority,
+      eventUid: tripOptions.eventUid,
+      eventDate: tripOptions.eventDate,
+      eventDtstart: tripOptions.eventDtstart,
+      lastCapacity: tripOptions.lastCapacity,
+      lastCapacityState: tripOptions.lastCapacityState,
     })
-    .from(journeys)
-    .innerJoin(journeyOptions, eq(journeyOptions.journeyId, journeys.id))
+    .from(trips)
+    .innerJoin(tripOptions, eq(tripOptions.tripId, trips.id))
     .where(
       and(
-        eq(journeys.active, true),
-        eq(journeyOptions.active, true),
-        gt(journeyOptions.eventDtstart, now),
+        eq(trips.active, true),
+        eq(tripOptions.active, true),
+        gt(tripOptions.eventDtstart, now),
       ),
     )
     .all()

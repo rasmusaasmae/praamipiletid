@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
-import { journeys, user } from '@/db/schema'
+import { trips, user } from '@/db/schema'
 import { logAudit } from '@/lib/audit'
 import { requireAdmin } from '@/lib/session'
 import { setSetting } from '@/lib/settings'
@@ -37,23 +37,23 @@ export async function updateUserRole(formData: FormData): Promise<AdminActionRes
   return { ok: true }
 }
 
-export async function deleteAnyJourney(formData: FormData): Promise<AdminActionResult> {
+export async function deleteAnyTrip(formData: FormData): Promise<AdminActionResult> {
   const session = await requireAdmin()
   const t = await getTranslations('Errors')
   const id = String(formData.get('id') ?? '')
   if (!id) return { ok: false, error: t('missingId') }
   const target = await db
-    .select({ direction: journeys.direction, userId: journeys.userId })
-    .from(journeys)
-    .where(eq(journeys.id, id))
+    .select({ direction: trips.direction, userId: trips.userId })
+    .from(trips)
+    .where(eq(trips.id, id))
     .get()
-  if (!target) return { ok: false, error: t('journeyNotFound') }
-  await db.delete(journeys).where(eq(journeys.id, id))
+  if (!target) return { ok: false, error: t('tripNotFound') }
+  await db.delete(trips).where(eq(trips.id, id))
   await logAudit({
-    type: 'journey.deleted',
+    type: 'trip.deleted',
     actor: 'user',
     userId: session.user.id,
-    journeyId: null,
+    tripId: null,
     payload: { direction: target.direction },
   })
   revalidatePath('/admin')

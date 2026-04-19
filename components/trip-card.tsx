@@ -1,176 +1,232 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { toast } from 'sonner'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Link } from '@/i18n/navigation'
+import { TicketSlot } from '@/components/ticket-slot'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { addOption, createJourney } from '@/actions/journeys'
-import { SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
+  deleteTrip,
+  moveOption,
+  removeOption,
+  updateTrip,
+} from '@/actions/trips'
+import type { Ticket } from '@/db/schema'
 
-const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
-
-export type JourneyTarget = {
-  id: string
-  measurementUnit: string
-  threshold: number
-  eventUids: string[]
-}
-
-type Props = {
-  trip: PraamidEvent
-  direction: string
-  date: string
-  journeys: JourneyTarget[]
-}
-
-function formatTime(iso: string) {
-  const d = new Date(iso)
-  const h = d.getHours().toString().padStart(2, '0')
-  const m = d.getMinutes().toString().padStart(2, '0')
-  return `${h}:${m}`
-}
-
-export function TripCard({ trip, direction, date, journeys }: Props) {
-  const [target, setTarget] = useState<string>('new')
-  const [capacityType, setCapacityType] = useState<string>('sv')
-  const [threshold, setThreshold] = useState('1')
-  const [isPending, startTransition] = useTransition()
-  const t = useTranslations('TripCard')
-  const tCap = useTranslations('Capacity')
-
-  const activeJourney = useMemo(
-    () => (target === 'new' ? null : journeys.find((j) => j.id === target) ?? null),
-    [target, journeys],
-  )
-
-  const effectiveCapacity = activeJourney ? activeJourney.measurementUnit : capacityType
-  const alreadyOnTarget = activeJourney
-    ? activeJourney.eventUids.includes(trip.uid)
-    : journeys.some(
-        (j) => j.measurementUnit === capacityType && j.eventUids.includes(trip.uid),
-      )
-
-  const onSubmit = () => {
-    const form = new FormData()
-    form.set('direction', direction)
-    form.set('date', date)
-    form.set('eventUid', trip.uid)
-
-    startTransition(async () => {
-      const result = activeJourney
-        ? await (() => {
-            form.set('journeyId', activeJourney.id)
-            return addOption(form)
-          })()
-        : await (() => {
-            form.set('measurementUnit', capacityType)
-            form.set('threshold', threshold)
-            return createJourney(form)
-          })()
-      if (result.ok) {
-        toast.success(activeJourney ? t('optionAdded') : t('subscribed'))
-      } else {
-        toast.error(result.error)
-      }
-    })
+export type TripCardData = {
+  trip: {
+    id: string
+    direction: string
+    measurementUnit: string
+    threshold: number
+    active: boolean
+    notify: boolean
+    edit: boolean
   }
+  options: Array<{
+    id: string
+    tripId: string
+    priority: number
+    active: boolean
+    eventUid: string
+    eventDate: string
+    eventDtstart: Date
+    lastCapacity: number | null
+    lastCapacityState: string | null
+  }>
+  ticket: Ticket | null
+}
+
+export function TripCard({ data }: { data: TripCardData }) {
+  const [isPending, startTransition] = useTransition()
+  const t = useTranslations('Trips')
+  const tOpt = useTranslations('Options')
+  const tCap = useTranslations('Capacity')
+  const tDir = useTranslations('Directions')
+  const locale = useLocale()
+
+  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString(dateTag, { weekday: 'short', day: 'numeric', month: 'short' })
+  const formatTime = (d: Date) =>
+    d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })
+
+  const allPast =
+    data.options.length > 0 && data.options.every((o) => o.eventDtstart.getTime() < Date.now())
+
+  const submit = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, okMsg: string) =>
+    startTransition(async () => {
+      const res = await fn()
+      if (res.ok) toast.success(okMsg)
+      else toast.error(res.error)
+    })
+
+  const toggleActive = () => {
+    const form = new FormData()
+    form.set('id', data.trip.id)
+    form.set('active', data.trip.active ? '' : 'true')
+    submit(() => updateTrip(form), t('saved'))
+  }
+
+  const toggleFlag = (flag: 'notify' | 'edit', next: boolean) => {
+    const form = new FormData()
+    form.set('id', data.trip.id)
+    form.set(flag, next ? 'true' : '')
+    submit(() => updateTrip(form), t('saved'))
+  }
+
+  const onDeleteTrip = () => {
+    const form = new FormData()
+    form.set('id', data.trip.id)
+    submit(() => deleteTrip(form), t('deleted'))
+  }
+
+  const onRemoveOption = (id: string) => {
+    const form = new FormData()
+    form.set('id', id)
+    submit(() => removeOption(form), tOpt('removed'))
+  }
+
+  const onMoveOption = (id: string, direction: 'up' | 'down') => {
+    const form = new FormData()
+    form.set('id', id)
+    form.set('direction', direction)
+    submit(() => moveOption(form), tOpt('moved'))
+  }
+
+  const sorted = [...data.options].sort((a, b) => a.priority - b.priority)
 
   return (
     <Card>
-      <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold">{formatTime(trip.dtstart)}</span>
-            <span className="text-sm text-muted-foreground">→ {formatTime(trip.dtend)}</span>
-            <Badge variant="outline">{SHIP_NAMES[trip.ship.code] ?? trip.ship.code}</Badge>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
+            <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
+            <Badge variant="secondary">
+              {t('columnThreshold')}: {data.trip.threshold}
+            </Badge>
           </div>
-          <div className="flex flex-wrap gap-2 text-sm">
-            {CAPACITY_ORDER.map((code) => {
-              const v = trip.capacities[code]
-              if (v == null) return null
-              return (
-                <span key={code} className="rounded-md bg-secondary px-2 py-0.5">
-                  {tCap(code)}: <span className="font-medium text-foreground">{v}</span>
-                </span>
-              )
-            })}
+          <div className="flex items-center gap-2">
+            {allPast ? (
+              <Badge variant="secondary">{t('statusPast')}</Badge>
+            ) : data.trip.active ? (
+              <Badge>{t('statusActive')}</Badge>
+            ) : (
+              <Badge variant="outline">{t('statusPaused')}</Badge>
+            )}
           </div>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="w-48">
-            <Label className="mb-1 block text-xs">{t('target')}</Label>
-            <Select value={target} onValueChange={(v) => v && setTarget(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new">{t('targetNew')}</SelectItem>
-                {journeys.map((j) => (
-                  <SelectItem key={j.id} value={j.id}>
-                    {t('targetExisting', {
-                      unit: tCap(j.measurementUnit as 'sv'),
-                      threshold: j.threshold,
-                    })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {!activeJourney ? (
-            <>
-              <div className="w-40">
-                <Label className="mb-1 block text-xs">{t('type')}</Label>
-                <Select value={capacityType} onValueChange={(v) => v && setCapacityType(v)}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      {(v: string) => tCap(v as (typeof CAPACITY_ORDER)[number])}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CAPACITY_ORDER.map((code) => (
-                      <SelectItem key={code} value={code}>
-                        {tCap(code)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-24">
-                <Label className="mb-1 block text-xs">{t('threshold')}</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={threshold}
-                  onChange={(e) => setThreshold(e.target.value)}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="text-xs text-muted-foreground">
-              {t('willUseUnit', { unit: tCap(effectiveCapacity as 'sv') })}
-            </div>
-          )}
-          <Button disabled={isPending || alreadyOnTarget} onClick={onSubmit}>
-            {alreadyOnTarget
-              ? t('alreadySubscribed')
-              : isPending
-                ? t('saving')
-                : activeJourney
-                  ? t('addOption')
-                  : t('subscribe')}
+        <div className="flex gap-2">
+          {!allPast ? (
+            <Button size="sm" variant="secondary" disabled={isPending} onClick={toggleActive}>
+              {data.trip.active ? t('pause') : t('activate')}
+            </Button>
+          ) : null}
+          <Button size="sm" variant="destructive" disabled={isPending} onClick={onDeleteTrip}>
+            {t('delete')}
           </Button>
         </div>
+      </CardHeader>
+
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={data.trip.notify ? 'default' : 'outline'}
+            disabled={isPending}
+            onClick={() => toggleFlag('notify', !data.trip.notify)}
+          >
+            {tOpt('badgeNotify')}
+          </Button>
+          <Button
+            size="sm"
+            variant={data.trip.edit ? 'default' : 'outline'}
+            disabled={isPending}
+            onClick={() => toggleFlag('edit', !data.trip.edit)}
+          >
+            {tOpt('badgeEdit')}
+          </Button>
+        </div>
+
+        <TicketSlot ticket={data.ticket} />
+
+        {sorted.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{tOpt('empty')}</p>
+        ) : null}
+        {sorted.length > 0 ? (
+          <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+            {sorted.map((option, idx) => {
+              const past = option.eventDtstart.getTime() < Date.now()
+              const state = option.lastCapacityState
+              return (
+                <li
+                  key={option.id}
+                  className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">
+                      {idx + 1}
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {formatDate(option.eventDtstart)} · {formatTime(option.eventDtstart)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {past
+                          ? tOpt('past')
+                          : option.lastCapacity == null
+                            ? tOpt('notYetChecked')
+                            : `${option.lastCapacity} ${tOpt(state === 'above' ? 'above' : 'below')}`}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={isPending || idx === 0}
+                      onClick={() => onMoveOption(option.id, 'up')}
+                      aria-label={tOpt('moveUp')}
+                    >
+                      <ArrowUp className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={isPending || idx === sorted.length - 1}
+                      onClick={() => onMoveOption(option.id, 'down')}
+                      aria-label={tOpt('moveDown')}
+                    >
+                      <ArrowDown className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={isPending}
+                      onClick={() => onRemoveOption(option.id)}
+                      aria-label={tOpt('remove')}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
+
+        <Link
+          href={`/trips/${data.trip.id}/options`}
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+        >
+          <Plus className="size-4" />
+          {tOpt('addOption')}
+        </Link>
       </CardContent>
     </Card>
   )

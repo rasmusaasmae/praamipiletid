@@ -20,9 +20,6 @@ export async function NavBar({ user }: Props) {
             <Link href="/" className="hover:text-foreground">
               {t('home')}
             </Link>
-            <Link href="/trips" className="hover:text-foreground">
-              {t('trips')}
-            </Link>
             <Link href="/settings" className="hover:text-foreground">
               {t('settings')}
             </Link>

@@ -13,8 +13,8 @@ export const settings = sqliteTable('settings', {
     .notNull(),
 })
 
-export const journeys = sqliteTable(
-  'journeys',
+export const trips = sqliteTable(
+  'trips',
   {
     id: text('id').primaryKey(),
     userId: text('user_id')
@@ -36,17 +36,17 @@ export const journeys = sqliteTable(
       .notNull(),
   },
   (table) => [
-    index('journeys_user_id_idx').on(table.userId),
-    index('journeys_active_idx').on(table.active),
+    index('trips_user_id_idx').on(table.userId),
+    index('trips_active_idx').on(table.active),
   ],
 )
 
 export const tickets = sqliteTable(
   'tickets',
   {
-    journeyId: text('journey_id')
+    tripId: text('trip_id')
       .primaryKey()
-      .references(() => journeys.id, { onDelete: 'cascade' }),
+      .references(() => trips.id, { onDelete: 'cascade' }),
     ticketCode: text('ticket_code').notNull(),
     ticketNumber: text('ticket_number').notNull(),
     bookingUid: text('booking_uid').notNull(),
@@ -62,13 +62,13 @@ export const tickets = sqliteTable(
   (table) => [index('tickets_event_uid_idx').on(table.eventUid)],
 )
 
-export const journeyOptions = sqliteTable(
-  'journey_options',
+export const tripOptions = sqliteTable(
+  'trip_options',
   {
     id: text('id').primaryKey(),
-    journeyId: text('journey_id')
+    tripId: text('trip_id')
       .notNull()
-      .references(() => journeys.id, { onDelete: 'cascade' }),
+      .references(() => trips.id, { onDelete: 'cascade' }),
     priority: integer('priority').notNull(),
     active: integer('active', { mode: 'boolean' }).default(true).notNull(),
     eventUid: text('event_uid').notNull(),
@@ -85,9 +85,9 @@ export const journeyOptions = sqliteTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('journey_options_event_unique').on(table.journeyId, table.eventUid),
-    uniqueIndex('journey_options_priority_unique').on(table.journeyId, table.priority),
-    index('journey_options_dtstart_idx').on(table.eventDtstart),
+    uniqueIndex('trip_options_event_unique').on(table.tripId, table.eventUid),
+    uniqueIndex('trip_options_priority_unique').on(table.tripId, table.priority),
+    index('trip_options_dtstart_idx').on(table.eventDtstart),
   ],
 )
 
@@ -98,7 +98,7 @@ export const auditLogs = sqliteTable(
     userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
     actor: text('actor').notNull(),
     type: text('type').notNull(),
-    journeyId: text('journey_id').references(() => journeys.id, { onDelete: 'set null' }),
+    tripId: text('trip_id').references(() => trips.id, { onDelete: 'set null' }),
     payload: text('payload'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -107,7 +107,7 @@ export const auditLogs = sqliteTable(
   (table) => [
     index('audit_logs_user_created_idx').on(table.userId, table.createdAt),
     index('audit_logs_type_idx').on(table.type),
-    index('audit_logs_journey_idx').on(table.journeyId),
+    index('audit_logs_trip_idx').on(table.tripId),
   ],
 )
 
@@ -154,11 +154,11 @@ export const praamidCsrfNonces = sqliteTable(
 export type Setting = typeof settings.$inferSelect
 export type PraamidCredential = typeof praamidCredentials.$inferSelect
 export type NewPraamidCredential = typeof praamidCredentials.$inferInsert
-export type Journey = typeof journeys.$inferSelect
-export type NewJourney = typeof journeys.$inferInsert
+export type Trip = typeof trips.$inferSelect
+export type NewTrip = typeof trips.$inferInsert
 export type Ticket = typeof tickets.$inferSelect
 export type NewTicket = typeof tickets.$inferInsert
-export type JourneyOption = typeof journeyOptions.$inferSelect
-export type NewJourneyOption = typeof journeyOptions.$inferInsert
+export type TripOption = typeof tripOptions.$inferSelect
+export type NewTripOption = typeof tripOptions.$inferInsert
 export type AuditLog = typeof auditLogs.$inferSelect
 export type NewAuditLog = typeof auditLogs.$inferInsert
