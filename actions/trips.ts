@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
-import { tripOptions, trips } from '@/db/schema'
+import { tickets, tripOptions, trips } from '@/db/schema'
 import { listEvents } from '@/lib/praamid'
 import { logAudit } from '@/lib/audit'
 import { requireUser } from '@/lib/session'
@@ -39,6 +39,7 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
     edit: formData.get('edit') ?? undefined,
   })
   if (!parsed.success) return { ok: false, error: t('invalidData') }
+  if (parsed.data.edit) return { ok: false, error: t('editRequiresTicket') }
 
   const tripId = randomUUID()
   await db.insert(trips).values({
@@ -48,7 +49,7 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
     measurementUnit: parsed.data.measurementUnit,
     threshold: parsed.data.threshold,
     notify: parsed.data.notify ?? true,
-    edit: parsed.data.edit ?? false,
+    edit: false,
     stopBeforeMinutes: 60,
     active: true,
   })
@@ -91,6 +92,16 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
 
   const { id, ...patch } = parsed.data
   if (Object.keys(patch).length === 0) return { ok: true }
+
+  if (patch.edit === true) {
+    const ownedTicket = await db
+      .select({ tripId: tickets.tripId })
+      .from(tickets)
+      .innerJoin(trips, eq(trips.id, tickets.tripId))
+      .where(and(eq(tickets.tripId, id), eq(trips.userId, session.user.id)))
+      .get()
+    if (!ownedTicket) return { ok: false, error: t('editRequiresTicket') }
+  }
 
   const res = await db
     .update(trips)

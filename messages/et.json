@@ -20,7 +20,8 @@
     "topicMin": "Vähemalt 4 tähemärki",
     "topicMax": "Kuni 64 tähemärki",
     "topicPattern": "Ainult tähed, numbrid, _ ja -",
-    "topicInvalid": "Vigane teema"
+    "topicInvalid": "Vigane teema",
+    "editRequiresTicket": "Lisa pilet enne auto-muutmise sisselülitamist"
   },
   "Home": {
     "topicTitle": "Sinu teavituste teema",
