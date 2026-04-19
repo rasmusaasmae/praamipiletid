@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
-import { forgetPraamidCredential } from '@/actions/praamid'
+import { ArrowUp, Loader2 } from 'lucide-react'
 
 type Props = { captureUrl: string }
 
@@ -20,28 +19,29 @@ export function PraamidBookmarklet({ captureUrl }: Props) {
   const t = useTranslations('Praamid')
   const [nonce, setNonce] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isForgetting, startForget] = useTransition()
   const linkRef = useRef<HTMLAnchorElement | null>(null)
 
-  const fetchNonce = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/praamid-credentials/nonce', { method: 'POST' })
-      if (!res.ok) throw new Error('nonce_failed')
-      const data = (await res.json()) as { nonce: string }
-      setNonce(data.nonce)
-    } catch {
-      toast.error(t('errorNonce'))
-      setNonce(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchNonce()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/praamid-credentials/nonce', { method: 'POST' })
+        if (!res.ok) throw new Error('nonce_failed')
+        const data = (await res.json()) as { nonce: string }
+        if (!cancelled) setNonce(data.nonce)
+      } catch {
+        if (!cancelled) {
+          toast.error(t('errorNonce'))
+          setNonce(null)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [t])
 
   useEffect(() => {
     if (linkRef.current && nonce) {
@@ -49,41 +49,31 @@ export function PraamidBookmarklet({ captureUrl }: Props) {
     }
   }, [captureUrl, nonce])
 
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        {nonce ? (
-          <a
-            ref={linkRef}
-            title={t('bookmarkletTitle')}
-            className="inline-flex items-center rounded-md border bg-secondary px-4 py-2 text-sm font-medium hover:bg-secondary/80"
-            onClick={(e) => e.preventDefault()}
-            draggable
-          >
-            {t('bookmarkletLabel')}
-          </a>
-        ) : (
-          <span className="text-sm text-muted-foreground">{loading ? t('refreshing') : '—'}</span>
-        )}
-        <Button type="button" variant="outline" size="sm" onClick={fetchNonce} disabled={loading}>
-          {loading ? t('refreshing') : t('refreshNonce')}
-        </Button>
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
       </div>
-      <p className="text-xs text-muted-foreground">{t('howToSteps')}</p>
-      <form
-        action={() =>
-          startForget(async () => {
-            if (!confirm(t('forgetConfirm'))) return
-            const res = await forgetPraamidCredential()
-            if (res.ok) toast.success(t('forgotten'))
-            else toast.error(res.error)
-          })
-        }
+    )
+  }
+
+  if (!nonce) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <a
+        ref={linkRef}
+        title={t('bookmarkletTitle')}
+        className="inline-flex items-center rounded-md border bg-secondary px-4 py-2 text-base font-medium shadow-sm hover:bg-secondary/80"
+        onClick={(e) => e.preventDefault()}
+        draggable
       >
-        <Button type="submit" variant="destructive" size="sm" disabled={isForgetting}>
-          {t('forget')}
-        </Button>
-      </form>
+        {t('bookmarkletLabel')}
+      </a>
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <ArrowUp className="size-3.5 animate-bounce" />
+        {t('dragHint')}
+      </span>
     </div>
   )
 }

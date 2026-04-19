@@ -6,6 +6,8 @@ import { requireUser } from '@/lib/session'
 import { getCredentialStatus } from '@/lib/praamid-credentials'
 import { SettingsForm } from '@/components/settings-form'
 import { PraamidBookmarklet } from '@/components/praamid-bookmarklet'
+import { ForgetPraamidButton } from '@/components/forget-praamid-button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function SettingsPage({
@@ -36,68 +38,74 @@ export default async function SettingsPage({
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t('descriptionBefore')}{' '}
-          <a className="underline" href="https://ntfy.sh/app" target="_blank" rel="noreferrer">
-            {t('descriptionLink')}
-          </a>{' '}
-          {t('descriptionAfter')}
-        </p>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('cardTitle')}</CardTitle>
-          <CardDescription>
-            {t('cardLabel')}{' '}
-            <code className="text-foreground">
-              {ntfyBase}/{t('topicPlaceholder')}
-            </code>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SettingsForm currentTopic={me?.ntfyTopic ?? ''} ntfyBase={ntfyBase} />
-        </CardContent>
-      </Card>
+      <h1 className="text-2xl font-semibold">{t('title')}</h1>
 
       <Card id="praamid" className="scroll-mt-24">
-        <CardHeader>
-          <CardTitle>{tP('title')}</CardTitle>
-          <CardDescription>
-            {status ? (
-              <span className="space-x-3">
-                <span>{tP('statusCaptured', { capturedAt: format.relativeTime(status.capturedAt) })}</span>
-                <span>·</span>
-                <span>{tP('statusExpires', { expiresAt: format.relativeTime(status.expiresAt) })}</span>
-                {status.lastVerifiedAt ? (
-                  <>
-                    <span>·</span>
-                    <span>
-                      {tP('statusLastVerified', {
-                        lastVerifiedAt: format.relativeTime(status.lastVerifiedAt),
-                      })}
-                    </span>
-                  </>
-                ) : null}
-              </span>
-            ) : (
-              tP('statusMissing')
-            )}
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <CardTitle>{tP('title')}</CardTitle>
+              {status ? (
+                <Badge variant="secondary">{tP('statusActiveBadge')}</Badge>
+              ) : (
+                <Badge variant="outline">{tP('statusMissingBadge')}</Badge>
+              )}
+            </div>
+            <CardDescription>{tP('description')}</CardDescription>
+          </div>
+          {status ? <ForgetPraamidButton /> : null}
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">{tP('description')}</p>
+        <CardContent className="flex flex-col gap-5">
+          {status ? (
+            <p className="text-sm text-muted-foreground">
+              <span>{tP('statusCaptured', { capturedAt: format.relativeTime(status.capturedAt) })}</span>
+              {' · '}
+              <span>{tP('statusExpires', { expiresAt: format.relativeTime(status.expiresAt) })}</span>
+              {status.lastVerifiedAt ? (
+                <>
+                  {' · '}
+                  <span>
+                    {tP('statusLastVerified', {
+                      lastVerifiedAt: format.relativeTime(status.lastVerifiedAt),
+                    })}
+                  </span>
+                </>
+              ) : null}
+            </p>
+          ) : null}
           {!configured ? (
             <p className="text-sm text-destructive">{tP('notConfigured')}</p>
           ) : (
-            <PraamidBookmarklet captureUrl={captureUrl} />
+            <>
+              <ol className="ml-5 list-decimal space-y-2 text-sm">
+                <li>{tP('howToStep1')}</li>
+                <li>{tP('howToStep2')}</li>
+                <li>{tP('howToStep3')}</li>
+              </ol>
+              <PraamidBookmarklet captureUrl={captureUrl} />
+            </>
           )}
           {status?.lastError ? (
             <p className="text-sm text-destructive">
               {tP('statusError', { lastError: status.lastError })}
             </p>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('cardTitle')}</CardTitle>
+          <CardDescription>
+            {t('descriptionBefore')}{' '}
+            <a className="underline" href="https://ntfy.sh/app" target="_blank" rel="noreferrer">
+              {t('descriptionLink')}
+            </a>{' '}
+            {t('descriptionAfter')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SettingsForm currentTopic={me?.ntfyTopic ?? ''} ntfyBase={ntfyBase} />
         </CardContent>
       </Card>
     </div>
