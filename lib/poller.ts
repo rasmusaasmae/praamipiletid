@@ -63,17 +63,25 @@ async function processBatch(
     const nextState: 'above' | 'below' = capacity >= row.threshold ? 'above' : 'below'
     const prevState = row.lastCapacityState as 'above' | 'below' | null
 
-    const crossedUp = nextState === 'above' && prevState !== 'above'
+    const transition: 'opened' | 'closed' | null =
+      nextState === 'above' && prevState !== 'above'
+        ? 'opened'
+        : nextState === 'below' && prevState === 'above'
+          ? 'closed'
+          : null
     const isCurrentTicket = row.currentTicketEventUid === row.eventUid
 
-    if (crossedUp && row.notify && !isCurrentTicket) {
+    if (transition && row.notify && !isCurrentTicket) {
       const topic = topicByUser.get(row.userId)
       if (!topic) {
         console.warn(`[poller] no ntfy topic for user ${row.userId}, skipping`)
       } else {
         const label = CAPACITY_LABELS[row.measurementUnit]?.et ?? row.measurementUnit
         const title = `${dir} ${date} ${formatTime(row.eventDtstart)}`
-        const msg = `${label}: ${capacity} kohta vaba (lävi ${row.threshold})`
+        const msg =
+          transition === 'opened'
+            ? `${label}: ${capacity} kohta vaba (lävi ${row.threshold})`
+            : `${label}: kinni (${capacity} alla läve ${row.threshold})`
         try {
           await getNotifier().send({
             userId: row.userId,
@@ -90,7 +98,7 @@ async function processBatch(
             payload: {
               eventUid: row.eventUid,
               from: prevState,
-              to: 'above',
+              to: nextState,
               capacity,
               threshold: row.threshold,
               priority: row.priority,

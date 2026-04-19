@@ -172,12 +172,12 @@ export class PraamidAuthError extends Error {
   }
 }
 
-async function authedFetch<T>(
+async function authedRequest(
   path: string,
   token: string,
   init: RequestInit = {},
   base: string = BASE_URL,
-): Promise<T> {
+): Promise<Response> {
   const url = `${base}${path}`
   const res = await fetch(url, {
     ...init,
@@ -192,6 +192,16 @@ async function authedFetch<T>(
     const body = await res.text().catch(() => '')
     throw new PraamidAuthError(res.status, url, body.slice(0, 200))
   }
+  return res
+}
+
+async function authedFetch<T>(
+  path: string,
+  token: string,
+  init: RequestInit = {},
+  base: string = BASE_URL,
+): Promise<T> {
+  const res = await authedRequest(path, token, init, base)
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
@@ -227,4 +237,68 @@ export async function getBookingExpiration(
     `/bookings/${encodeURIComponent(bookingUid)}/expiration`,
     token,
   )
+}
+
+// Patched ticket body for editTicket — caller starts from a Ticket and
+// swaps event fields (uid, dtstart, dtend, ship, pricelist,
+// transportationType, capacities, status, highPrice). The runtime object
+// carries extra upstream fields (services, qrcode, vehicleDimensions, …)
+// not modelled in our Ticket type — JSON.stringify preserves them.
+export type EditTicketBody = Ticket
+
+export async function editTicket(
+  token: string,
+  oldTicketCode: string,
+  body: EditTicketBody,
+): Promise<void> {
+  const res = await authedRequest(
+    `/tickets/${encodeURIComponent(oldTicketCode)}`,
+    token,
+    {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+  if (res.status !== 204) {
+    throw new PraamidAuthError(
+      res.status,
+      `PUT /online/tickets/${oldTicketCode}`,
+      `expected 204, got ${res.status}`,
+    )
+  }
+}
+
+export type CommitZeroSumResult = { invoiceNumber: string }
+
+export async function commitZeroSum(
+  token: string,
+  bookingUid: string,
+): Promise<CommitZeroSumResult> {
+  const res = await authedRequest(
+    `/bookings/${encodeURIComponent(bookingUid)}/invoices`,
+    token,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ zeroSum: true }),
+    },
+  )
+  if (res.status !== 201) {
+    throw new PraamidAuthError(
+      res.status,
+      `POST /online/bookings/${bookingUid}/invoices`,
+      `expected 201, got ${res.status}`,
+    )
+  }
+  const location = res.headers.get('location')
+  const match = location?.match(/\/invoices\/([^/?#]+)\/?$/)
+  if (!match) {
+    throw new PraamidAuthError(
+      res.status,
+      `POST /online/bookings/${bookingUid}/invoices`,
+      `missing invoice number in Location header: ${location ?? '(none)'}`,
+    )
+  }
+  return { invoiceNumber: decodeURIComponent(match[1]!) }
 }
