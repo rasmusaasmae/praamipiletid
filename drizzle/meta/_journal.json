@@ -71,6 +71,13 @@
       "when": 1776627570614,
       "tag": "0009_drop_trip_options_active",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1776719068755,
+      "tag": "0010_overconfident_justice",
+      "breakpoints": true
     }
   ]
 }

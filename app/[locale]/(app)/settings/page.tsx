@@ -5,17 +5,12 @@ import { user } from '@/db/schema'
 import { requireUser } from '@/lib/session'
 import { getCredentialStatus } from '@/lib/praamid-credentials'
 import { SettingsForm } from '@/components/settings-form'
-import { PraamidBookmarklet } from '@/components/praamid-bookmarklet'
+import { PraamidSigninFlow } from '@/components/praamid-signin-flow'
 import { ForgetPraamidButton } from '@/components/forget-praamid-button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default async function SettingsPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>
-}) {
-  const { locale } = await params
+export default async function SettingsPage() {
   const session = await requireUser()
   const t = await getTranslations('Settings')
   const tP = await getTranslations('Praamid')
@@ -29,12 +24,6 @@ export default async function SettingsPage({
 
   const configured = Boolean(process.env.PRAAMID_CRED_KEY)
   const status = configured ? await getCredentialStatus(session.user.id) : null
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.APP_URL ??
-    process.env.BETTER_AUTH_URL ??
-    'http://localhost:3000'
-  const captureUrl = `${appUrl}/${locale}/praamid/capture`
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -76,14 +65,7 @@ export default async function SettingsPage({
           {!configured ? (
             <p className="text-sm text-destructive">{tP('notConfigured')}</p>
           ) : (
-            <>
-              <ol className="ml-5 list-decimal space-y-2 text-sm">
-                <li>{tP('howToStep1')}</li>
-                <li>{tP('howToStep2')}</li>
-                <li>{tP('howToStep3')}</li>
-              </ol>
-              <PraamidBookmarklet captureUrl={captureUrl} />
-            </>
+            <PraamidSigninFlow />
           )}
           {status?.lastError ? (
             <p className="text-sm text-destructive">

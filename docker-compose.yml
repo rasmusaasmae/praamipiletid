@@ -15,6 +15,9 @@ services:
       DATABASE_PATH: /app/data/praamipiletid.db
     volumes:
       - praamipiletid_data:/app/data
+    # Chromium crashes with the default 64MB /dev/shm when Playwright drives
+    # logins. Raise it instead of using ipc=host so we don't share host IPC.
+    shm_size: 1gb
     labels:
       com.centurylinklabs.watchtower.enable: "true"
     healthcheck:

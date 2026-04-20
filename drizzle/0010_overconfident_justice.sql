@@ -1,0 +1,1 @@
+DROP TABLE `praamid_csrf_nonces`;

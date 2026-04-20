@@ -53,7 +53,10 @@ RUN node ./node_modules/.bin/next build
 # -----------------------------
 # Production runner stage
 # -----------------------------
-FROM node:22-bookworm-slim AS runner
+# Microsoft's Playwright image bundles Chromium + the exact system libs
+# Playwright needs. Pin the tag to match the playwright npm version so the
+# bundled browser and client stay in sync.
+FROM mcr.microsoft.com/playwright:v1.59.1-noble AS runner
 
 WORKDIR /app
 
@@ -72,10 +75,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
+# Chromium lives under /ms-playwright in the base image and is owned by
+# root. The app runs as nextjs, so expose the browser cache path explicitly.
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME="0.0.0.0" \
-    DATABASE_PATH=/app/data/praamipiletid.db
+    DATABASE_PATH=/app/data/praamipiletid.db \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 VOLUME ["/app/data"]
 

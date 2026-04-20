@@ -129,22 +129,6 @@ export const praamidCredentials = sqliteTable(
   (table) => [index('praamid_credentials_expires_at_idx').on(table.expiresAt)],
 )
 
-export const praamidCsrfNonces = sqliteTable(
-  'praamid_csrf_nonces',
-  {
-    nonce: text('nonce').primaryKey(),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-    usedAt: integer('used_at', { mode: 'timestamp_ms' }),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-  },
-  (table) => [index('praamid_csrf_nonces_user_id_idx').on(table.userId)],
-)
-
 export type Setting = typeof settings.$inferSelect
 export type PraamidCredential = typeof praamidCredentials.$inferSelect
 export type NewPraamidCredential = typeof praamidCredentials.$inferInsert
