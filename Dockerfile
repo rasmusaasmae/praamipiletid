@@ -64,16 +64,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       wget ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 --no-log-init -g nodejs nextjs && \
-    mkdir -p /app/data && chown -R nextjs:nodejs /app
+# The Playwright base ships a non-root `pwuser` (uid/gid 1001) set up for
+# running headless Chromium. Reuse it instead of creating our own.
+RUN mkdir -p /app/data && chown -R pwuser:pwuser /app
 
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=pwuser:pwuser /app/.next/standalone ./
+COPY --from=builder --chown=pwuser:pwuser /app/.next/static ./.next/static
+COPY --from=builder --chown=pwuser:pwuser /app/public ./public
 
-COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
-COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=pwuser:pwuser /app/drizzle ./drizzle
+COPY --from=prod-deps --chown=pwuser:pwuser /app/node_modules ./node_modules
 
 # Chromium lives under /ms-playwright in the base image and is owned by
 # root. The app runs as nextjs, so expose the browser cache path explicitly.
@@ -85,7 +85,7 @@ ENV NODE_ENV=production \
 
 VOLUME ["/app/data"]
 
-USER nextjs
+USER pwuser
 
 EXPOSE 3000
 
