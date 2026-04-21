@@ -107,7 +107,6 @@ export default async function AddOptionPage({
         currentDirection={direction}
         currentDate={date}
         tripId={trip.id}
-        directionLocked
       />
 
       {error ? (

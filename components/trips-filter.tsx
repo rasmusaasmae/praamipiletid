@@ -18,7 +18,6 @@ type Props = {
   currentDirection: string
   currentDate: string
   tripId: string
-  directionLocked?: boolean
 }
 
 export function TripsFilter({
@@ -26,16 +25,10 @@ export function TripsFilter({
   currentDirection,
   currentDate,
   tripId,
-  directionLocked,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('TripsFilter')
-
-  const push = (_direction: string, date: string) => {
-    const qs = new URLSearchParams({ date })
-    startTransition(() => router.push(`/trips/${tripId}/options?${qs.toString()}`))
-  }
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px]">
@@ -43,11 +36,7 @@ export function TripsFilter({
         <Label htmlFor="direction" className="mb-1 block">
           {t('direction')}
         </Label>
-        <Select
-          value={currentDirection}
-          onValueChange={(v) => v && push(v, currentDate)}
-          disabled={isPending || directionLocked}
-        >
+        <Select value={currentDirection} disabled>
           <SelectTrigger id="direction" className="w-full">
             <SelectValue>
               {(v: string) => directions.find((d) => d.code === v)?.label ?? v}
@@ -72,7 +61,10 @@ export function TripsFilter({
           defaultValue={currentDate}
           disabled={isPending}
           onChange={(e) => {
-            if (e.target.value) push(currentDirection, e.target.value)
+            const date = e.target.value
+            if (!date) return
+            const qs = new URLSearchParams({ date })
+            startTransition(() => router.push(`/trips/${tripId}/options?${qs.toString()}`))
           }}
         />
       </div>
