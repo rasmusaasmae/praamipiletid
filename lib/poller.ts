@@ -52,7 +52,7 @@ async function processBatch(
     log.error('listEvents failed', {
       dir,
       date,
-      error: err instanceof Error ? err.message : String(err),
+      err: err instanceof Error ? err.message : String(err),
     })
     await logAudit({
       type: 'system.poller_tick_error',
@@ -122,7 +122,7 @@ async function processBatch(
         } catch (err) {
           log.error('notify failed', {
             optionId: row.optionId,
-            error: err instanceof Error ? err.message : String(err),
+            err: err instanceof Error ? err.message : String(err),
           })
         }
       }
@@ -235,7 +235,7 @@ async function tick() {
           } catch (err) {
             log.error('edit notify failed', {
               tripId,
-              error: err instanceof Error ? err.message : String(err),
+              err: err instanceof Error ? err.message : String(err),
             })
           }
         }
@@ -243,7 +243,7 @@ async function tick() {
     } catch (err) {
       log.error('processEditForTrip threw', {
         tripId,
-        error: err instanceof Error ? err.message : String(err),
+        err: err instanceof Error ? err.message : String(err),
       })
     } finally {
       await db
@@ -267,7 +267,7 @@ async function loop() {
     try {
       await tick()
     } catch (err) {
-      log.error('tick failed', { error: err instanceof Error ? err.message : String(err) })
+      log.error('tick failed', { err: err instanceof Error ? err.message : String(err) })
     }
     const { pollIntervalMs } = await getAllSettings()
     const elapsed = Date.now() - started
@@ -306,13 +306,13 @@ export function startPoller() {
   recoverStuckSwaps()
     .catch((err) => {
       log.error('recoverStuckSwaps failed', {
-        error: err instanceof Error ? err.message : String(err),
+        err: err instanceof Error ? err.message : String(err),
       })
     })
     .finally(() => {
       loop().catch((err) => {
         log.error('loop crashed', {
-          error: err instanceof Error ? err.message : String(err),
+          err: err instanceof Error ? err.message : String(err),
         })
         running = false
       })
