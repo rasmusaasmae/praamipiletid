@@ -12,7 +12,7 @@
     "format:check": "oxfmt --check app components db lib",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@base-ui/react": "1.4.0",
