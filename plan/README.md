@@ -7,7 +7,7 @@ Goal: UI that feels always-in-sync (no stale "last checked", live swap state), f
 | # | File | Status | Summary |
 |---|------|--------|---------|
 | 1 | [phase-1-postgres.md](phase-1-postgres.md) | done (pending server verify) | Swap SQLite → Postgres. Also fixes the current `better-sqlite3` NODE_MODULE_VERSION crash. |
-| 2 | [phase-2-electric.md](phase-2-electric.md) | not started | Add ElectricSQL sync service + auth-gated shape proxy. |
+| 2 | [phase-2-electric.md](phase-2-electric.md) | done (pending server verify) | Add ElectricSQL sync service + auth-gated shape proxy. |
 | 3 | [phase-3-tanstack-db.md](phase-3-tanstack-db.md) | not started | TanStack DB collections (Electric + Query Collection) wired into the UI. |
 | 4 | [phase-4-tanstack-form.md](phase-4-tanstack-form.md) | not started | Port every form to `@tanstack/react-form` + server-action validation. |
 | 5 | [phase-5-live-state.md](phase-5-live-state.md) | not started | Add `lastCheckedAt` / `swapInProgress` columns; live badges without refresh. |

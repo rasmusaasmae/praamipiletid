@@ -19,11 +19,33 @@ services:
       retries: 5
     restart: unless-stopped
 
+  electric:
+    image: electricsql/electric:${ELECTRIC_TAG:-latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-ferry}:${POSTGRES_PASSWORD:-ferry}@postgres:5432/${POSTGRES_DB:-ferry}?sslmode=disable
+      # INSECURE=true disables Electric's own auth. The Next.js app's
+      # /api/shape route is the security boundary — in production Electric
+      # should only receive traffic from inside the docker network.
+      ELECTRIC_INSECURE: "true"
+    # Host port only needed for local `bun dev` (when the Next.js app runs
+    # outside compose). In production, unset ELECTRIC_PORT so Electric stays
+    # internal-only.
+    ports:
+      - '${ELECTRIC_PORT:-3001}:3000'
+    volumes:
+      - ferry_electric:/app/persistent
+    restart: unless-stopped
+
   app:
     image: ${IMAGE_NAME:-ghcr.io/rasmusaasmae/praamipiletid}:${IMAGE_TAG:-latest}
     depends_on:
       postgres:
         condition: service_healthy
+      electric:
+        condition: service_started
     ports:
       - '${APP_PORT:-3000}:3000'
     environment:
@@ -35,6 +57,7 @@ services:
       NTFY_BASE_URL: ${NTFY_BASE_URL:-https://ntfy.sh}
       PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
       DATABASE_URL: postgres://${POSTGRES_USER:-ferry}:${POSTGRES_PASSWORD:-ferry}@postgres:5432/${POSTGRES_DB:-ferry}
+      ELECTRIC_URL: http://electric:3000
     # Chromium crashes with the default 64MB /dev/shm when Playwright drives
     # logins. Raise it instead of using ipc=host so we don't share host IPC.
     shm_size: 1gb
@@ -49,3 +72,4 @@ services:
 
 volumes:
   ferry_pg:
+  ferry_electric:

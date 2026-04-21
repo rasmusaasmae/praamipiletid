@@ -185,6 +185,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
   await db.insert(tripOptions).values({
     id: optionId,
     tripId: trip.id,
+    userId: session.user.id,
     priority: nextPriority,
     eventUid: parsed.data.eventUid,
     eventDate: parsed.data.date,

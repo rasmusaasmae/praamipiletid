@@ -29,6 +29,7 @@ CREATE TABLE "settings" (
 --> statement-breakpoint
 CREATE TABLE "tickets" (
 	"trip_id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
 	"ticket_code" text NOT NULL,
 	"ticket_number" text NOT NULL,
 	"booking_uid" text NOT NULL,
@@ -42,6 +43,7 @@ CREATE TABLE "tickets" (
 CREATE TABLE "trip_options" (
 	"id" text PRIMARY KEY NOT NULL,
 	"trip_id" text NOT NULL,
+	"user_id" text NOT NULL,
 	"priority" integer NOT NULL,
 	"event_uid" text NOT NULL,
 	"event_date" text NOT NULL,
@@ -123,7 +125,9 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_user_id_fk" FOREIGN 
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "praamid_credentials" ADD CONSTRAINT "praamid_credentials_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trip_options" ADD CONSTRAINT "trip_options_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trip_options" ADD CONSTRAINT "trip_options_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trips" ADD CONSTRAINT "trips_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -132,9 +136,11 @@ CREATE INDEX "audit_logs_type_idx" ON "audit_logs" USING btree ("type");--> stat
 CREATE INDEX "audit_logs_trip_idx" ON "audit_logs" USING btree ("trip_id");--> statement-breakpoint
 CREATE INDEX "praamid_credentials_expires_at_idx" ON "praamid_credentials" USING btree ("expires_at");--> statement-breakpoint
 CREATE INDEX "tickets_event_uid_idx" ON "tickets" USING btree ("event_uid");--> statement-breakpoint
+CREATE INDEX "tickets_user_id_idx" ON "tickets" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "trip_options_event_unique" ON "trip_options" USING btree ("trip_id","event_uid");--> statement-breakpoint
 CREATE UNIQUE INDEX "trip_options_priority_unique" ON "trip_options" USING btree ("trip_id","priority");--> statement-breakpoint
 CREATE INDEX "trip_options_dtstart_idx" ON "trip_options" USING btree ("event_dtstart");--> statement-breakpoint
+CREATE INDEX "trip_options_user_id_idx" ON "trip_options" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "trips_user_id_idx" ON "trips" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "account_user_id_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "session_user_id_idx" ON "session" USING btree ("user_id");--> statement-breakpoint

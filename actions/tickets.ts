@@ -134,6 +134,7 @@ export async function attachTicket(formData: FormData): Promise<ActionResult> {
     .insert(tickets)
     .values({
       tripId: trip.id,
+      userId: session.user.id,
       ticketCode: raw.ticketCode,
       ticketNumber: raw.ticketNumber,
       bookingUid: raw.bookingUid,

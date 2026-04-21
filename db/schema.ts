@@ -40,12 +40,17 @@ export const trips = pgTable(
   (table) => [index('trips_user_id_idx').on(table.userId)],
 )
 
+// user_id is denormalized from trips.user_id so Electric shape `where`
+// clauses (which can't join) can scope this table per user.
 export const tickets = pgTable(
   'tickets',
   {
     tripId: text('trip_id')
       .primaryKey()
       .references(() => trips.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
     ticketCode: text('ticket_code').notNull(),
     ticketNumber: text('ticket_number').notNull(),
     bookingUid: text('booking_uid').notNull(),
@@ -58,9 +63,13 @@ export const tickets = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index('tickets_event_uid_idx').on(table.eventUid)],
+  (table) => [
+    index('tickets_event_uid_idx').on(table.eventUid),
+    index('tickets_user_id_idx').on(table.userId),
+  ],
 )
 
+// user_id is denormalized from trips.user_id — see tickets comment.
 export const tripOptions = pgTable(
   'trip_options',
   {
@@ -68,6 +77,9 @@ export const tripOptions = pgTable(
     tripId: text('trip_id')
       .notNull()
       .references(() => trips.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
     priority: integer('priority').notNull(),
     eventUid: text('event_uid').notNull(),
     eventDate: text('event_date').notNull(),
@@ -85,6 +97,7 @@ export const tripOptions = pgTable(
     uniqueIndex('trip_options_event_unique').on(table.tripId, table.eventUid),
     uniqueIndex('trip_options_priority_unique').on(table.tripId, table.priority),
     index('trip_options_dtstart_idx').on(table.eventDtstart),
+    index('trip_options_user_id_idx').on(table.userId),
   ],
 )
 
