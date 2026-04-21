@@ -5,6 +5,9 @@ import { auditLogs, user } from '@/db/schema'
 import { listCredentialsNeedingReauth } from '@/lib/praamid-credentials'
 import { getNotifier } from '@/lib/notifier'
 import { logAudit } from '@/lib/audit'
+import { createLogger } from '@/lib/logger'
+
+const log = createLogger('credential-expiry')
 
 const WARN_HOURS = 48
 const DEDUPE_HOURS = 20
@@ -64,7 +67,10 @@ async function tick() {
         payload: { expiresAt: c.expiresAt.toISOString(), hoursLeft },
       })
     } catch (err) {
-      console.error(`[credential-expiry] notify failed for user ${c.userId}:`, err)
+      log.error('notify failed', {
+        userId: c.userId,
+        err: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 }
@@ -74,7 +80,7 @@ async function loop() {
     try {
       await tick()
     } catch (err) {
-      console.error('[credential-expiry] tick failed:', err)
+      log.error('tick failed', { err: err instanceof Error ? err.message : String(err) })
     }
     await new Promise((r) => setTimeout(r, TICK_INTERVAL_MS))
   }
@@ -84,9 +90,9 @@ export function startCredentialExpiryWatcher() {
   if (running) return
   running = true
   stopRequested = false
-  console.log('[credential-expiry] starting')
+  log.info('starting')
   loop().catch((err) => {
-    console.error('[credential-expiry] loop crashed:', err)
+    log.error('loop crashed', { err: err instanceof Error ? err.message : String(err) })
     running = false
   })
 }
