@@ -33,6 +33,8 @@ const tripSchema = z.object({
   measurement_unit: z.string(),
   notify: z.boolean(),
   edit: z.boolean(),
+  last_checked_at: z.coerce.date().nullable(),
+  swap_in_progress: z.boolean(),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 })
@@ -81,6 +83,7 @@ const tripOptionSchema = z.object({
   stop_before_at: z.coerce.date(),
   last_capacity: z.number().nullable(),
   last_capacity_state: z.string().nullable(),
+  last_capacity_checked_at: z.coerce.date().nullable(),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 })

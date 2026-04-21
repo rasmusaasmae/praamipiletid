@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { useLocale, useTranslations } from 'next-intl'
 import { et, enGB } from 'react-day-picker/locale'
-import { ArrowDown, ArrowRightLeft, ArrowUp, Bell, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowRightLeft, ArrowUp, Bell, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useForm, useStore } from '@tanstack/react-form'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -45,6 +45,8 @@ export type TripCardData = {
     measurementUnit: string
     notify: boolean
     edit: boolean
+    lastCheckedAt: Date | null
+    swapInProgress: boolean
   }
   options: Array<{
     id: string
@@ -56,17 +58,49 @@ export type TripCardData = {
     stopBeforeAt: Date
     lastCapacity: number | null
     lastCapacityState: string | null
+    lastCapacityCheckedAt: Date | null
   }>
   ticket: Ticket | null
 }
 
-export function TripCard({ data }: { data: TripCardData }) {
+function useNow(intervalMs: number) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs)
+    return () => clearInterval(id)
+  }, [intervalMs])
+  return now
+}
+
+function formatRelative(
+  nowMs: number,
+  tsMs: number,
+  tRel: ReturnType<typeof useTranslations<'Relative'>>,
+): string {
+  const diff = Math.max(0, Math.floor((nowMs - tsMs) / 1000))
+  if (diff < 60) return tRel('secondsAgo', { s: diff })
+  const mins = Math.floor(diff / 60)
+  if (mins < 60) return tRel('minutesAgo', { m: mins })
+  const hours = Math.floor(mins / 60)
+  return tRel('hoursAgo', { h: hours })
+}
+
+export function TripCard({
+  data,
+  pollIntervalMs,
+}: {
+  data: TripCardData
+  pollIntervalMs: number
+}) {
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('Trips')
   const tOpt = useTranslations('Options')
   const tCap = useTranslations('Capacity')
   const tDir = useTranslations('Directions')
+  const tRel = useTranslations('Relative')
   const locale = useLocale()
+  const now = useNow(1000)
+  const staleThresholdMs = pollIntervalMs * 2
 
   const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
   const formatDate = (d: Date) =>
@@ -123,9 +157,24 @@ export function TripCard({ data }: { data: TripCardData }) {
     <TooltipProvider>
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
-            <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
+              <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
+              {data.trip.swapInProgress ? (
+                <Badge variant="secondary" className="gap-1">
+                  <Loader2 className="size-3 animate-spin" />
+                  {t('swapping')}
+                </Badge>
+              ) : null}
+            </div>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {data.trip.lastCheckedAt
+                ? t('checkedAgo', {
+                    ago: formatRelative(now, data.trip.lastCheckedAt.getTime(), tRel),
+                  })
+                : t('notYetChecked')}
+            </span>
           </div>
           <Button
             size="icon"
@@ -219,14 +268,32 @@ export function TripCard({ data }: { data: TripCardData }) {
                             <Badge variant="secondary">{tOpt('current')}</Badge>
                           ) : null}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {past
-                            ? tOpt('past')
-                            : option.lastCapacity == null
-                              ? tOpt('notYetChecked')
-                              : state === 'above'
-                                ? `${option.lastCapacity} ${tOpt('above')}`
-                                : tOpt('below')}
+                        <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                          <span>
+                            {past
+                              ? tOpt('past')
+                              : option.lastCapacity == null
+                                ? tOpt('notYetChecked')
+                                : state === 'above'
+                                  ? `${option.lastCapacity} ${tOpt('above')}`
+                                  : tOpt('below')}
+                          </span>
+                          {!past && option.lastCapacityCheckedAt ? (
+                            <span
+                              className={
+                                now - option.lastCapacityCheckedAt.getTime() > staleThresholdMs
+                                  ? 'tabular-nums text-amber-600 dark:text-amber-400'
+                                  : 'tabular-nums'
+                              }
+                            >
+                              ·{' '}
+                              {formatRelative(
+                                now,
+                                option.lastCapacityCheckedAt.getTime(),
+                                tRel,
+                              )}
+                            </span>
+                          ) : null}
                         </span>
                       </div>
                     </div>

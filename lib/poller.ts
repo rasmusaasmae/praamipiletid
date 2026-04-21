@@ -44,6 +44,7 @@ async function processBatch(
   rows: JoinedOption[],
   topicByUser: Map<string, string | null>,
   timeShift: number,
+  checkedAt: Date,
 ) {
   let events: PraamidEvent[]
   try {
@@ -130,7 +131,11 @@ async function processBatch(
 
     await db
       .update(tripOptions)
-      .set({ lastCapacity: capacity, lastCapacityState: nextState })
+      .set({
+        lastCapacity: capacity,
+        lastCapacityState: nextState,
+        lastCapacityCheckedAt: checkedAt,
+      })
       .where(eq(tripOptions.id, row.optionId))
   }
 }
@@ -181,9 +186,18 @@ async function tick() {
     batches.set(key, list)
   }
 
+  const checkedAt = new Date()
   for (const [key, batch] of batches) {
     const [dir, date] = key.split('|') as [string, string]
-    await processBatch(dir, date, batch, topicByUser, pollTimeShift)
+    await processBatch(dir, date, batch, topicByUser, pollTimeShift, checkedAt)
+  }
+
+  const processedTripIds = Array.from(new Set(due.map((r) => r.tripId)))
+  if (processedTripIds.length > 0) {
+    await db
+      .update(trips)
+      .set({ lastCheckedAt: checkedAt })
+      .where(inArray(trips.id, processedTripIds))
   }
 
   const editTripIds = new Set<string>()
@@ -197,10 +211,18 @@ async function tick() {
     userByTrip.set(r.tripId, r.userId)
   }
   for (const tripId of editTripIds) {
+    const userId = userByTrip.get(tripId)
+    await db.update(trips).set({ swapInProgress: true }).where(eq(trips.id, tripId))
+    await logAudit({
+      type: 'swap.started',
+      actor: 'system',
+      userId: userId ?? null,
+      tripId,
+      payload: {},
+    })
     try {
       const outcome = await processEditForTrip(tripId)
       if (outcome.kind === 'succeeded') {
-        const userId = userByTrip.get(tripId)
         const topic = userId ? topicByUser.get(userId) : null
         if (topic) {
           try {
@@ -224,6 +246,18 @@ async function tick() {
         tripId,
         error: err instanceof Error ? err.message : String(err),
       })
+    } finally {
+      await db
+        .update(trips)
+        .set({ swapInProgress: false })
+        .where(eq(trips.id, tripId))
+      await logAudit({
+        type: 'swap.finished',
+        actor: 'system',
+        userId: userId ?? null,
+        tripId,
+        payload: {},
+      })
     }
   }
 }
@@ -244,15 +278,47 @@ async function loop() {
   }
 }
 
+async function recoverStuckSwaps() {
+  // Worker owns swap_in_progress. If we're starting, nothing is in flight —
+  // clear any leftovers from a prior crash.
+  const stuck = await db
+    .update(trips)
+    .set({ swapInProgress: false })
+    .where(eq(trips.swapInProgress, true))
+    .returning({ id: trips.id, userId: trips.userId })
+  for (const row of stuck) {
+    await logAudit({
+      type: 'swap.recovered',
+      actor: 'system',
+      userId: row.userId,
+      tripId: row.id,
+      payload: { reason: 'worker_boot' },
+    })
+  }
+  if (stuck.length > 0) {
+    log.warn('cleared stuck swap_in_progress', { count: stuck.length })
+  }
+}
+
 export function startPoller() {
   if (running) return
   running = true
   stopRequested = false
   log.info('starting')
-  loop().catch((err) => {
-    log.error('loop crashed', { error: err instanceof Error ? err.message : String(err) })
-    running = false
-  })
+  recoverStuckSwaps()
+    .catch((err) => {
+      log.error('recoverStuckSwaps failed', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+    .finally(() => {
+      loop().catch((err) => {
+        log.error('loop crashed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+        running = false
+      })
+    })
 }
 
 export function stopPoller() {

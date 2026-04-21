@@ -130,7 +130,15 @@
     "statusPast": "Past",
     "delete": "Delete",
     "saved": "Saved",
-    "deleted": "Deleted"
+    "deleted": "Deleted",
+    "checkedAgo": "checked {ago}",
+    "notYetChecked": "not yet checked",
+    "swapping": "swapping"
+  },
+  "Relative": {
+    "secondsAgo": "{s}s ago",
+    "minutesAgo": "{m}m ago",
+    "hoursAgo": "{h}h ago"
   },
   "Settings": {
     "title": "Settings",

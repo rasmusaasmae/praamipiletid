@@ -8,6 +8,13 @@
       "when": 1776763263202,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776771944273,
+      "tag": "0001_rich_maggott",
+      "breakpoints": true
     }
   ]
 }

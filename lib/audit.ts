@@ -51,6 +51,9 @@ export type AuditPayload = {
     reason: string
   }
   'edit.rolled_back': { reason: string }
+  'swap.started': Record<string, never>
+  'swap.finished': Record<string, never>
+  'swap.recovered': { reason: 'worker_boot' }
   'system.poller_tick_error': { error: string }
 }
 

@@ -10,7 +10,7 @@ Goal: UI that feels always-in-sync (no stale "last checked", live swap state), f
 | 2 | [phase-2-electric.md](phase-2-electric.md) | done (pending server verify) | Add ElectricSQL sync service + auth-gated shape proxy. |
 | 3 | [phase-3-tanstack-db.md](phase-3-tanstack-db.md) | done (pending server verify) | TanStack DB collections wired into home + admin; notify/edit toggles use optimistic update + awaitMatch. Settings/options pages intentionally deferred. |
 | 4 | [phase-4-tanstack-form.md](phase-4-tanstack-form.md) | done (pending server verify) | Real user-editable forms ported to `@tanstack/react-form`; button-action forms left as-is by design. |
-| 5 | [phase-5-live-state.md](phase-5-live-state.md) | not started | Add `lastCheckedAt` / `swapInProgress` columns; live badges without refresh. |
+| 5 | [phase-5-live-state.md](phase-5-live-state.md) | done (pending server verify) | Added `lastCheckedAt` / `swapInProgress` / `lastCapacityCheckedAt` columns; live "checked Ns ago" ticker + swap spinner + per-option stale cue. |
 
 ## Rules
 

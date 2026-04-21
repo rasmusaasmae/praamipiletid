@@ -31,6 +31,8 @@ export const trips = pgTable(
     measurementUnit: text('measurement_unit').notNull(),
     notify: boolean('notify').default(true).notNull(),
     edit: boolean('edit').default(false).notNull(),
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true, mode: 'date' }),
+    swapInProgress: boolean('swap_in_progress').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
       .defaultNow()
@@ -87,6 +89,10 @@ export const tripOptions = pgTable(
     stopBeforeAt: timestamp('stop_before_at', { withTimezone: true, mode: 'date' }).notNull(),
     lastCapacity: integer('last_capacity'),
     lastCapacityState: text('last_capacity_state'),
+    lastCapacityCheckedAt: timestamp('last_capacity_checked_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
       .defaultNow()

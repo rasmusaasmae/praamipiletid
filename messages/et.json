@@ -130,7 +130,15 @@
     "statusPast": "Möödunud",
     "delete": "Kustuta",
     "saved": "Salvestatud",
-    "deleted": "Kustutatud"
+    "deleted": "Kustutatud",
+    "checkedAgo": "kontrollitud {ago}",
+    "notYetChecked": "pole veel kontrollitud",
+    "swapping": "vahetamine"
+  },
+  "Relative": {
+    "secondsAgo": "{s}s tagasi",
+    "minutesAgo": "{m}m tagasi",
+    "hoursAgo": "{h}h tagasi"
   },
   "Settings": {
     "title": "Seaded",
