@@ -19,7 +19,13 @@ export const queryClient = new QueryClient({
 // All collections hit the same auth-gated gateway; Electric's `where` is
 // injected server-side from the better-auth session, so clients never need
 // to pass user-scope params themselves.
-const SHAPE_URL = '/api/shape'
+//
+// Must be an absolute URL — Electric's client constructs `new URL(SHAPE_URL)`
+// without a base, which WebKit/Safari reject for relative paths. This module
+// is `'use client'` so `window` is always defined at eval time on the client;
+// during SSR evaluation the collections aren't actually synced.
+const SHAPE_URL =
+  typeof window !== 'undefined' ? `${window.location.origin}/api/shape` : '/api/shape'
 
 // Shared parser: Electric returns timestamptz as ISO strings; we want Date.
 const parser = {
