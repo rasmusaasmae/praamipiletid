@@ -11,7 +11,6 @@
     "format": "oxfmt --write app components db lib",
     "format:check": "oxfmt --check app components db lib",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun run db/migrate.ts",
     "db:push": "drizzle-kit push",
     "prepare": "husky"
   },
