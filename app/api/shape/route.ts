@@ -7,7 +7,9 @@ import { getSession } from '@/lib/session'
 const FORWARDED_PARAMS = ['live', 'table', 'handle', 'offset', 'cursor', 'columns'] as const
 
 // Tables any authenticated user can read, scoped to their own user_id.
-const USER_SCOPED_TABLES = new Set(['trips', 'trip_options', 'tickets', 'praamid_credentials'])
+// praamid_credentials is deliberately NOT here — rows contain encrypted
+// access tokens and are read server-side only. See lib/collections.ts.
+const USER_SCOPED_TABLES = new Set(['trips', 'trip_options', 'tickets'])
 
 // Tables only admins can read, returned unfiltered.
 const ADMIN_ONLY_TABLES = new Set(['user', 'audit_logs', 'settings'])
