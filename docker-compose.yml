@@ -27,14 +27,10 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-ferry}:${POSTGRES_PASSWORD:-ferry}@postgres:5432/${POSTGRES_DB:-ferry}?sslmode=disable
       # INSECURE=true disables Electric's own auth. The Next.js app's
-      # /api/shape route is the security boundary — in production Electric
-      # should only receive traffic from inside the docker network.
+      # /api/shape route is the security boundary — Electric stays internal
+      # to the docker network (no `ports:` entry here). For local `bun dev`
+      # that needs to reach Electric from the host, use docker-compose.dev.yml.
       ELECTRIC_INSECURE: "true"
-    # Host port only needed for local `bun dev` (when the Next.js app runs
-    # outside compose). In production, unset ELECTRIC_PORT so Electric stays
-    # internal-only.
-    ports:
-      - '${ELECTRIC_PORT:-3001}:3000'
     volumes:
       - ferry_electric:/app/persistent
     restart: unless-stopped
