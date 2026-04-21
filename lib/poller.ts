@@ -168,12 +168,10 @@ async function tick() {
   if (due.length === 0) return
 
   const userIds = Array.from(new Set(due.map((r) => r.userId)))
-  const users = userIds.length
-    ? await db
-        .select({ id: user.id, ntfyTopic: user.ntfyTopic })
-        .from(user)
-        .where(inArray(user.id, userIds))
-    : []
+  const users = await db
+    .select({ id: user.id, ntfyTopic: user.ntfyTopic })
+    .from(user)
+    .where(inArray(user.id, userIds))
   const topicByUser = new Map(users.map((u) => [u.id, u.ntfyTopic]))
 
   const { pollTimeShift } = await getAllSettings()
