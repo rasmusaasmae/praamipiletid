@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { startLogin } from '@/lib/praamid-login'
+import { isikukoodSchema } from '@/lib/schemas'
 
-const schema = z.object({ isikukood: z.string().regex(/^\d{11}$/) })
+const schema = z.object({ isikukood: isikukoodSchema })
 
 export async function POST(req: Request) {
   const session = await getSession()
