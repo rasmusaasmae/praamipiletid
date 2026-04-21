@@ -133,7 +133,11 @@ export type ActiveCredential = {
 
 export async function getCredential(userId: string): Promise<ActiveCredential | null> {
   const [row] = await db
-    .select()
+    .select({
+      accessTokenEnc: praamidCredentials.accessTokenEnc,
+      expiresAt: praamidCredentials.expiresAt,
+      praamidSub: praamidCredentials.praamidSub,
+    })
     .from(praamidCredentials)
     .where(eq(praamidCredentials.userId, userId))
     .limit(1)
