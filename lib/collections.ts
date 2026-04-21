@@ -2,8 +2,9 @@
 
 import { QueryClient } from '@tanstack/react-query'
 import { createCollection } from '@tanstack/react-db'
-import { electricCollectionOptions } from '@tanstack/electric-db-collection'
+import { electricCollectionOptions, isChangeMessage } from '@tanstack/electric-db-collection'
 import { z } from 'zod'
+import { updateTrip } from '@/actions/trips'
 
 // Single shared QueryClient for the app. Exposed here so collections and the
 // provider wrapper can both reach the same instance.
@@ -43,6 +44,29 @@ export const tripsCollection = createCollection(
     schema: tripSchema,
     shapeOptions: { url: SHAPE_URL, params: { table: 'trips' }, parser },
     getKey: (row) => row.id,
+    // Optimistic toggles for notify/edit. Server actions don't return Postgres
+    // txids, so we wait for Electric to stream the update back matching this
+    // row's key — reconciles the local optimistic state once the write lands.
+    onUpdate: async ({ transaction, collection }) => {
+      await Promise.all(
+        transaction.mutations.map(async (mutation) => {
+          const { original, changes } = mutation
+          const form = new FormData()
+          form.set('id', original.id)
+          if ('notify' in changes) form.set('notify', changes.notify ? 'true' : '')
+          if ('edit' in changes) form.set('edit', changes.edit ? 'true' : '')
+          const res = await updateTrip(form)
+          if (!res.ok) throw new Error(res.error)
+          await collection.utils.awaitMatch(
+            (message) =>
+              isChangeMessage(message) &&
+              message.headers.operation === 'update' &&
+              message.value.id === original.id,
+            5000,
+          )
+        }),
+      )
+    },
   }),
 )
 
@@ -98,3 +122,94 @@ export const ticketsCollection = createCollection(
 // the row contains an encrypted access token. Settings page still reads
 // status server-side via getCredentialStatus. If we ever surface it to the
 // client, use the `columns` shape param to whitelist safe fields.
+
+// ---------- Admin-only collections ----------
+
+const userSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  email_verified: z.boolean(),
+  image: z.string().nullable(),
+  role: z.string(),
+  banned: z.boolean(),
+  ban_reason: z.string().nullable(),
+  ban_expires: z.coerce.date().nullable(),
+  ntfy_topic: z.string(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+})
+export type UserRow = z.infer<typeof userSchema>
+
+export const usersCollection = createCollection(
+  electricCollectionOptions({
+    id: 'user',
+    schema: userSchema,
+    shapeOptions: { url: SHAPE_URL, params: { table: 'user' }, parser },
+    getKey: (row) => row.id,
+  }),
+)
+
+const auditLogSchema = z.object({
+  id: z.string(),
+  user_id: z.string().nullable(),
+  actor: z.string(),
+  type: z.string(),
+  trip_id: z.string().nullable(),
+  payload: z.string().nullable(),
+  created_at: z.coerce.date(),
+})
+export type AuditLogRow = z.infer<typeof auditLogSchema>
+
+export const auditLogsCollection = createCollection(
+  electricCollectionOptions({
+    id: 'audit_logs',
+    schema: auditLogSchema,
+    shapeOptions: { url: SHAPE_URL, params: { table: 'audit_logs' }, parser },
+    getKey: (row) => row.id,
+  }),
+)
+
+const settingRowSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  updated_at: z.coerce.date(),
+})
+export type SettingRow = z.infer<typeof settingRowSchema>
+
+export const settingsCollection = createCollection(
+  electricCollectionOptions({
+    id: 'settings',
+    schema: settingRowSchema,
+    shapeOptions: { url: SHAPE_URL, params: { table: 'settings' }, parser },
+    getKey: (row) => row.key,
+  }),
+)
+
+// Admin-scoped views of the user-scoped tables. Gateway opt-in via
+// ?scope=admin → returns every user's rows; non-admin requests are rejected.
+export const adminTripsCollection = createCollection(
+  electricCollectionOptions({
+    id: 'trips-admin',
+    schema: tripSchema,
+    shapeOptions: {
+      url: SHAPE_URL,
+      params: { table: 'trips', scope: 'admin' },
+      parser,
+    },
+    getKey: (row) => row.id,
+  }),
+)
+
+export const adminTripOptionsCollection = createCollection(
+  electricCollectionOptions({
+    id: 'trip_options-admin',
+    schema: tripOptionSchema,
+    shapeOptions: {
+      url: SHAPE_URL,
+      params: { table: 'trip_options', scope: 'admin' },
+      parser,
+    },
+    getKey: (row) => row.id,
+  }),
+)

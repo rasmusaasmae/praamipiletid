@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useLocale, useTranslations } from 'next-intl'
 import { et, enGB } from 'react-day-picker/locale'
 import { ArrowDown, ArrowRightLeft, ArrowUp, Bell, Plus, Trash2 } from 'lucide-react'
+import { useForm, useStore } from '@tanstack/react-form'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -33,8 +34,8 @@ import {
   moveOption,
   removeOption,
   updateOption,
-  updateTrip,
 } from '@/actions/trips'
+import { tripsCollection } from '@/lib/collections'
 import type { Ticket } from '@/db/schema'
 
 export type TripCardData = {
@@ -81,10 +82,13 @@ export function TripCard({ data }: { data: TripCardData }) {
     })
 
   const toggleFlag = (flag: 'notify' | 'edit', next: boolean) => {
-    const form = new FormData()
-    form.set('id', data.trip.id)
-    form.set(flag, next ? 'true' : '')
-    submit(() => updateTrip(form), t('saved'))
+    const tx = tripsCollection.update(data.trip.id, (draft) => {
+      draft[flag] = next
+    })
+    tx.isPersisted.promise.then(
+      () => toast.success(t('saved')),
+      (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    )
   }
 
   const onDeleteTrip = () => {
@@ -256,6 +260,26 @@ export function TripCard({ data }: { data: TripCardData }) {
   )
 }
 
+function startOfDay(d: Date) {
+  const c = new Date(d)
+  c.setHours(0, 0, 0, 0)
+  return c
+}
+
+function formatHHMM(d: Date) {
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+}
+
+function combineDateTime(date: Date, time: string): Date | null {
+  const [hStr, mStr] = time.split(':')
+  const h = Number(hStr)
+  const m = Number(mStr)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
+  const combined = new Date(date)
+  combined.setHours(h, m, 0, 0)
+  return combined
+}
+
 function CutoffEditor({
   eventStart,
   stopBeforeAt,
@@ -297,42 +321,42 @@ function CutoffEditor({
         })
 
   const [open, setOpen] = useState(false)
-
-  const startOfDay = (d: Date) => {
-    const c = new Date(d)
-    c.setHours(0, 0, 0, 0)
-    return c
-  }
   const eventDayStart = startOfDay(eventStart)
 
-  const [draftDate, setDraftDate] = useState<Date>(startOfDay(stopBeforeAt))
-  const [draftTime, setDraftTime] = useState<string>(
-    `${stopBeforeAt.getHours().toString().padStart(2, '0')}:${stopBeforeAt.getMinutes().toString().padStart(2, '0')}`,
-  )
+  const form = useForm({
+    defaultValues: {
+      date: startOfDay(stopBeforeAt),
+      time: formatHHMM(stopBeforeAt),
+    },
+    validators: {
+      onChange: ({ value }) => {
+        const combined = combineDateTime(value.date, value.time)
+        if (!combined) return { fields: { time: 'invalid time' } }
+        if (combined.getTime() >= eventStart.getTime()) {
+          return tOpt('cutoffMustBeBeforeStart')
+        }
+        return undefined
+      },
+    },
+    onSubmit: ({ value }) => {
+      const combined = combineDateTime(value.date, value.time)
+      if (!combined) return
+      setOpen(false)
+      onSave(combined)
+    },
+  })
+
+  const canSubmit = useStore(form.store, (s) => s.canSubmit)
+  const formErrors = useStore(form.store, (s) => s.errors)
 
   const onOpenChange = (next: boolean) => {
     if (next) {
-      setDraftDate(startOfDay(stopBeforeAt))
-      setDraftTime(
-        `${stopBeforeAt.getHours().toString().padStart(2, '0')}:${stopBeforeAt.getMinutes().toString().padStart(2, '0')}`,
-      )
+      form.reset({
+        date: startOfDay(stopBeforeAt),
+        time: formatHHMM(stopBeforeAt),
+      })
     }
     setOpen(next)
-  }
-
-  const onCommit = () => {
-    const [hStr, mStr] = draftTime.split(':')
-    const h = Number(hStr)
-    const m = Number(mStr)
-    if (!Number.isFinite(h) || !Number.isFinite(m)) return
-    const combined = new Date(draftDate)
-    combined.setHours(h, m, 0, 0)
-    if (combined.getTime() >= eventStart.getTime()) {
-      toast.error(tOpt('cutoffMustBeBeforeStart'))
-      return
-    }
-    setOpen(false)
-    onSave(combined)
   }
 
   return (
@@ -365,36 +389,60 @@ function CutoffEditor({
           <PopoverTitle>{tOpt('cutoffEditTitle')}</PopoverTitle>
           <PopoverDescription>{tOpt('cutoffTooltip')}</PopoverDescription>
         </PopoverHeader>
-        <Calendar
-          mode="single"
-          selected={draftDate}
-          onSelect={(d) => {
-            if (d) setDraftDate(startOfDay(d))
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            form.handleSubmit()
           }}
-          disabled={(d) => d.getTime() > eventDayStart.getTime()}
-          defaultMonth={draftDate}
-          locale={dpLocale}
-        />
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="cutoff-time" className="text-xs">
-            {tOpt('cutoffTime')}
-          </Label>
-          <Input
-            id="cutoff-time"
-            type="time"
-            value={draftTime}
-            onChange={(e) => setDraftTime(e.target.value)}
-            className="h-8 text-sm tabular-nums"
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
-            {tOpt('cutoffCancel')}
-          </Button>
-          <Button size="sm" onClick={onCommit}>
-            {tOpt('cutoffSave')}
-          </Button>
-        </div>
+          className="flex flex-col gap-2"
+        >
+          <form.Field name="date">
+            {(field) => (
+              <Calendar
+                mode="single"
+                selected={field.state.value}
+                onSelect={(d) => {
+                  if (d) field.handleChange(startOfDay(d))
+                }}
+                disabled={(d) => d.getTime() > eventDayStart.getTime()}
+                defaultMonth={field.state.value}
+                locale={dpLocale}
+              />
+            )}
+          </form.Field>
+          <form.Field name="time">
+            {(field) => (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="cutoff-time" className="text-xs">
+                  {tOpt('cutoffTime')}
+                </Label>
+                <Input
+                  id="cutoff-time"
+                  type="time"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="h-8 text-sm tabular-nums"
+                />
+              </div>
+            )}
+          </form.Field>
+          {formErrors.length > 0 ? (
+            <p className="text-xs text-destructive" role="alert">
+              {formErrors
+                .map((err) => (typeof err === 'string' ? err : ''))
+                .filter(Boolean)
+                .join(', ')}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" type="button" onClick={() => setOpen(false)}>
+              {tOpt('cutoffCancel')}
+            </Button>
+            <Button size="sm" type="submit" disabled={!canSubmit}>
+              {tOpt('cutoffSave')}
+            </Button>
+          </div>
+        </form>
       </PopoverContent>
     </Popover>
   )

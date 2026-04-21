@@ -21,6 +21,7 @@
     "topicMax": "Kuni 64 tähemärki",
     "topicPattern": "Ainult tähed, numbrid, _ ja -",
     "topicInvalid": "Vigane teema",
+    "isikukoodInvalid": "Isikukood peab olema täpselt 11 numbrit",
     "editRequiresTicket": "Lisa pilet enne automaatse vahetuse sisselülitamist"
   },
   "Home": {

@@ -4,25 +4,21 @@ import { randomUUID } from 'node:crypto'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
-import { z } from 'zod'
 import { db } from '@/db'
 import { tickets, tripOptions, trips } from '@/db/schema'
 import { listEvents } from '@/lib/praamid'
 import { logAudit } from '@/lib/audit'
+import {
+  optionAddSchema,
+  optionMoveSchema,
+  optionUpdateSchema,
+  tripCreateSchema,
+  tripUpdateSchema,
+} from '@/lib/schemas'
 import { requireUser } from '@/lib/session'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('actions/trips')
-
-const directionSchema = z.enum(['VK', 'KV', 'RH', 'HR'])
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
-
-const createSchema = z.object({
-  direction: directionSchema,
-  measurementUnit: z.string().min(1),
-  notify: z.coerce.boolean().optional(),
-  edit: z.coerce.boolean().optional(),
-})
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 export type CreateTripResult =
@@ -33,7 +29,7 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
   const session = await requireUser()
   const t = await getTranslations('Errors')
 
-  const parsed = createSchema.safeParse({
+  const parsed = tripCreateSchema.safeParse({
     direction: formData.get('direction'),
     measurementUnit: formData.get('measurementUnit'),
     notify: formData.get('notify') ?? undefined,
@@ -72,16 +68,10 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
   return { ok: true, tripId }
 }
 
-const updateSchema = z.object({
-  id: z.string().min(1),
-  notify: z.coerce.boolean().optional(),
-  edit: z.coerce.boolean().optional(),
-})
-
 export async function updateTrip(formData: FormData): Promise<ActionResult> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const parsed = updateSchema.safeParse({
+  const parsed = tripUpdateSchema.safeParse({
     id: formData.get('id'),
     notify: formData.get('notify') ?? undefined,
     edit: formData.get('edit') ?? undefined,
@@ -122,18 +112,11 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
   return { ok: true }
 }
 
-const addOptionSchema = z.object({
-  tripId: z.string().min(1),
-  eventUid: z.string().min(1),
-  date: dateSchema,
-  stopBeforeAt: z.coerce.number().int().optional(),
-})
-
 export async function addOption(formData: FormData): Promise<ActionResult> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
 
-  const parsed = addOptionSchema.safeParse({
+  const parsed = optionAddSchema.safeParse({
     tripId: formData.get('tripId'),
     eventUid: formData.get('eventUid'),
     date: formData.get('date'),
@@ -211,15 +194,10 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
   return { ok: true }
 }
 
-const updateOptionSchema = z.object({
-  id: z.string().min(1),
-  stopBeforeAt: z.coerce.number().int(),
-})
-
 export async function updateOption(formData: FormData): Promise<ActionResult> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const parsed = updateOptionSchema.safeParse({
+  const parsed = optionUpdateSchema.safeParse({
     id: formData.get('id'),
     stopBeforeAt: formData.get('stopBeforeAt'),
   })
@@ -295,15 +273,10 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
   return { ok: true }
 }
 
-const moveSchema = z.object({
-  id: z.string().min(1),
-  direction: z.enum(['up', 'down']),
-})
-
 export async function moveOption(formData: FormData): Promise<ActionResult> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const parsed = moveSchema.safeParse({
+  const parsed = optionMoveSchema.safeParse({
     id: formData.get('id'),
     direction: formData.get('direction'),
   })

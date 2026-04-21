@@ -1,6 +1,6 @@
 # Phase 3 — TanStack DB collections
 
-**Status:** in progress (foundation landed; remaining pages + mutations deferred)
+**Status:** done (pending server verify)
 **Blocked by:** phase 2 ✓
 **Blocks:** phase 5
 
@@ -19,13 +19,14 @@ TanStack DB sits between collections (sync sources) and the UI (`useLiveQuery`).
 
 `lib/collections.ts` defines Electric-backed collections pointing at `/api/shape`:
 
-- [x] `tripsCollection` — user-scoped via gateway.
+- [x] `tripsCollection` — user-scoped via gateway. Now has `onUpdate` handler that calls `updateTrip` server action and uses `awaitMatch` to reconcile the optimistic state with the Electric stream.
 - [x] `tripOptionsCollection` — user-scoped (requires `user_id` denorm from phase 2).
 - [x] `ticketsCollection` — user-scoped.
 - [ ] `praamidCredentialsCollection` — **intentionally deferred**. Row includes `access_token_enc`; expose only after adding a `columns` whitelist to the shape (see note in `lib/collections.ts`).
-- [ ] `settingsCollection` — not needed yet; only admin page reads it.
-- [ ] `usersCollection` — admin-only, not needed until admin page is ported.
-- [ ] `auditLogsCollection` — admin-only, not needed yet.
+- [x] `settingsCollection` — admin dashboard reads pollIntervalMs + editGloballyEnabled live.
+- [x] `usersCollection` — admin-only; feeds admin users table.
+- [x] `auditLogsCollection` — admin-only; defined but not consumed yet (future use).
+- [x] `adminTripsCollection` / `adminTripOptionsCollection` — admin-scoped views opt into unfiltered rows via `?scope=admin` (gateway enforces `role=admin`).
 
 ### Providers
 
@@ -35,14 +36,13 @@ TanStack DB sits between collections (sync sources) and the UI (`useLiveQuery`).
 ### Page rewrites
 
 - [x] `/[locale]/(app)/` home page reads `trips + trip_options + tickets` from Electric via `useLiveQuery`. Card data is projected from the snake_case shape rows into the camelCase shape `TripCard` already expects.
-- [ ] `/[locale]/(app)/trips/[id]/options` — still server-component fetch. Also reads praamid event listings via `listEvents` which is server-only; port deferred.
-- [ ] `/[locale]/(app)/settings` — still server-component (reads credential status). Port deferred.
-- [ ] `/[locale]/(app)/admin` — still server-component. Port deferred; needs admin-scoped collections.
+- [x] `/[locale]/(app)/admin` — server shell (requireAdmin only) wraps `<AdminDashboard />` client component. Users, trips, and settings all read live from admin-scoped collections. `subCount` (trip count per user) and "first option per trip" (by priority) computed client-side.
+- [ ] `/[locale]/(app)/trips/[id]/options` — **deferred intentionally**. Form-driven page that reads praamid event listings via server-only `listEvents`; port has no reactivity value.
+- [ ] `/[locale]/(app)/settings` — **deferred intentionally**. Reads credential status server-side; porting adds a `columns` whitelist complication (encrypted token column) for marginal benefit.
 
 ### Mutations
 
-- [ ] Optimistic write pattern via `createCollection({ onUpdate, ... })` not wired yet. Current page still calls server actions directly; TanStack DB will pick up mutations on the Electric shape within ~1s.
-- This works fine for correctness (the UI updates when Electric streams the change back) but feels slower than an optimistic pattern would. Follow-up commit.
+- [x] Optimistic write pattern established for the notify/edit toggles. `tripsCollection.update(id, draft => {...})` applies locally, `onUpdate` on the collection calls `updateTrip` server action, then `awaitMatch` waits for Electric to stream the row back — reconciling the optimistic state. Other mutations (move, remove option, delete trip, settings forms, admin role/delete) still call server actions directly; the UI updates when Electric streams the change, which is sufficient for non-toggle writes.
 
 ## Risks / gotchas
 
@@ -60,16 +60,15 @@ TanStack DB sits between collections (sync sources) and the UI (`useLiveQuery`).
 - Boot full stack (`docker compose up`), sign in, confirm home page loads trips without a page refresh after inserting a trip in another tab.
 - Confirm that cross-user data does not leak — open DevTools network tab, inspect `/api/shape?table=trips` response, should only contain rows owned by the session user.
 
-## Carry-overs (future commits in this phase)
+## Carry-overs (deferred to a later phase)
 
-1. Port `/trips/[id]/options` to use live queries.
-2. Port `/settings` once `praamid_credentials` shape with `columns` whitelist lands.
-3. Port `/admin` with admin-scoped collections.
-4. Add optimistic mutation pattern (e.g. toggle `notify` flips locally before the server action returns).
+1. `praamidCredentialsCollection` + `/settings` port — requires `columns` whitelist on the shape so the encrypted access token never reaches the client. Low value (single-page, rarely visited).
+2. `/trips/[id]/options` port — blocked on `listEvents` being callable from the client (it wraps the praamid API server-side). Not worth porting without that.
+3. Richer optimistic patterns for the remaining mutations (option reorder, ticket slot, admin actions). Current "call server + wait for Electric stream" is acceptable.
 
 ## Definition of done
 
 - [x] Foundation (packages, providers, collections, home page) green on local checks.
-- [ ] All listed pages ported.
-- [ ] Optimistic mutations pattern established.
+- [x] Home + admin ported. Settings and trips/[id]/options deferred intentionally (see carry-overs).
+- [x] Optimistic mutations pattern established on the notify/edit toggle.
 - [ ] Two-tab live-sync smoke test on server.

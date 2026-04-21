@@ -21,6 +21,7 @@
     "topicMax": "At most 64 characters",
     "topicPattern": "Only letters, numbers, _ and -",
     "topicInvalid": "Invalid topic",
+    "isikukoodInvalid": "ID code must be exactly 11 digits",
     "editRequiresTicket": "Attach a ticket before enabling automatic swap"
   },
   "Home": {

@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
+import { useForm, useStore } from '@tanstack/react-form'
+import { z } from 'zod'
 import { useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { createTrip } from '@/actions/trips'
 import { Button } from '@/components/ui/button'
+import { FieldError } from '@/components/ui/field-error'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -14,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { directionSchema } from '@/lib/schemas'
 
 type Option = { code: string; label: string }
 
@@ -22,107 +25,144 @@ type Props = {
   units: Option[]
 }
 
+const unitSchema = z.string().min(1)
+
 export function NewTripForm({ directions, units }: Props) {
   const router = useRouter()
   const t = useTranslations('NewTrip')
-  const [isPending, startTransition] = useTransition()
 
-  const [direction, setDirection] = useState(directions[0]?.code ?? 'HR')
-  const [unit, setUnit] = useState(units[0]?.code ?? 'sv')
-  const [notify, setNotify] = useState(true)
-  const [edit, setEdit] = useState(false)
+  const form = useForm({
+    defaultValues: {
+      direction: directions[0]?.code ?? 'HR',
+      measurementUnit: units[0]?.code ?? 'sv',
+      notify: true,
+      edit: false,
+    },
+    onSubmit: async ({ value }) => {
+      const fd = new FormData()
+      fd.set('direction', value.direction)
+      fd.set('measurementUnit', value.measurementUnit)
+      if (value.notify) fd.set('notify', 'true')
+      if (value.edit) fd.set('edit', 'true')
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const form = new FormData()
-    form.set('direction', direction)
-    form.set('measurementUnit', unit)
-    if (notify) form.set('notify', 'true')
-    if (edit) form.set('edit', 'true')
-
-    startTransition(async () => {
-      const res = await createTrip(form)
+      const res = await createTrip(fd)
       if (!res.ok) {
         toast.error(res.error)
         return
       }
       toast.success(t('created'))
       router.push(`/trips/${res.tripId}/options`)
-    })
-  }
+    },
+  })
+
+  const canSubmit = useStore(form.store, (s) => s.canSubmit)
+  const isSubmitting = useStore(form.store, (s) => s.isSubmitting)
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="direction">{t('direction')}</Label>
-        <Select value={direction} onValueChange={(v) => v && setDirection(v)}>
-          <SelectTrigger id="direction" className="w-full">
-            <SelectValue>
-              {(v: string) => directions.find((d) => d.code === v)?.label ?? v}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {directions.map((d) => (
-              <SelectItem key={d.code} value={d.code}>
-                {d.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        form.handleSubmit()
+      }}
+      className="flex flex-col gap-4"
+    >
+      <form.Field
+        name="direction"
+        validators={{ onChange: directionSchema }}
+      >
+        {(field) => (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={field.name}>{t('direction')}</Label>
+            <Select
+              value={field.state.value}
+              onValueChange={(v) => v && field.handleChange(v as 'VK' | 'KV' | 'RH' | 'HR')}
+            >
+              <SelectTrigger id={field.name} className="w-full">
+                <SelectValue>
+                  {(v: string) => directions.find((d) => d.code === v)?.label ?? v}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {directions.map((d) => (
+                  <SelectItem key={d.code} value={d.code}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError field={field} />
+          </div>
+        )}
+      </form.Field>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="unit">{t('measurementUnit')}</Label>
-        <Select value={unit} onValueChange={(v) => v && setUnit(v)}>
-          <SelectTrigger id="unit" className="w-full">
-            <SelectValue>
-              {(v: string) => units.find((u) => u.code === v)?.label ?? v}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {units.map((u) => (
-              <SelectItem key={u.code} value={u.code}>
-                {u.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <form.Field
+        name="measurementUnit"
+        validators={{ onChange: unitSchema }}
+      >
+        {(field) => (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={field.name}>{t('measurementUnit')}</Label>
+            <Select value={field.state.value} onValueChange={(v) => v && field.handleChange(v)}>
+              <SelectTrigger id={field.name} className="w-full">
+                <SelectValue>
+                  {(v: string) => units.find((u) => u.code === v)?.label ?? v}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {units.map((u) => (
+                  <SelectItem key={u.code} value={u.code}>
+                    {u.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError field={field} />
+          </div>
+        )}
+      </form.Field>
 
       <div className="flex flex-col gap-3 rounded-md border border-border p-3">
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={notify}
-            onChange={(e) => setNotify(e.target.checked)}
-          />
-          <span className="flex flex-col">
-            <span className="text-sm font-medium">{t('notifyLabel')}</span>
-            <span className="text-xs text-muted-foreground">{t('notifyHelp')}</span>
-          </span>
-        </label>
+        <form.Field name="notify">
+          {(field) => (
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+              />
+              <span className="flex flex-col">
+                <span className="text-sm font-medium">{t('notifyLabel')}</span>
+                <span className="text-xs text-muted-foreground">{t('notifyHelp')}</span>
+              </span>
+            </label>
+          )}
+        </form.Field>
 
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={edit}
-            onChange={(e) => setEdit(e.target.checked)}
-          />
-          <span className="flex flex-col">
-            <span className="text-sm font-medium">{t('editLabel')}</span>
-            <span className="text-xs text-muted-foreground">{t('editHelp')}</span>
-          </span>
-        </label>
+        <form.Field name="edit">
+          {(field) => (
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+              />
+              <span className="flex flex-col">
+                <span className="text-sm font-medium">{t('editLabel')}</span>
+                <span className="text-xs text-muted-foreground">{t('editHelp')}</span>
+              </span>
+            </label>
+          )}
+        </form.Field>
       </div>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={() => router.push('/')}>
           {t('cancel')}
         </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? t('creating') : t('submit')}
+        <Button type="submit" disabled={!canSubmit || isSubmitting}>
+          {isSubmitting ? t('creating') : t('submit')}
         </Button>
       </div>
     </form>
