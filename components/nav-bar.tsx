@@ -3,7 +3,7 @@ import { Link } from '@/i18n/navigation'
 import { AvatarMenu } from '@/components/avatar-menu'
 
 type Props = {
-  user: { name: string; email: string; image: string | null; role: string }
+  user: { email: string; image: string | null; role: string }
 }
 
 export async function NavBar({ user }: Props) {
