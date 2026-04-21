@@ -1,7 +1,6 @@
 'use client'
 
-import { useForm } from '@tanstack/react-form'
-import { useStore } from '@tanstack/react-form'
+import { useForm, useStore } from '@tanstack/react-form'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { Copy } from 'lucide-react'
