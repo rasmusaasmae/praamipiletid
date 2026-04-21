@@ -19,6 +19,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const DEFAULT_POLL_INTERVAL_MS = 15_000
 
+function parseOrDefault(raw: string | undefined, fallback: number): number {
+  if (raw === undefined) return fallback
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 export function AdminDashboard() {
   const t = useTranslations('Admin')
 
@@ -28,8 +34,8 @@ export function AdminDashboard() {
   const { data: adminOptions } = useLiveQuery((q) => q.from({ o: adminTripOptionsCollection }))
 
   const settingsMap = new Map(settings.map((s) => [s.key, s.value]))
-  const pollIntervalMs = Number(settingsMap.get('pollIntervalMs') ?? DEFAULT_POLL_INTERVAL_MS)
-  const editGloballyEnabled = Number(settingsMap.get('editGloballyEnabled') ?? 0) !== 0
+  const pollIntervalMs = parseOrDefault(settingsMap.get('pollIntervalMs'), DEFAULT_POLL_INTERVAL_MS)
+  const editGloballyEnabled = parseOrDefault(settingsMap.get('editGloballyEnabled'), 0) !== 0
 
   const tripCountByUser = new Map<string, number>()
   for (const trip of adminTrips) {
