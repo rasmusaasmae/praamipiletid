@@ -1,7 +1,7 @@
 'use server'
 
 import { randomUUID } from 'node:crypto'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
@@ -297,39 +297,28 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
 
   const neighborFilter =
     parsed.data.direction === 'up'
-      ? sql`${tripOptions.priority} < ${current.priority}`
-      : sql`${tripOptions.priority} > ${current.priority}`
-  const aggregate =
+      ? lt(tripOptions.priority, current.priority)
+      : gt(tripOptions.priority, current.priority)
+  const neighborOrder =
     parsed.data.direction === 'up'
-      ? sql<number>`max(${tripOptions.priority})`
-      : sql<number>`min(${tripOptions.priority})`
-
-  const [neighborPriorityRow] = await db
-    .select({ p: aggregate })
-    .from(tripOptions)
-    .where(and(eq(tripOptions.tripId, current.tripId), neighborFilter))
-    .limit(1)
-  const neighborPriority = neighborPriorityRow?.p ?? null
-  if (neighborPriority == null) return { ok: true }
+      ? desc(tripOptions.priority)
+      : asc(tripOptions.priority)
 
   const [neighbor] = await db
     .select({ id: tripOptions.id, priority: tripOptions.priority })
     .from(tripOptions)
-    .where(
-      and(
-        eq(tripOptions.tripId, current.tripId),
-        eq(tripOptions.priority, neighborPriority),
-      ),
-    )
+    .where(and(eq(tripOptions.tripId, current.tripId), neighborFilter))
+    .orderBy(neighborOrder)
     .limit(1)
   if (!neighbor) return { ok: true }
 
   const [topRow] = await db
-    .select({ p: sql<number>`max(${tripOptions.priority})` })
+    .select({ priority: tripOptions.priority })
     .from(tripOptions)
     .where(eq(tripOptions.tripId, current.tripId))
+    .orderBy(desc(tripOptions.priority))
     .limit(1)
-  const parkingSpot = (topRow?.p ?? 0) + 1
+  const parkingSpot = (topRow?.priority ?? 0) + 1
 
   await db.transaction(async (tx) => {
     await tx
