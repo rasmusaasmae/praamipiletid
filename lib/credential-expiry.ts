@@ -14,7 +14,6 @@ const DEDUPE_HOURS = 20
 const TICK_INTERVAL_MS = 60 * 60 * 1000
 
 let running = false
-let stopRequested = false
 
 async function recentlyNotified(userId: string): Promise<boolean> {
   const cutoff = new Date(Date.now() - DEDUPE_HOURS * 60 * 60 * 1000)
@@ -76,7 +75,7 @@ async function tick() {
 }
 
 async function loop() {
-  while (!stopRequested) {
+  while (true) {
     try {
       await tick()
     } catch (err) {
@@ -89,14 +88,9 @@ async function loop() {
 export function startCredentialExpiryWatcher() {
   if (running) return
   running = true
-  stopRequested = false
   log.info('starting')
   loop().catch((err) => {
     log.error('loop crashed', { err: err instanceof Error ? err.message : String(err) })
     running = false
   })
-}
-
-export function stopCredentialExpiryWatcher() {
-  stopRequested = true
 }

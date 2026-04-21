@@ -12,7 +12,6 @@ import { createLogger } from '@/lib/logger'
 const log = createLogger('poller')
 
 let running = false
-let stopRequested = false
 
 type JoinedOption = {
   optionId: string
@@ -263,7 +262,7 @@ async function tick() {
 }
 
 async function loop() {
-  while (!stopRequested) {
+  while (true) {
     const started = Date.now()
     try {
       await tick()
@@ -303,7 +302,6 @@ async function recoverStuckSwaps() {
 export function startPoller() {
   if (running) return
   running = true
-  stopRequested = false
   log.info('starting')
   recoverStuckSwaps()
     .catch((err) => {
@@ -319,8 +317,4 @@ export function startPoller() {
         running = false
       })
     })
-}
-
-export function stopPoller() {
-  stopRequested = true
 }
