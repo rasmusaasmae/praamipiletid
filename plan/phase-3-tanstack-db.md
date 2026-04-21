@@ -1,7 +1,7 @@
 # Phase 3 — TanStack DB collections
 
-**Status:** not started
-**Blocked by:** phase 2
+**Status:** in progress (foundation landed; remaining pages + mutations deferred)
+**Blocked by:** phase 2 ✓
 **Blocks:** phase 5
 
 ## Why
@@ -12,43 +12,64 @@ TanStack DB sits between collections (sync sources) and the UI (`useLiveQuery`).
 
 ### Packages
 
-- [ ] Install: `@tanstack/db`, `@tanstack/react-db`, `@tanstack/electric-db-collection`, `@tanstack/react-query`, `@tanstack/query-db-collection`.
-- [ ] Decide: do we adopt `@tanstack/react-query` for ephemeral server state too (e.g. `/api/swap-now` POST), or keep server actions? Recommendation: keep server actions for mutations, use react-query only where Query Collection needs it.
+- [x] Installed: `@tanstack/db`, `@tanstack/react-db`, `@tanstack/electric-db-collection`, `@tanstack/react-query`, `@tanstack/query-db-collection`.
+- [x] Decision: keep server actions for mutations. React Query is in the tree only because `query-db-collection` pulls it in; we're not using it directly yet.
 
 ### Collections
 
-Define once (in `lib/collections.ts` or similar):
+`lib/collections.ts` defines Electric-backed collections pointing at `/api/shape`:
 
-- [ ] `tripsCollection` — Electric shape, filtered to session user.
-- [ ] `tripOptionsCollection` — Electric shape, joined on trip_id → user_id (after denorm in phase 2).
-- [ ] `ticketsCollection` — Electric shape.
-- [ ] `settingsCollection` — Electric shape, read-only for non-admin.
-- [ ] `usersCollection` — Electric shape, admin-only.
-- [ ] `auditLogsCollection` — Electric shape, admin-only, capped query (e.g. last 200).
-- [ ] Swap-state collection — see phase 5; can be Electric or a Query Collection with a short refetchInterval, TBD.
+- [x] `tripsCollection` — user-scoped via gateway.
+- [x] `tripOptionsCollection` — user-scoped (requires `user_id` denorm from phase 2).
+- [x] `ticketsCollection` — user-scoped.
+- [ ] `praamidCredentialsCollection` — **intentionally deferred**. Row includes `access_token_enc`; expose only after adding a `columns` whitelist to the shape (see note in `lib/collections.ts`).
+- [ ] `settingsCollection` — not needed yet; only admin page reads it.
+- [ ] `usersCollection` — admin-only, not needed until admin page is ported.
+- [ ] `auditLogsCollection` — admin-only, not needed yet.
+
+### Providers
+
+- [x] `components/app-providers.tsx` (client) wraps children in `QueryClientProvider` using the shared `queryClient` from `lib/collections.ts`.
+- [x] Mounted inside `app/[locale]/(app)/layout.tsx` so only the authed area pays the cost.
 
 ### Page rewrites
 
-Switch each page from server-component fetch to client `useLiveQuery`:
-
-- [ ] `/[locale]/(app)/` home — trip list + per-trip options.
-- [ ] `/[locale]/(app)/trip/[id]` trip detail.
-- [ ] `/[locale]/(app)/settings` settings page (own trips, credentials status).
-- [ ] `/[locale]/(app)/admin` admin users table, audit log, poll interval editor.
+- [x] `/[locale]/(app)/` home page reads `trips + trip_options + tickets` from Electric via `useLiveQuery`. Card data is projected from the snake_case shape rows into the camelCase shape `TripCard` already expects.
+- [ ] `/[locale]/(app)/trips/[id]/options` — still server-component fetch. Also reads praamid event listings via `listEvents` which is server-only; port deferred.
+- [ ] `/[locale]/(app)/settings` — still server-component (reads credential status). Port deferred.
+- [ ] `/[locale]/(app)/admin` — still server-component. Port deferred; needs admin-scoped collections.
 
 ### Mutations
 
-- [ ] Establish pattern: call server action → optimistic update in the collection → reconcile on action response. TanStack DB has `createOptimisticAction` — use it.
-- [ ] Audit every action in `actions/*.ts` for idempotency and retry behavior.
+- [ ] Optimistic write pattern via `createCollection({ onUpdate, ... })` not wired yet. Current page still calls server actions directly; TanStack DB will pick up mutations on the Electric shape within ~1s.
+- This works fine for correctness (the UI updates when Electric streams the change back) but feels slower than an optimistic pattern would. Follow-up commit.
 
 ## Risks / gotchas
 
-- Next.js 16 server components already stream data to clients; be deliberate about which pages must remain server-rendered for SEO/performance and which become client-driven.
-- Locale strings from `next-intl` need to stay SSR'd to avoid FOUC.
-- Auth session is still only available server-side; either expose a cheap `/api/me` or use better-auth's client hook.
+- Electric shape rows are snake_case (raw Postgres column names). Code that consumed the Drizzle camelCase shape has to project between them — keep the mapping at the collection boundary rather than leaking snake_case into components.
+- `praamid_credentials` row carries an encrypted access token. Don't expose the full row over Electric without whitelisting columns in the shape request.
+- `useLiveQuery` returns an empty array while the collection is still syncing; the home page treats empty as "no trips yet" — this is visually indistinguishable from loading. Acceptable for 2-user hobby; revisit when adding a first-load spinner.
+
+## Local verification (done here)
+
+- `bun run typecheck` — clean.
+- `bun run lint` — clean.
+
+## Server verification
+
+- Boot full stack (`docker compose up`), sign in, confirm home page loads trips without a page refresh after inserting a trip in another tab.
+- Confirm that cross-user data does not leak — open DevTools network tab, inspect `/api/shape?table=trips` response, should only contain rows owned by the session user.
+
+## Carry-overs (future commits in this phase)
+
+1. Port `/trips/[id]/options` to use live queries.
+2. Port `/settings` once `praamid_credentials` shape with `columns` whitelist lands.
+3. Port `/admin` with admin-scoped collections.
+4. Add optimistic mutation pattern (e.g. toggle `notify` flips locally before the server action returns).
 
 ## Definition of done
 
-- All listed pages read from collections; no page fetches trips directly from the DB in server code anymore (except for SEO/SSR shell).
-- Opening two tabs and performing a mutation in one (e.g. create trip) reflects in the other within <1s without manual refresh.
-- `useLiveQuery`-driven lists show loading/empty/error states cleanly.
+- [x] Foundation (packages, providers, collections, home page) green on local checks.
+- [ ] All listed pages ported.
+- [ ] Optimistic mutations pattern established.
+- [ ] Two-tab live-sync smoke test on server.
