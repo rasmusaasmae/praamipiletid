@@ -1,9 +1,9 @@
 import 'server-only'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { createLogger } from '@/lib/logger'
+import { logger } from '@/lib/logger'
 import { saveCredential } from '@/lib/praamid-credentials'
 
-const log = createLogger('praamid-login')
+const log = logger.child({ scope: 'praamid-login' })
 
 const ENTRY_URL =
   'https://www.praamid.ee/portal/integration/wp?action=login&redirectPath=/'
@@ -106,7 +106,7 @@ export async function startLogin(userId: string, isikukood: string): Promise<voi
 
   session.driver = driveLogin(session, isikukood).catch(async (err) => {
     const message = err instanceof Error ? err.message : String(err)
-    log.warn('driver failed', { userId, err: message })
+    log.warn({ userId, err: message }, 'driver failed')
     if (session.state.kind === 'pending' || session.state.kind === 'awaiting_code') {
       session.state = { kind: 'error', error: message }
     }

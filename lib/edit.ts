@@ -18,9 +18,9 @@ import {
 } from '@/lib/praamid-credentials'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
-import { createLogger } from '@/lib/logger'
+import { logger } from '@/lib/logger'
 
-const log = createLogger('edit')
+const log = logger.child({ scope: 'edit' })
 
 const CREDENTIAL_BUFFER_MS = 15 * 60 * 1000
 const TRIP_BACKOFF_MS = 10 * 60 * 1000
@@ -44,22 +44,25 @@ export type EditOutcome =
     }
 
 export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
-  log.debug('start', { tripId })
+  log.debug({ tripId }, 'start')
   const outcome = await runEdit(tripId)
   if (outcome.kind === 'succeeded') {
-    log.info('succeeded', {
-      tripId,
-      newTicketNumber: outcome.newTicketNumber,
-      invoiceNumber: outcome.invoiceNumber,
-    })
+    log.info(
+      {
+        tripId,
+        newTicketNumber: outcome.newTicketNumber,
+        invoiceNumber: outcome.invoiceNumber,
+      },
+      'succeeded',
+    )
   } else if (outcome.kind === 'failed') {
-    log.error('failed', { tripId, stage: outcome.stage, reason: outcome.reason })
+    log.error({ tripId, stage: outcome.stage, reason: outcome.reason }, 'failed')
   } else if (outcome.kind === 'rolled_back') {
-    log.warn('rolled_back', { tripId, reason: outcome.reason })
+    log.warn({ tripId, reason: outcome.reason }, 'rolled_back')
   } else if (outcome.kind === 'idempotency_paused') {
-    log.warn('idempotency_paused', { tripId, reason: outcome.reason })
+    log.warn({ tripId, reason: outcome.reason }, 'idempotency_paused')
   } else {
-    log.debug(outcome.kind, { tripId, ...('reason' in outcome ? { reason: outcome.reason } : {}) })
+    log.debug({ tripId, ...('reason' in outcome ? { reason: outcome.reason } : {}) }, outcome.kind)
   }
   return outcome
 }
@@ -136,21 +139,27 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     .sort((a, b) => a.priority - b.priority)[0]
 
   if (!target) {
-    log.debug('no_target', {
-      tripId,
-      currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
-      consideredCount: options.length,
-    })
+    log.debug(
+      {
+        tripId,
+        currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
+        consideredCount: options.length,
+      },
+      'no_target',
+    )
     return { kind: 'no_target' }
   }
 
-  log.info('attempting', {
-    tripId,
-    fromEventUid: ticket.eventUid,
-    toEventUid: target.eventUid,
-    toPriority: target.priority,
-    currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
-  })
+  log.info(
+    {
+      tripId,
+      fromEventUid: ticket.eventUid,
+      toEventUid: target.eventUid,
+      toPriority: target.priority,
+      currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
+    },
+    'attempting',
+  )
   lastAttemptAt.set(tripId, Date.now())
   await logAudit({
     type: 'edit.attempted',

@@ -16,9 +16,9 @@ import {
   tripUpdateSchema,
 } from '@/lib/schemas'
 import { requireUser } from '@/lib/session'
-import { createLogger } from '@/lib/logger'
+import { logger } from '@/lib/logger'
 
-const log = createLogger('actions/trips')
+const log = logger.child({ scope: 'actions/trips' })
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 export type CreateTripResult =
@@ -58,11 +58,14 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
       measurementUnit: parsed.data.measurementUnit,
     },
   })
-  log.info('trip created', {
-    tripId,
-    userId: session.user.id,
-    direction: parsed.data.direction,
-  })
+  log.info(
+    {
+      tripId,
+      userId: session.user.id,
+      direction: parsed.data.direction,
+    },
+    'trip created',
+  )
 
   revalidatePath('/')
   return { ok: true, tripId }
@@ -106,7 +109,7 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
     tripId: id,
     payload: { changes: patch },
   })
-  log.info('trip updated', { tripId: id, userId: session.user.id, changes: patch })
+  log.info({ tripId: id, userId: session.user.id, changes: patch }, 'trip updated')
 
   revalidatePath('/')
   return { ok: true }
@@ -183,12 +186,15 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
     tripId: trip.id,
     payload: { eventUid: parsed.data.eventUid, priority: nextPriority },
   })
-  log.info('option added', {
-    tripId: trip.id,
-    userId: session.user.id,
-    eventUid: parsed.data.eventUid,
-    priority: nextPriority,
-  })
+  log.info(
+    {
+      tripId: trip.id,
+      userId: session.user.id,
+      eventUid: parsed.data.eventUid,
+      priority: nextPriority,
+    },
+    'option added',
+  )
 
   revalidatePath('/')
   return { ok: true }
@@ -224,11 +230,14 @@ export async function updateOption(formData: FormData): Promise<ActionResult> {
     .set({ stopBeforeAt: new Date(parsed.data.stopBeforeAt) })
     .where(eq(tripOptions.id, parsed.data.id))
 
-  log.info('option updated', {
-    optionId: parsed.data.id,
-    userId: session.user.id,
-    stopBeforeAt: parsed.data.stopBeforeAt,
-  })
+  log.info(
+    {
+      optionId: parsed.data.id,
+      userId: session.user.id,
+      stopBeforeAt: parsed.data.stopBeforeAt,
+    },
+    'option updated',
+  )
 
   revalidatePath('/')
   return { ok: true }
@@ -262,12 +271,15 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
     tripId: existing.tripId,
     payload: { eventUid: existing.eventUid, priority: existing.priority },
   })
-  log.info('option removed', {
-    optionId: id,
-    tripId: existing.tripId,
-    userId: session.user.id,
-    priority: existing.priority,
-  })
+  log.info(
+    {
+      optionId: id,
+      tripId: existing.tripId,
+      userId: session.user.id,
+      priority: existing.priority,
+    },
+    'option removed',
+  )
 
   revalidatePath('/')
   return { ok: true }
@@ -342,13 +354,16 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
     tripId: current.tripId,
     payload: { from: current.priority, to: neighbor.priority, eventUid: current.eventUid },
   })
-  log.info('option reordered', {
-    optionId: current.id,
-    tripId: current.tripId,
-    userId: session.user.id,
-    from: current.priority,
-    to: neighbor.priority,
-  })
+  log.info(
+    {
+      optionId: current.id,
+      tripId: current.tripId,
+      userId: session.user.id,
+      from: current.priority,
+      to: neighbor.priority,
+    },
+    'option reordered',
+  )
 
   revalidatePath('/')
   return { ok: true }
@@ -376,7 +391,7 @@ export async function deleteTrip(formData: FormData): Promise<ActionResult> {
     tripId: null,
     payload: { direction: existing.direction },
   })
-  log.info('trip deleted', { tripId: id, userId: session.user.id })
+  log.info({ tripId: id, userId: session.user.id }, 'trip deleted')
 
   revalidatePath('/')
   return { ok: true }

@@ -7,9 +7,9 @@ import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
 import { processEditForTrip } from '@/lib/edit'
-import { createLogger } from '@/lib/logger'
+import { logger } from '@/lib/logger'
 
-const log = createLogger('poller')
+const log = logger.child({ scope: 'poller' })
 
 let running = false
 
@@ -49,11 +49,14 @@ async function processBatch(
   try {
     events = await listEvents(dir, date, timeShift)
   } catch (err) {
-    log.error('listEvents failed', {
-      dir,
-      date,
-      err: err instanceof Error ? err.message : String(err),
-    })
+    log.error(
+      {
+        dir,
+        date,
+        err: err instanceof Error ? err.message : String(err),
+      },
+      'listEvents failed',
+    )
     await logAudit({
       type: 'system.poller_tick_error',
       actor: 'system',
@@ -61,7 +64,7 @@ async function processBatch(
     })
     return
   }
-  log.debug('processBatch', { dir, date, rows: rows.length, events: events.length })
+  log.debug({ dir, date, rows: rows.length, events: events.length }, 'processBatch')
 
   const eventByUid = new Map(events.map((e) => [e.uid, e]))
 
@@ -83,7 +86,7 @@ async function processBatch(
     if (transition && row.notify && !isCurrentTicket) {
       const topic = topicByUser.get(row.userId)
       if (!topic) {
-        log.warn('no ntfy topic, skipping notify', { userId: row.userId, optionId: row.optionId })
+        log.warn({ userId: row.userId, optionId: row.optionId }, 'no ntfy topic, skipping notify')
       } else {
         const label = CAPACITY_LABELS[row.measurementUnit]?.et ?? row.measurementUnit
         const title = `${dir} ${date} ${formatTime(row.eventDtstart)}`
@@ -99,13 +102,16 @@ async function processBatch(
             message: msg,
             tag: 'ferry',
           })
-          log.info('notified', {
-            userId: row.userId,
-            tripId: row.tripId,
-            transition,
-            capacity,
-            priority: row.priority,
-          })
+          log.info(
+            {
+              userId: row.userId,
+              tripId: row.tripId,
+              transition,
+              capacity,
+              priority: row.priority,
+            },
+            'notified',
+          )
           await logAudit({
             type: 'notification.availability_changed',
             actor: 'system',
@@ -120,10 +126,13 @@ async function processBatch(
             },
           })
         } catch (err) {
-          log.error('notify failed', {
-            optionId: row.optionId,
-            err: err instanceof Error ? err.message : String(err),
-          })
+          log.error(
+            {
+              optionId: row.optionId,
+              err: err instanceof Error ? err.message : String(err),
+            },
+            'notify failed',
+          )
         }
       }
     }
@@ -231,18 +240,24 @@ async function tick() {
               tag: 'ferry',
             })
           } catch (err) {
-            log.error('edit notify failed', {
-              tripId,
-              err: err instanceof Error ? err.message : String(err),
-            })
+            log.error(
+              {
+                tripId,
+                err: err instanceof Error ? err.message : String(err),
+              },
+              'edit notify failed',
+            )
           }
         }
       }
     } catch (err) {
-      log.error('processEditForTrip threw', {
-        tripId,
-        err: err instanceof Error ? err.message : String(err),
-      })
+      log.error(
+        {
+          tripId,
+          err: err instanceof Error ? err.message : String(err),
+        },
+        'processEditForTrip threw',
+      )
     } finally {
       await db
         .update(trips)
@@ -265,12 +280,12 @@ async function loop() {
     try {
       await tick()
     } catch (err) {
-      log.error('tick failed', { err: err instanceof Error ? err.message : String(err) })
+      log.error({ err: err instanceof Error ? err.message : String(err) }, 'tick failed')
     }
     const { pollIntervalMs } = await getAllSettings()
     const elapsed = Date.now() - started
     const delay = Math.max(1000, pollIntervalMs - elapsed)
-    log.debug('tick complete', { elapsedMs: elapsed, nextDelayMs: delay })
+    log.debug({ elapsedMs: elapsed, nextDelayMs: delay }, 'tick complete')
     await new Promise((r) => setTimeout(r, delay))
   }
 }
@@ -293,7 +308,7 @@ async function recoverStuckSwaps() {
     })
   }
   if (stuck.length > 0) {
-    log.warn('cleared stuck swap_in_progress', { count: stuck.length })
+    log.warn({ count: stuck.length }, 'cleared stuck swap_in_progress')
   }
 }
 
@@ -303,15 +318,21 @@ export function startPoller() {
   log.info('starting')
   recoverStuckSwaps()
     .catch((err) => {
-      log.error('recoverStuckSwaps failed', {
-        err: err instanceof Error ? err.message : String(err),
-      })
+      log.error(
+        {
+          err: err instanceof Error ? err.message : String(err),
+        },
+        'recoverStuckSwaps failed',
+      )
     })
     .finally(() => {
       loop().catch((err) => {
-        log.error('loop crashed', {
-          err: err instanceof Error ? err.message : String(err),
-        })
+        log.error(
+          {
+            err: err instanceof Error ? err.message : String(err),
+          },
+          'loop crashed',
+        )
         running = false
       })
     })
