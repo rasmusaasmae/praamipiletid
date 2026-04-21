@@ -32,11 +32,9 @@ async function recentlyNotified(userId: string): Promise<boolean> {
 }
 
 async function tick() {
-  const candidates = await listCredentialsNeedingReauth(WARN_HOURS)
-  if (candidates.length === 0) return
-  const now = Date.now()
-  const upcoming = candidates.filter((c) => c.expiresAt.getTime() > now)
+  const upcoming = await listCredentialsNeedingReauth(WARN_HOURS)
   if (upcoming.length === 0) return
+  const now = Date.now()
 
   const userIds = Array.from(new Set(upcoming.map((c) => c.userId)))
   const userRows = await db

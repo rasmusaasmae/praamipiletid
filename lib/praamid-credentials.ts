@@ -1,6 +1,6 @@
 import 'server-only'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
-import { eq, lt } from 'drizzle-orm'
+import { and, eq, gt, lt } from 'drizzle-orm'
 import { db } from '@/db'
 import { praamidCredentials } from '@/db/schema'
 
@@ -195,12 +195,15 @@ export type ReauthCandidate = {
 export async function listCredentialsNeedingReauth(
   hoursBefore: number,
 ): Promise<ReauthCandidate[]> {
-  const cutoff = new Date(Date.now() + hoursBefore * 60 * 60 * 1000)
+  const now = new Date()
+  const cutoff = new Date(now.getTime() + hoursBefore * 60 * 60 * 1000)
   return db
     .select({
       userId: praamidCredentials.userId,
       expiresAt: praamidCredentials.expiresAt,
     })
     .from(praamidCredentials)
-    .where(lt(praamidCredentials.expiresAt, cutoff))
+    .where(
+      and(gt(praamidCredentials.expiresAt, now), lt(praamidCredentials.expiresAt, cutoff)),
+    )
 }
