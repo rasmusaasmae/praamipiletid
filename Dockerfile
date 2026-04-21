@@ -38,6 +38,12 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Placeholders only — `next build` imports modules that eagerly validate env
+# vars. Real values are provided at runtime by docker-compose / Unraid.
+ENV DATABASE_URL=postgres://build:build@localhost:5432/build \
+    APP_URL=http://localhost:3000 \
+    BETTER_AUTH_SECRET=build-placeholder-at-least-32-chars-long
+
 RUN node ./node_modules/.bin/next build
 
 # -----------------------------

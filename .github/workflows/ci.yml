@@ -78,6 +78,12 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build
+        env:
+          # Placeholder env vars so `next build` can evaluate modules that
+          # validate env at import time. Real values are supplied at runtime.
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+          APP_URL: http://localhost:3000
+          BETTER_AUTH_SECRET: ci-build-placeholder-at-least-32-chars-long
         run: bun run build
 
   deploy:
