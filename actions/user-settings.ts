@@ -25,8 +25,9 @@ export async function updateNtfyTopic(formData: FormData): Promise<UpdateTopicRe
   try {
     await db.update(user).set({ ntfyTopic: parsed.data }).where(eq(user.id, session.user.id))
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : ''
-    if (msg.includes('UNIQUE')) {
+    // 23505 = unique_violation. The UPDATE only touches ntfy_topic, so the
+    // only unique constraint it can collide with is user_ntfy_topic_unique.
+    if (err && typeof err === 'object' && 'code' in err && err.code === '23505') {
       return { ok: false, error: t('topicInUse') }
     }
     throw err
