@@ -6,14 +6,13 @@ import { db } from '@/db'
 import * as schema from '@/db/schema'
 import { generateNtfyTopic } from '@/lib/ntfy-topic'
 
-const adminEmails = (process.env.ADMIN_EMAILS ?? '')
-  .split(',')
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean)
+const appUrl = process.env.APP_URL
+if (!appUrl) throw new Error('APP_URL is not set')
 
 export const auth = betterAuth({
+  baseURL: appUrl,
   database: drizzleAdapter(db, {
-    provider: 'sqlite',
+    provider: 'pg',
     schema: {
       user: schema.user,
       session: schema.session,
@@ -46,12 +45,11 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          const email = user.email?.toLowerCase() ?? ''
           return {
             data: {
               ...user,
               ntfyTopic: generateNtfyTopic(),
-              role: adminEmails.includes(email) ? 'admin' : 'user',
+              role: 'user',
             },
           }
         },

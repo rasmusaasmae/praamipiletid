@@ -15,11 +15,11 @@ export default async function SettingsPage() {
   const t = await getTranslations('Settings')
   const tP = await getTranslations('Praamid')
   const format = await getFormatter()
-  const me = await db
+  const [me] = await db
     .select({ ntfyTopic: user.ntfyTopic })
     .from(user)
     .where(eq(user.id, session.user.id))
-    .get()
+    .limit(1)
   const ntfyBase = process.env.NTFY_BASE_URL ?? 'https://ntfy.sh'
 
   const configured = Boolean(process.env.PRAAMID_CRED_KEY)

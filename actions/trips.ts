@@ -92,12 +92,12 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
   if (Object.keys(patch).length === 0) return { ok: true }
 
   if (patch.edit === true) {
-    const ownedTicket = await db
+    const [ownedTicket] = await db
       .select({ tripId: tickets.tripId })
       .from(tickets)
       .innerJoin(trips, eq(trips.id, tickets.tripId))
       .where(and(eq(tickets.tripId, id), eq(trips.userId, session.user.id)))
-      .get()
+      .limit(1)
     if (!ownedTicket) return { ok: false, error: t('editRequiresTicket') }
   }
 
@@ -141,18 +141,18 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
   })
   if (!parsed.success) return { ok: false, error: t('invalidData') }
 
-  const trip = await db
+  const [trip] = await db
     .select({ id: trips.id, direction: trips.direction })
     .from(trips)
     .where(and(eq(trips.id, parsed.data.tripId), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!trip) return { ok: false, error: t('tripNotFound') }
 
   const events = await listEvents(trip.direction, parsed.data.date)
   const event = events.find((e) => e.uid === parsed.data.eventUid)
   if (!event) return { ok: false, error: t('eventNotFound') }
 
-  const duplicate = await db
+  const [duplicate] = await db
     .select({ id: tripOptions.id })
     .from(tripOptions)
     .where(
@@ -161,15 +161,15 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
         eq(tripOptions.eventUid, parsed.data.eventUid),
       ),
     )
-    .get()
+    .limit(1)
   if (duplicate) return { ok: false, error: t('optionExists') }
 
-  const top = await db
+  const [top] = await db
     .select({ priority: tripOptions.priority })
     .from(tripOptions)
     .where(eq(tripOptions.tripId, trip.id))
     .orderBy(desc(tripOptions.priority))
-    .get()
+    .limit(1)
   const nextPriority = (top?.priority ?? 0) + 1
 
   const eventStart = new Date(event.dtstart)
@@ -224,7 +224,7 @@ export async function updateOption(formData: FormData): Promise<ActionResult> {
   })
   if (!parsed.success) return { ok: false, error: t('invalidData') }
 
-  const owned = await db
+  const [owned] = await db
     .select({
       id: tripOptions.id,
       tripId: tripOptions.tripId,
@@ -233,7 +233,7 @@ export async function updateOption(formData: FormData): Promise<ActionResult> {
     .from(tripOptions)
     .innerJoin(trips, eq(trips.id, tripOptions.tripId))
     .where(and(eq(tripOptions.id, parsed.data.id), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!owned) return { ok: false, error: t('tripNotFound') }
 
   if (parsed.data.stopBeforeAt >= owned.eventDtstart.getTime()) {
@@ -261,7 +261,7 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
   const id = String(formData.get('id') ?? '')
   if (!id) return { ok: false, error: t('missingId') }
 
-  const existing = await db
+  const [existing] = await db
     .select({
       id: tripOptions.id,
       tripId: tripOptions.tripId,
@@ -271,7 +271,7 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
     .from(tripOptions)
     .innerJoin(trips, eq(trips.id, tripOptions.tripId))
     .where(and(eq(tripOptions.id, id), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!existing) return { ok: false, error: t('tripNotFound') }
 
   await db.delete(tripOptions).where(eq(tripOptions.id, id))
@@ -308,7 +308,7 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
   })
   if (!parsed.success) return { ok: false, error: t('invalidData') }
 
-  const current = await db
+  const [current] = await db
     .select({
       id: tripOptions.id,
       tripId: tripOptions.tripId,
@@ -318,7 +318,7 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
     .from(tripOptions)
     .innerJoin(trips, eq(trips.id, tripOptions.tripId))
     .where(and(eq(tripOptions.id, parsed.data.id), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!current) return { ok: false, error: t('tripNotFound') }
 
   const neighborFilter =
@@ -330,15 +330,15 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
       ? sql<number>`max(${tripOptions.priority})`
       : sql<number>`min(${tripOptions.priority})`
 
-  const neighborPriorityRow = await db
+  const [neighborPriorityRow] = await db
     .select({ p: aggregate })
     .from(tripOptions)
     .where(and(eq(tripOptions.tripId, current.tripId), neighborFilter))
-    .get()
+    .limit(1)
   const neighborPriority = neighborPriorityRow?.p ?? null
   if (neighborPriority == null) return { ok: true }
 
-  const neighbor = await db
+  const [neighbor] = await db
     .select({ id: tripOptions.id, priority: tripOptions.priority })
     .from(tripOptions)
     .where(
@@ -347,29 +347,29 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
         eq(tripOptions.priority, neighborPriority),
       ),
     )
-    .get()
+    .limit(1)
   if (!neighbor) return { ok: true }
 
-  const topRow = await db
+  const [topRow] = await db
     .select({ p: sql<number>`max(${tripOptions.priority})` })
     .from(tripOptions)
     .where(eq(tripOptions.tripId, current.tripId))
-    .get()
+    .limit(1)
   const parkingSpot = (topRow?.p ?? 0) + 1
 
-  db.transaction((tx) => {
-    tx.update(tripOptions)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(tripOptions)
       .set({ priority: parkingSpot })
       .where(eq(tripOptions.id, current.id))
-      .run()
-    tx.update(tripOptions)
+    await tx
+      .update(tripOptions)
       .set({ priority: current.priority })
       .where(eq(tripOptions.id, neighbor.id))
-      .run()
-    tx.update(tripOptions)
+    await tx
+      .update(tripOptions)
       .set({ priority: neighbor.priority })
       .where(eq(tripOptions.id, current.id))
-      .run()
   })
 
   await logAudit({
@@ -397,11 +397,11 @@ export async function deleteTrip(formData: FormData): Promise<ActionResult> {
   const id = String(formData.get('id') ?? '')
   if (!id) return { ok: false, error: t('missingId') }
 
-  const existing = await db
+  const [existing] = await db
     .select({ id: trips.id, direction: trips.direction })
     .from(trips)
     .where(and(eq(trips.id, id), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!existing) return { ok: false, error: t('tripNotFound') }
 
   await db.delete(trips).where(eq(trips.id, id))

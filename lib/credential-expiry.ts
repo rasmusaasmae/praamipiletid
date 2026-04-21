@@ -15,7 +15,7 @@ let stopRequested = false
 
 async function recentlyNotified(userId: string): Promise<boolean> {
   const cutoff = new Date(Date.now() - DEDUPE_HOURS * 60 * 60 * 1000)
-  const row = await db
+  const [row] = await db
     .select({ id: auditLogs.id })
     .from(auditLogs)
     .where(
@@ -25,7 +25,7 @@ async function recentlyNotified(userId: string): Promise<boolean> {
         gt(auditLogs.createdAt, cutoff),
       ),
     )
-    .get()
+    .limit(1)
   return Boolean(row)
 }
 
@@ -41,7 +41,6 @@ async function tick() {
     .select({ id: user.id, ntfyTopic: user.ntfyTopic })
     .from(user)
     .where(inArray(user.id, userIds))
-    .all()
   const topicByUser = new Map(userRows.map((u) => [u.id, u.ntfyTopic]))
 
   for (const c of upcoming) {

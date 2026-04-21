@@ -159,7 +159,6 @@ async function tick() {
     .innerJoin(tripOptions, eq(tripOptions.tripId, trips.id))
     .leftJoin(tickets, eq(tickets.tripId, trips.id))
     .where(gt(tripOptions.eventDtstart, now))
-    .all()
 
   const due = rows.filter((r) => r.stopBeforeAt.getTime() > now.getTime())
   if (due.length === 0) return
@@ -170,7 +169,6 @@ async function tick() {
         .select({ id: user.id, ntfyTopic: user.ntfyTopic })
         .from(user)
         .where(inArray(user.id, userIds))
-        .all()
     : []
   const topicByUser = new Map(users.map((u) => [u.id, u.ntfyTopic]))
 

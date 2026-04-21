@@ -61,11 +61,11 @@ export async function listAttachableTickets(tripId: string): Promise<ListAttacha
   const session = await requireUser()
   const errT = await getTranslations('Errors')
 
-  const trip = await db
+  const [trip] = await db
     .select({ id: trips.id, direction: trips.direction })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!trip) return { ok: false, error: errT('tripNotFound') }
 
   const fetched = await fetchPraamidTickets(session.user.id, errT)
@@ -109,11 +109,11 @@ export async function attachTicket(formData: FormData): Promise<ActionResult> {
   })
   if (!parsed.success) return { ok: false, error: errT('invalidData') }
 
-  const trip = await db
+  const [trip] = await db
     .select({ id: trips.id, direction: trips.direction })
     .from(trips)
     .where(and(eq(trips.id, parsed.data.tripId), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!trip) return { ok: false, error: errT('tripNotFound') }
 
   const fetched = await fetchPraamidTickets(session.user.id, errT)
@@ -180,24 +180,24 @@ export async function detachTicket(formData: FormData): Promise<ActionResult> {
   const parsed = detachSchema.safeParse({ tripId: formData.get('tripId') })
   if (!parsed.success) return { ok: false, error: errT('missingId') }
 
-  const owned = await db
+  const [owned] = await db
     .select({ id: trips.id, edit: trips.edit })
     .from(trips)
     .where(and(eq(trips.id, parsed.data.tripId), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
   if (!owned) return { ok: false, error: errT('tripNotFound') }
 
-  const existing = await db
+  const [existing] = await db
     .select({ ticketCode: tickets.ticketCode })
     .from(tickets)
     .where(eq(tickets.tripId, parsed.data.tripId))
-    .get()
+    .limit(1)
   if (!existing) return { ok: true }
 
-  db.transaction((tx) => {
-    tx.delete(tickets).where(eq(tickets.tripId, parsed.data.tripId)).run()
+  await db.transaction(async (tx) => {
+    await tx.delete(tickets).where(eq(tickets.tripId, parsed.data.tripId))
     if (owned.edit) {
-      tx.update(trips).set({ edit: false }).where(eq(trips.id, parsed.data.tripId)).run()
+      await tx.update(trips).set({ edit: false }).where(eq(trips.id, parsed.data.tripId))
     }
   })
 

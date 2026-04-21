@@ -12,7 +12,7 @@ const DEFAULTS: Record<string, number> = {
 export type SettingsKey = 'pollIntervalMs' | 'pollTimeShift' | 'editGloballyEnabled'
 
 export async function getSetting(key: SettingsKey): Promise<number> {
-  const row = await db.select().from(settings).where(eq(settings.key, key)).get()
+  const [row] = await db.select().from(settings).where(eq(settings.key, key)).limit(1)
   if (!row) return DEFAULTS[key]
   const parsed = Number(row.value)
   if (Number.isFinite(parsed)) return parsed
@@ -28,7 +28,7 @@ export async function setSetting(key: SettingsKey, value: number): Promise<void>
 }
 
 export async function getAllSettings() {
-  const rows = await db.select().from(settings).all()
+  const rows = await db.select().from(settings)
   const map = new Map(rows.map((r) => [r.key, r.value]))
   return {
     pollIntervalMs: Number(map.get('pollIntervalMs') ?? DEFAULTS.pollIntervalMs),

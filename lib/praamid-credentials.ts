@@ -132,11 +132,11 @@ export type ActiveCredential = {
 }
 
 export async function getCredential(userId: string): Promise<ActiveCredential | null> {
-  const row = await db
+  const [row] = await db
     .select()
     .from(praamidCredentials)
     .where(eq(praamidCredentials.userId, userId))
-    .get()
+    .limit(1)
   if (!row) return null
   const token = decryptToken(row.accessTokenEnc)
   return { token, expiresAt: row.expiresAt, praamidSub: row.praamidSub }
@@ -151,7 +151,7 @@ export type CredentialStatus = {
 }
 
 export async function getCredentialStatus(userId: string): Promise<CredentialStatus | null> {
-  const row = await db
+  const [row] = await db
     .select({
       praamidSub: praamidCredentials.praamidSub,
       expiresAt: praamidCredentials.expiresAt,
@@ -161,7 +161,7 @@ export async function getCredentialStatus(userId: string): Promise<CredentialSta
     })
     .from(praamidCredentials)
     .where(eq(praamidCredentials.userId, userId))
-    .get()
+    .limit(1)
   return row ?? null
 }
 
@@ -201,5 +201,4 @@ export async function listCredentialsNeedingReauth(
     .where(
       and(lt(praamidCredentials.expiresAt, cutoff), isNotNull(praamidCredentials.userId)),
     )
-    .all()
 }

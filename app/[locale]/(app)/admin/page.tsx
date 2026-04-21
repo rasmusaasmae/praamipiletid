@@ -29,7 +29,6 @@ export default async function AdminPage() {
     })
     .from(user)
     .orderBy(desc(user.createdAt))
-    .all()
 
   const rows = await db
     .select({
@@ -46,7 +45,6 @@ export default async function AdminPage() {
     .innerJoin(user, eq(user.id, trips.userId))
     .innerJoin(tripOptions, eq(tripOptions.tripId, trips.id))
     .orderBy(asc(tripOptions.priority), desc(tripOptions.eventDtstart))
-    .all()
 
   const firstByTrip = new Map<string, (typeof rows)[number]>()
   for (const r of rows) {

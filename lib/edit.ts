@@ -70,7 +70,7 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     return { kind: 'gate_blocked', reason: 'edit_disabled' }
   }
 
-  const trip = await db
+  const [trip] = await db
     .select({
       id: trips.id,
       userId: trips.userId,
@@ -79,13 +79,13 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     })
     .from(trips)
     .where(eq(trips.id, tripId))
-    .get()
+    .limit(1)
   if (!trip) return { kind: 'gate_blocked', reason: 'trip_missing' }
   if (!trip.edit) {
     return { kind: 'gate_blocked', reason: 'trip_not_eligible' }
   }
 
-  const ticket = await db
+  const [ticket] = await db
     .select({
       ticketCode: tickets.ticketCode,
       ticketNumber: tickets.ticketNumber,
@@ -94,7 +94,7 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     })
     .from(tickets)
     .where(eq(tickets.tripId, tripId))
-    .get()
+    .limit(1)
   if (!ticket) return { kind: 'gate_blocked', reason: 'no_ticket' }
 
   const credential = await getCredential(trip.userId)
@@ -121,7 +121,6 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     })
     .from(tripOptions)
     .where(eq(tripOptions.tripId, tripId))
-    .all()
 
   const now = Date.now()
   const currentOption = options.find((o) => o.eventUid === ticket.eventUid)
@@ -294,7 +293,8 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
   )
   if (!newTicket) return fail('internal', 'new_ticket_not_found')
 
-  db.update(tickets)
+  await db
+    .update(tickets)
     .set({
       ticketCode: newTicket.ticketCode,
       ticketNumber: newTicket.ticketNumber,
@@ -305,7 +305,6 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
       capturedAt: new Date(),
     })
     .where(eq(tickets.tripId, tripId))
-    .run()
 
   lastAttemptAt.delete(tripId)
 

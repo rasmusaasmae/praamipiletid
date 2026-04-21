@@ -1,16 +1,10 @@
 import 'server-only'
-import { mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import * as schema from './schema'
 
-const dbPath = process.env.DATABASE_PATH ?? './data/praamipiletid.db'
-mkdirSync(dirname(dbPath), { recursive: true })
+const databaseUrl = process.env.DATABASE_URL
+if (!databaseUrl) throw new Error('DATABASE_URL is not set')
 
-const sqlite = new Database(dbPath)
-sqlite.pragma('journal_mode = WAL')
-sqlite.pragma('foreign_keys = ON')
-
-export const db = drizzle(sqlite, { schema, casing: 'snake_case' })
-export { sqlite }
+export const sql = postgres(databaseUrl)
+export const db = drizzle(sql, { schema, casing: 'snake_case' })

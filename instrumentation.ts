@@ -1,11 +1,11 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
 
-  const { sqlite } = await import('@/db')
-  const { migrate } = await import('drizzle-orm/better-sqlite3/migrator')
-  const { drizzle } = await import('drizzle-orm/better-sqlite3')
+  const { sql } = await import('@/db')
+  const { migrate } = await import('drizzle-orm/postgres-js/migrator')
+  const { drizzle } = await import('drizzle-orm/postgres-js')
   try {
-    migrate(drizzle(sqlite), { migrationsFolder: './drizzle' })
+    await migrate(drizzle(sql), { migrationsFolder: './drizzle' })
   } catch (err) {
     console.error('[instrumentation] migrate failed:', err)
   }

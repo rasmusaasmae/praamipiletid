@@ -1,82 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1776492412442,
-      "tag": "0000_reflective_electro",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1776607296153,
-      "tag": "0001_motionless_eddie_brock",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1776607698546,
-      "tag": "0002_unknown_terror",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1776608367985,
-      "tag": "0003_opposite_cloak",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1776610459001,
-      "tag": "0004_rename_journey_to_trip",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1776617968121,
-      "tag": "0005_move_stop_before_minutes_to_options",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1776621328913,
-      "tag": "0006_robust_vermin",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1776621880912,
-      "tag": "0007_slimy_lenny_balinger",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1776622581624,
-      "tag": "0008_change_stop_before_to_datetime",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1776627570614,
-      "tag": "0009_drop_trip_options_active",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1776719068755,
-      "tag": "0010_overconfident_justice",
+      "version": "7",
+      "when": 1776761021583,
+      "tag": "0000_init",
       "breakpoints": true
     }
   ]

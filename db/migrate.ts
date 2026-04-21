@@ -1,19 +1,13 @@
 import 'dotenv/config'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
-import { mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import { migrate } from 'drizzle-orm/postgres-js/migrator'
+import postgres from 'postgres'
 
-const dbPath = process.env.DATABASE_PATH ?? './data/praamipiletid.db'
-mkdirSync(dirname(dbPath), { recursive: true })
+const databaseUrl = process.env.DATABASE_URL
+if (!databaseUrl) throw new Error('DATABASE_URL is not set')
 
-const sqlite = new Database(dbPath)
-sqlite.pragma('journal_mode = WAL')
-sqlite.pragma('foreign_keys = ON')
-
-const db = drizzle(sqlite)
-migrate(db, { migrationsFolder: './drizzle' })
-
-console.log(`Migrated ${dbPath}`)
-sqlite.close()
+const sql = postgres(databaseUrl, { max: 1 })
+const db = drizzle(sql)
+await migrate(db, { migrationsFolder: './drizzle' })
+await sql.end()
+console.log(`Migrated ${databaseUrl}`)

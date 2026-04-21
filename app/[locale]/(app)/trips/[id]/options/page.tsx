@@ -37,7 +37,7 @@ export default async function AddOptionPage({
 
   const directions = DIRECTION_CODES.map((code) => ({ code, label: tDir(code) }))
 
-  const trip = await db
+  const [trip] = await db
     .select({
       id: trips.id,
       direction: trips.direction,
@@ -45,7 +45,7 @@ export default async function AddOptionPage({
     })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.userId, session.user.id)))
-    .get()
+    .limit(1)
 
   if (!trip) {
     return (
@@ -67,14 +67,13 @@ export default async function AddOptionPage({
     .from(tripOptions)
     .where(eq(tripOptions.tripId, trip.id))
     .orderBy(asc(tripOptions.priority))
-    .all()
   const takenUids = new Set(existingOptions.map((o) => o.eventUid))
 
-  const ticket = await db
+  const [ticket] = await db
     .select({ eventDtstart: tickets.eventDtstart })
     .from(tickets)
     .where(eq(tickets.tripId, trip.id))
-    .get()
+    .limit(1)
   const ticketDate = ticket
     ? `${ticket.eventDtstart.getFullYear()}-${String(ticket.eventDtstart.getMonth() + 1).padStart(2, '0')}-${String(ticket.eventDtstart.getDate()).padStart(2, '0')}`
     : null

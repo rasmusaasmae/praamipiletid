@@ -52,11 +52,11 @@ export async function deleteAnyTrip(formData: FormData): Promise<AdminActionResu
   const t = await getTranslations('Errors')
   const id = String(formData.get('id') ?? '')
   if (!id) return { ok: false, error: t('missingId') }
-  const target = await db
+  const [target] = await db
     .select({ direction: trips.direction, userId: trips.userId })
     .from(trips)
     .where(eq(trips.id, id))
-    .get()
+    .limit(1)
   if (!target) return { ok: false, error: t('tripNotFound') }
   await db.delete(trips).where(eq(trips.id, id))
   await logAudit({

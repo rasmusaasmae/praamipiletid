@@ -1,20 +1,40 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ferry}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ferry}
+      POSTGRES_DB: ${POSTGRES_DB:-ferry}
+    # Logical replication is required for ElectricSQL (phase 2). Enabling it
+    # now avoids a restart later when Electric is wired in.
+    command: postgres -c wal_level=logical
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - ferry_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ferry} -d ${POSTGRES_DB:-ferry}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   app:
     image: ${IMAGE_NAME:-ghcr.io/rasmusaasmae/praamipiletid}:${IMAGE_TAG:-latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - '${APP_PORT:-3000}:3000'
     environment:
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      APP_URL: ${APP_URL:-http://localhost:3000}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      ADMIN_EMAILS: ${ADMIN_EMAILS}
       NOTIFIER: ${NOTIFIER:-ntfy}
       NTFY_BASE_URL: ${NTFY_BASE_URL:-https://ntfy.sh}
       PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
-      DATABASE_PATH: /app/data/praamipiletid.db
-    volumes:
-      - praamipiletid_data:/app/data
+      DATABASE_URL: postgres://${POSTGRES_USER:-ferry}:${POSTGRES_PASSWORD:-ferry}@postgres:5432/${POSTGRES_DB:-ferry}
     # Chromium crashes with the default 64MB /dev/shm when Playwright drives
     # logins. Raise it instead of using ipc=host so we don't share host IPC.
     shm_size: 1gb
@@ -28,4 +48,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  praamipiletid_data:
+  ferry_pg:

@@ -1,19 +1,26 @@
-import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 import { user } from './auth-schema'
 
 export * from './auth-schema'
 
-export const settings = sqliteTable('settings', {
+export const settings = pgTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+    .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
 })
 
-export const trips = sqliteTable(
+export const trips = pgTable(
   'trips',
   {
     id: text('id').primaryKey(),
@@ -22,20 +29,18 @@ export const trips = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     direction: text('direction').notNull(),
     measurementUnit: text('measurement_unit').notNull(),
-    notify: integer('notify', { mode: 'boolean' }).default(true).notNull(),
-    edit: integer('edit', { mode: 'boolean' }).default(false).notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    notify: boolean('notify').default(true).notNull(),
+    edit: boolean('edit').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [index('trips_user_id_idx').on(table.userId)],
 )
 
-export const tickets = sqliteTable(
+export const tickets = pgTable(
   'tickets',
   {
     tripId: text('trip_id')
@@ -46,17 +51,17 @@ export const tickets = sqliteTable(
     bookingUid: text('booking_uid').notNull(),
     eventUid: text('event_uid').notNull(),
     ticketDate: text('ticket_date').notNull(),
-    eventDtstart: integer('event_dtstart', { mode: 'timestamp_ms' }).notNull(),
-    capturedAt: integer('captured_at', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    eventDtstart: timestamp('event_dtstart', { withTimezone: true, mode: 'date' }).notNull(),
+    capturedAt: timestamp('captured_at', { withTimezone: true, mode: 'date' }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [index('tickets_event_uid_idx').on(table.eventUid)],
 )
 
-export const tripOptions = sqliteTable(
+export const tripOptions = pgTable(
   'trip_options',
   {
     id: text('id').primaryKey(),
@@ -66,15 +71,13 @@ export const tripOptions = sqliteTable(
     priority: integer('priority').notNull(),
     eventUid: text('event_uid').notNull(),
     eventDate: text('event_date').notNull(),
-    eventDtstart: integer('event_dtstart', { mode: 'timestamp_ms' }).notNull(),
-    stopBeforeAt: integer('stop_before_at', { mode: 'timestamp_ms' }).notNull(),
+    eventDtstart: timestamp('event_dtstart', { withTimezone: true, mode: 'date' }).notNull(),
+    stopBeforeAt: timestamp('stop_before_at', { withTimezone: true, mode: 'date' }).notNull(),
     lastCapacity: integer('last_capacity'),
     lastCapacityState: text('last_capacity_state'),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
@@ -85,7 +88,7 @@ export const tripOptions = sqliteTable(
   ],
 )
 
-export const auditLogs = sqliteTable(
+export const auditLogs = pgTable(
   'audit_logs',
   {
     id: text('id').primaryKey(),
@@ -94,9 +97,7 @@ export const auditLogs = sqliteTable(
     type: text('type').notNull(),
     tripId: text('trip_id').references(() => trips.id, { onDelete: 'set null' }),
     payload: text('payload'),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
   },
   (table) => [
     index('audit_logs_user_created_idx').on(table.userId, table.createdAt),
@@ -105,7 +106,7 @@ export const auditLogs = sqliteTable(
   ],
 )
 
-export const praamidCredentials = sqliteTable(
+export const praamidCredentials = pgTable(
   'praamid_credentials',
   {
     userId: text('user_id')
@@ -114,15 +115,13 @@ export const praamidCredentials = sqliteTable(
     accessTokenEnc: text('access_token_enc').notNull(),
     praamidSub: text('praamid_sub').notNull(),
     sessionSid: text('session_sid'),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-    capturedAt: integer('captured_at', { mode: 'timestamp_ms' }).notNull(),
-    lastVerifiedAt: integer('last_verified_at', { mode: 'timestamp_ms' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+    capturedAt: timestamp('captured_at', { withTimezone: true, mode: 'date' }).notNull(),
+    lastVerifiedAt: timestamp('last_verified_at', { withTimezone: true, mode: 'date' }),
     lastError: text('last_error'),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },

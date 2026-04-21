@@ -24,8 +24,7 @@ export default async function HomePage() {
         edit: trips.edit,
       })
       .from(trips)
-      .where(eq(trips.userId, session.user.id))
-      .all(),
+      .where(eq(trips.userId, session.user.id)),
     db
       .select({
         id: tripOptions.id,
@@ -41,14 +40,12 @@ export default async function HomePage() {
       .from(tripOptions)
       .innerJoin(trips, eq(trips.id, tripOptions.tripId))
       .where(eq(trips.userId, session.user.id))
-      .orderBy(asc(tripOptions.priority))
-      .all(),
+      .orderBy(asc(tripOptions.priority)),
     db
       .select()
       .from(tickets)
       .innerJoin(trips, eq(trips.id, tickets.tripId))
-      .where(eq(trips.userId, session.user.id))
-      .all(),
+      .where(eq(trips.userId, session.user.id)),
   ])
 
   const optionsByTrip = new Map<string, (typeof optionRows)[number][]>()
