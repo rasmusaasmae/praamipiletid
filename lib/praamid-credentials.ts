@@ -1,6 +1,6 @@
 import 'server-only'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
-import { and, eq, isNotNull, lt } from 'drizzle-orm'
+import { eq, lt } from 'drizzle-orm'
 import { db } from '@/db'
 import { praamidCredentials } from '@/db/schema'
 
@@ -198,7 +198,5 @@ export async function listCredentialsNeedingReauth(
       expiresAt: praamidCredentials.expiresAt,
     })
     .from(praamidCredentials)
-    .where(
-      and(lt(praamidCredentials.expiresAt, cutoff), isNotNull(praamidCredentials.userId)),
-    )
+    .where(lt(praamidCredentials.expiresAt, cutoff))
 }
