@@ -55,7 +55,7 @@ export function SettingsForm({ currentTopic, ntfyBase }: { currentTopic: string;
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  pattern="^[A-Za-z0-9_-]+$"
+                  pattern="^[A-Za-z0-9_\-]+$"
                   minLength={4}
                   maxLength={64}
                   required

@@ -158,7 +158,7 @@
   "Praamid": {
     "title": "praamid.ee",
     "description": "We replay your praamid.ee session to auto-update tickets when a better slot opens. Session tokens last up to 7 days — you'll need to re-authenticate after that.",
-    "statusMissingBadge": "No session",
+    "statusMissingBadge": "Not authenticated",
     "statusActiveBadge": "Active",
     "statusCaptured": "Captured {capturedAt}",
     "statusExpires": "Expires {expiresAt}",

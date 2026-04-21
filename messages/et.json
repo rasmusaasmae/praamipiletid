@@ -158,7 +158,7 @@
   "Praamid": {
     "title": "praamid.ee",
     "description": "Kasutame sinu praamid.ee sessiooni, et pileteid automaatselt uuendada, kui parem väljumine vabaneb. Sessioon kehtib kuni 7 päeva - pärast tuleb uuesti ühendus luua.",
-    "statusMissingBadge": "Sessiooni pole",
+    "statusMissingBadge": "Pole autenditud",
     "statusActiveBadge": "Aktiivne",
     "statusCaptured": "Salvestatud {capturedAt}",
     "statusExpires": "Aegub {expiresAt}",
