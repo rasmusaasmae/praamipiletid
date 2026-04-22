@@ -10,7 +10,6 @@ export const user = pgTable('user', {
   banned: boolean('banned').default(false).notNull(),
   banReason: text('ban_reason'),
   banExpires: timestamp('ban_expires', { withTimezone: true, mode: 'date' }),
-  ntfyTopic: text('ntfy_topic').notNull().unique(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .defaultNow()

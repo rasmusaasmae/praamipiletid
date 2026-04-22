@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
-import { user } from '@/db/schema'
+import { userSettings } from '@/db/schema'
 import { ntfyTopicSchema } from '@/lib/schemas'
 import { requireUser } from '@/lib/session'
 
@@ -23,10 +23,14 @@ export async function updateNtfyTopic(formData: FormData): Promise<UpdateTopicRe
     return { ok: false, error: isErrorKey(key) ? t(key) : t('topicInvalid') }
   }
   try {
-    await db.update(user).set({ ntfyTopic: parsed.data }).where(eq(user.id, session.user.id))
+    await db
+      .update(userSettings)
+      .set({ ntfyTopic: parsed.data })
+      .where(eq(userSettings.userId, session.user.id))
   } catch (err: unknown) {
     // 23505 = unique_violation. The UPDATE only touches ntfy_topic, so the
-    // only unique constraint it can collide with is user_ntfy_topic_unique.
+    // only unique constraint it can collide with is the ntfy_topic unique
+    // index on user_settings.
     if (err && typeof err === 'object' && 'code' in err && err.code === '23505') {
       return { ok: false, error: t('topicInUse') }
     }

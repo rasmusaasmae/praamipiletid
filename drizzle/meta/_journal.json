@@ -36,6 +36,13 @@
       "when": 1776884400000,
       "tag": "0004_auth_state_rename",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776887524147,
+      "tag": "0005_user_settings",
+      "breakpoints": true
     }
   ]
 }

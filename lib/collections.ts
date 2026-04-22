@@ -161,7 +161,6 @@ const userSchema = z.object({
   banned: z.boolean(),
   ban_reason: z.string().nullable(),
   ban_expires: z.coerce.date().nullable(),
-  ntfy_topic: z.string(),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
 })

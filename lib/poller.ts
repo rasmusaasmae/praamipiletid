@@ -1,7 +1,7 @@
 import 'server-only'
 import { eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@/db'
-import { tickets, tripOptions, trips, user } from '@/db/schema'
+import { tickets, tripOptions, trips, userSettings } from '@/db/schema'
 import { CAPACITY_LABELS, listEvents, type PraamidEvent } from '@/lib/praamid'
 import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
@@ -178,9 +178,9 @@ async function tick() {
 
   const userIds = Array.from(new Set(due.map((r) => r.userId)))
   const users = await db
-    .select({ id: user.id, ntfyTopic: user.ntfyTopic })
-    .from(user)
-    .where(inArray(user.id, userIds))
+    .select({ id: userSettings.userId, ntfyTopic: userSettings.ntfyTopic })
+    .from(userSettings)
+    .where(inArray(userSettings.userId, userIds))
   const topicByUser = new Map(users.map((u) => [u.id, u.ntfyTopic]))
 
   const { pollTimeShift } = await getAllSettings()

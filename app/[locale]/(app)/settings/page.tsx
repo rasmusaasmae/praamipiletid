@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
-import { praamidAuthState, user } from '@/db/schema'
+import { praamidAuthState, userSettings } from '@/db/schema'
 import { requireUser } from '@/lib/session'
 import { getCredentialStatus } from '@/lib/praamid-credentials'
 import { SettingsForm } from '@/components/settings-form'
@@ -12,9 +12,9 @@ export default async function SettingsPage() {
   const session = await requireUser()
   const t = await getTranslations('Settings')
   const [me] = await db
-    .select({ ntfyTopic: user.ntfyTopic })
-    .from(user)
-    .where(eq(user.id, session.user.id))
+    .select({ ntfyTopic: userSettings.ntfyTopic })
+    .from(userSettings)
+    .where(eq(userSettings.userId, session.user.id))
     .limit(1)
 
   const configured = Boolean(process.env.PRAAMID_CRED_KEY)

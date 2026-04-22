@@ -20,15 +20,6 @@ export const auth = betterAuth({
       verification: schema.verification,
     },
   }),
-  user: {
-    additionalFields: {
-      ntfyTopic: {
-        type: 'string',
-        required: true,
-        input: false,
-      },
-    },
-  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
@@ -44,14 +35,14 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => {
-          return {
-            data: {
-              ...user,
-              ntfyTopic: generateNtfyTopic(),
-              role: 'user',
-            },
-          }
+        after: async (created) => {
+          // Every user gets a user_settings row with a generated ntfy
+          // topic the moment they're created, so notifier code can
+          // always assume it exists.
+          await db.insert(schema.userSettings).values({
+            userId: created.id,
+            ntfyTopic: generateNtfyTopic(),
+          })
         },
       },
     },

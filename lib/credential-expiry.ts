@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@/db'
-import { auditLogs, user } from '@/db/schema'
+import { auditLogs, userSettings } from '@/db/schema'
 import { listCredentialsNeedingReauth } from '@/lib/praamid-credentials'
 import { getNotifier } from '@/lib/notifier'
 import { logAudit } from '@/lib/audit'
@@ -38,9 +38,9 @@ async function tick() {
 
   const userIds = Array.from(new Set(upcoming.map((c) => c.userId)))
   const userRows = await db
-    .select({ id: user.id, ntfyTopic: user.ntfyTopic })
-    .from(user)
-    .where(inArray(user.id, userIds))
+    .select({ id: userSettings.userId, ntfyTopic: userSettings.ntfyTopic })
+    .from(userSettings)
+    .where(inArray(userSettings.userId, userIds))
   const topicByUser = new Map(userRows.map((u) => [u.id, u.ntfyTopic]))
 
   for (const c of upcoming) {

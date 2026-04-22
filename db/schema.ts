@@ -20,6 +20,21 @@ export const settings = pgTable('settings', {
     .notNull(),
 })
 
+// Per-user preferences that don't belong on the better-auth `user` row
+// (kept there only for data better-auth itself manages). user_id is the
+// PK and FK, so there's at most one settings row per user.
+export const userSettings = pgTable('user_settings', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  ntfyTopic: text('ntfy_topic').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
+
 export const trips = pgTable(
   'trips',
   {
