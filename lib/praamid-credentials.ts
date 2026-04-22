@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { and, eq, gt, lt } from 'drizzle-orm'
 import { db } from '@/db'
 import { praamidCredentials } from '@/db/schema'
+import { setAuthState, settleAuthState } from '@/lib/praamid-auth-state'
 
 const IV_BYTES = 12
 const TAG_BYTES = 16
@@ -60,50 +61,43 @@ function decodeJwt(token: string): JwtPayload {
   return JSON.parse(json) as JwtPayload
 }
 
-type UserCtx = {
-  accessToken?: string
-  access_token?: string
-  [key: string]: unknown
-}
-
 export type SaveCredentialResult = {
   expiresAt: Date
   praamidSub: string
 }
 
+export type CapturedTokens = {
+  accessToken: string
+  refreshToken: string
+}
+
 export async function saveCredential(
   userId: string,
-  rawUserCtxJson: string,
+  tokens: CapturedTokens,
 ): Promise<SaveCredentialResult> {
-  let parsed: UserCtx
-  try {
-    parsed = JSON.parse(rawUserCtxJson) as UserCtx
-  } catch {
-    throw new Error('Invalid user-ctx JSON')
-  }
-  const token = parsed.accessToken ?? parsed.access_token
-  if (!token || typeof token !== 'string') {
-    throw new Error('user-ctx missing accessToken')
-  }
+  const accessClaims = decodeJwt(tokens.accessToken)
+  const refreshClaims = decodeJwt(tokens.refreshToken)
+  if (!accessClaims.sub) throw new Error('access token missing sub claim')
+  if (!refreshClaims.exp) throw new Error('refresh token missing exp claim')
 
-  const claims = decodeJwt(token)
-  if (!claims.sub) throw new Error('JWT missing sub claim')
-  if (!claims.exp) throw new Error('JWT missing exp claim')
-  const expiresAt = new Date(claims.exp * 1000)
+  // The refresh_token is the long-lived credential (~7 days). The
+  // access_token is ephemeral (~5 min) and is re-minted on demand via
+  // getFreshAccessToken.
+  const expiresAt = new Date(refreshClaims.exp * 1000)
   if (expiresAt.getTime() <= Date.now()) {
-    throw new Error('JWT already expired')
+    throw new Error('refresh token already expired')
   }
 
-  const accessTokenEnc = encryptToken(token)
+  const refreshTokenEnc = encryptToken(tokens.refreshToken)
   const now = new Date()
 
   await db
     .insert(praamidCredentials)
     .values({
       userId,
-      accessTokenEnc,
-      praamidSub: claims.sub,
-      sessionSid: claims.sid ?? null,
+      refreshTokenEnc,
+      praamidSub: accessClaims.sub,
+      sessionSid: accessClaims.sid ?? null,
       expiresAt,
       capturedAt: now,
       lastVerifiedAt: null,
@@ -112,9 +106,9 @@ export async function saveCredential(
     .onConflictDoUpdate({
       target: praamidCredentials.userId,
       set: {
-        accessTokenEnc,
-        praamidSub: claims.sub,
-        sessionSid: claims.sid ?? null,
+        refreshTokenEnc,
+        praamidSub: accessClaims.sub,
+        sessionSid: accessClaims.sid ?? null,
         expiresAt,
         capturedAt: now,
         lastVerifiedAt: null,
@@ -122,7 +116,9 @@ export async function saveCredential(
       },
     })
 
-  return { expiresAt, praamidSub: claims.sub }
+  await setAuthState(userId, { status: 'authenticated' })
+
+  return { expiresAt, praamidSub: accessClaims.sub }
 }
 
 export type ActiveCredential = {
@@ -131,10 +127,38 @@ export type ActiveCredential = {
   praamidSub: string
 }
 
+const TOKEN_ENDPOINT =
+  'https://auth.praamid.ee/auth/realms/praamid-online/protocol/openid-connect/token'
+const CLIENT_ID = 'praamid-portal'
+
+type TokenResponse = {
+  access_token: string
+  refresh_token?: string
+  expires_in?: number
+}
+
+async function exchangeRefreshToken(refreshToken: string): Promise<TokenResponse> {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    client_id: CLIENT_ID,
+    refresh_token: refreshToken,
+  })
+  const res = await fetch(TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  })
+  if (!res.ok) {
+    const snippet = (await res.text().catch(() => '')).slice(0, 200)
+    throw new Error(`refresh failed ${res.status}: ${snippet}`)
+  }
+  return (await res.json()) as TokenResponse
+}
+
 export async function getCredential(userId: string): Promise<ActiveCredential | null> {
   const [row] = await db
     .select({
-      accessTokenEnc: praamidCredentials.accessTokenEnc,
+      refreshTokenEnc: praamidCredentials.refreshTokenEnc,
       expiresAt: praamidCredentials.expiresAt,
       praamidSub: praamidCredentials.praamidSub,
     })
@@ -142,8 +166,26 @@ export async function getCredential(userId: string): Promise<ActiveCredential | 
     .where(eq(praamidCredentials.userId, userId))
     .limit(1)
   if (!row) return null
-  const token = decryptToken(row.accessTokenEnc)
-  return { token, expiresAt: row.expiresAt, praamidSub: row.praamidSub }
+
+  const refreshToken = decryptToken(row.refreshTokenEnc)
+  const tokens = await exchangeRefreshToken(refreshToken)
+
+  // Keycloak rotates refresh tokens when the feature is enabled — the new
+  // one arrives in the response. Persist it so the next call uses the
+  // rotated value. If rotation is off, refresh_token is omitted and we
+  // keep the stored one.
+  if (tokens.refresh_token && tokens.refresh_token !== refreshToken) {
+    await db
+      .update(praamidCredentials)
+      .set({ refreshTokenEnc: encryptToken(tokens.refresh_token) })
+      .where(eq(praamidCredentials.userId, userId))
+  }
+
+  return {
+    token: tokens.access_token,
+    expiresAt: row.expiresAt,
+    praamidSub: row.praamidSub,
+  }
 }
 
 export type CredentialStatus = {
@@ -181,10 +223,14 @@ export async function invalidateCredential(userId: string, reason: string): Prom
     .update(praamidCredentials)
     .set({ lastError: reason })
     .where(eq(praamidCredentials.userId, userId))
+  // The refresh token might still be valid — only the last API call failed.
+  // Keep the live status based on credential presence and surface the error.
+  await settleAuthState(userId, { lastError: reason })
 }
 
 export async function forgetCredential(userId: string): Promise<void> {
   await db.delete(praamidCredentials).where(eq(praamidCredentials.userId, userId))
+  await setAuthState(userId, { status: 'unauthenticated' })
 }
 
 export type ReauthCandidate = {

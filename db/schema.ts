@@ -131,7 +131,7 @@ export const praamidCredentials = pgTable(
     userId: text('user_id')
       .primaryKey()
       .references(() => user.id, { onDelete: 'cascade' }),
-    accessTokenEnc: text('access_token_enc').notNull(),
+    refreshTokenEnc: text('refresh_token_enc').notNull(),
     praamidSub: text('praamid_sub').notNull(),
     sessionSid: text('session_sid'),
     expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
@@ -147,6 +147,21 @@ export const praamidCredentials = pgTable(
   (table) => [index('praamid_credentials_expires_at_idx').on(table.expiresAt)],
 )
 
+// Electric-synced mirror of the praamid auth flow. praamid_credentials holds
+// the encrypted refresh token and cannot be exposed to the client; this table
+// holds only observable state so the UI can render the login stepper live.
+export const praamidAuthState = pgTable('praamid_auth_state', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  status: text('status').default('unauthenticated').notNull(),
+  lastError: text('last_error'),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
+
 export type Setting = typeof settings.$inferSelect
 export type PraamidCredential = typeof praamidCredentials.$inferSelect
 export type NewPraamidCredential = typeof praamidCredentials.$inferInsert
@@ -158,3 +173,16 @@ export type TripOption = typeof tripOptions.$inferSelect
 export type NewTripOption = typeof tripOptions.$inferInsert
 export type AuditLog = typeof auditLogs.$inferSelect
 export type NewAuditLog = typeof auditLogs.$inferInsert
+export type PraamidAuthState = typeof praamidAuthState.$inferSelect
+export type NewPraamidAuthState = typeof praamidAuthState.$inferInsert
+
+// Flow state the user sees live via Electric. last_error rides alongside
+// any status when the previous flow ended with an error — there is no
+// separate error state, just unauthenticated/authenticated with a message.
+export const PRAAMID_AUTH_STATUSES = [
+  'unauthenticated',
+  'loading',
+  'awaiting_confirmation',
+  'authenticated',
+] as const
+export type PraamidAuthStatus = (typeof PRAAMID_AUTH_STATUSES)[number]

@@ -15,6 +15,27 @@
       "when": 1776771944273,
       "tag": "0001_rich_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777233000000,
+      "tag": "0002_refresh_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776880172638,
+      "tag": "0003_auth_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776884400000,
+      "tag": "0004_auth_state_rename",
+      "breakpoints": true
     }
   ]
 }

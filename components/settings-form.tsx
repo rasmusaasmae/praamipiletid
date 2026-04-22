@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { updateNtfyTopic } from '@/actions/user-settings'
 import { ntfyTopicSchema } from '@/lib/schemas'
 
-export function SettingsForm({ currentTopic, ntfyBase }: { currentTopic: string; ntfyBase: string }) {
+export function SettingsForm({ currentTopic }: { currentTopic: string }) {
   const t = useTranslations('Settings')
 
   const form = useForm({
@@ -77,9 +77,6 @@ export function SettingsForm({ currentTopic, ntfyBase }: { currentTopic: string;
             </>
           )}
         </form.Field>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t('urlPreview', { base: ntfyBase, topic: topic || t('topicPlaceholder') })}
-        </p>
       </div>
       <Button
         type="submit"

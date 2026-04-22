@@ -8,8 +8,15 @@ const FORWARDED_PARAMS = ['live', 'table', 'handle', 'offset', 'cursor', 'column
 
 // Tables any authenticated user can read, scoped to their own user_id.
 // praamid_credentials is deliberately NOT here — rows contain encrypted
-// access tokens and are read server-side only. See lib/collections.ts.
-const USER_SCOPED_TABLES = new Set(['trips', 'trip_options', 'tickets'])
+// access tokens and are read server-side only. praamid_auth_state is a
+// safe observable mirror (status + verification code, no secrets).
+// See lib/collections.ts.
+const USER_SCOPED_TABLES = new Set([
+  'trips',
+  'trip_options',
+  'tickets',
+  'praamid_auth_state',
+])
 
 // Tables only admins can read, returned unfiltered.
 const ADMIN_ONLY_TABLES = new Set(['user', 'audit_logs', 'settings'])

@@ -132,6 +132,23 @@ export const ticketsCollection = createCollection(
 // status server-side via getCredentialStatus. If we ever surface it to the
 // client, use the `columns` shape param to whitelist safe fields.
 
+const praamidAuthStateSchema = z.object({
+  user_id: z.string(),
+  status: z.enum(['unauthenticated', 'loading', 'awaiting_confirmation', 'authenticated']),
+  last_error: z.string().nullable(),
+  updated_at: z.coerce.date(),
+})
+export type PraamidAuthStateRow = z.infer<typeof praamidAuthStateSchema>
+
+export const praamidAuthStateCollection = createCollection(
+  electricCollectionOptions({
+    id: 'praamid_auth_state',
+    schema: praamidAuthStateSchema,
+    shapeOptions: { url: SHAPE_URL, params: { table: 'praamid_auth_state' }, parser },
+    getKey: (row) => row.user_id,
+  }),
+)
+
 // ---------- Admin-only collections ----------
 
 const userSchema = z.object({

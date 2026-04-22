@@ -9,5 +9,8 @@ export default getRequestConfig(async ({ requestLocale }) => {
   return {
     locale,
     messages: (await import(`../messages/${locale}.json`)).default,
+    // Required for `useNow` / `relativeTime` on the server — next-intl
+    // otherwise logs an ENVIRONMENT_FALLBACK warning on every render.
+    now: new Date(),
   }
 })
