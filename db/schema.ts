@@ -28,12 +28,22 @@ export const userSettings = pgTable('user_settings', {
     .primaryKey()
     .references(() => user.id, { onDelete: 'cascade' }),
   ntfyTopic: text('ntfy_topic').notNull().unique(),
+  // App locale used when the server has to render on behalf of the user
+  // (e.g. composing notification messages). The UI also reads this when
+  // the user is signed in; unauthenticated browsers fall back to the
+  // NEXT_LOCALE cookie. Constrained to SUPPORTED_LOCALES via a CHECK in
+  // the migration since drizzle-pg doesn't model CHECKs inline.
+  locale: text('locale').default('et').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
 })
+
+export const SUPPORTED_LOCALES = ['et', 'en'] as const
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
+export const DEFAULT_LOCALE: SupportedLocale = 'et'
 
 export const trips = pgTable(
   'trips',
