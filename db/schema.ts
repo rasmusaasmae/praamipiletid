@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm'
 import {
   boolean,
+  check,
   index,
   integer,
   pgTable,
@@ -23,27 +25,35 @@ export const settings = pgTable('settings', {
 // Per-user preferences that don't belong on the better-auth `user` row
 // (kept there only for data better-auth itself manages). user_id is the
 // PK and FK, so there's at most one settings row per user.
-export const userSettings = pgTable('user_settings', {
-  userId: text('user_id')
-    .primaryKey()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  ntfyTopic: text('ntfy_topic').notNull().unique(),
-  // App locale used when the server has to render on behalf of the user
-  // (e.g. composing notification messages). The UI also reads this when
-  // the user is signed in; unauthenticated browsers fall back to the
-  // NEXT_LOCALE cookie. Constrained to SUPPORTED_LOCALES via a CHECK in
-  // the migration since drizzle-pg doesn't model CHECKs inline.
-  locale: text('locale').default('et').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-})
-
 export const SUPPORTED_LOCALES = ['et', 'en'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 export const DEFAULT_LOCALE: SupportedLocale = 'et'
+
+// Per-user preferences that don't belong on the better-auth `user` row
+// (which is kept tight to columns better-auth itself manages). The locale
+// column is what server code uses when rendering on behalf of the user,
+// e.g. composing notification messages.
+export const userSettings = pgTable(
+  'user_settings',
+  {
+    userId: text('user_id')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    ntfyTopic: text('ntfy_topic').notNull().unique(),
+    locale: text('locale').default(DEFAULT_LOCALE).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    check(
+      'user_settings_locale_check',
+      sql.raw(`${table.locale.name} IN (${SUPPORTED_LOCALES.map((l) => `'${l}'`).join(', ')})`),
+    ),
+  ],
+)
 
 export const trips = pgTable(
   'trips',

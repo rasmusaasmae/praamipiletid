@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776763263202,
+      "when": 1776921538586,
       "tag": "0000_init",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1776771944273,
-      "tag": "0001_rich_maggott",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777233000000,
-      "tag": "0002_refresh_token",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1776880172638,
-      "tag": "0003_auth_state",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1776884400000,
-      "tag": "0004_auth_state_rename",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1776887524147,
-      "tag": "0005_user_settings",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1776889002915,
-      "tag": "0006_user_locale",
       "breakpoints": true
     }
   ]
