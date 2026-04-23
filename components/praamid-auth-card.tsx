@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { useLiveQuery } from '@tanstack/react-db'
 import { useForm, useStore } from '@tanstack/react-form'
 import { toast } from 'sonner'
 import { useFormatter, useNow, useTranslations } from 'next-intl'
@@ -29,9 +28,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { forgetPraamidCredential } from '@/actions/praamid'
-import { praamidAuthStateCollection, type PraamidAuthStateRow } from '@/lib/collections'
 import { isikukoodSchema } from '@/lib/schemas'
 import { cn } from '@/lib/utils'
+import type { PraamidAuthStateView } from '@/lib/queries'
+import type { PraamidAuthStatus } from '@/db/schema'
 
 export type PraamidCredentialMeta = {
   capturedAt: Date
@@ -43,10 +43,10 @@ export type PraamidCredentialMeta = {
 export type PraamidAuthCardProps = {
   configured: boolean
   credentialMeta: PraamidCredentialMeta | null
-  initialStatus: 'unauthenticated' | 'loading' | 'awaiting_confirmation' | 'authenticated'
+  authState: PraamidAuthStateView
 }
 
-type Status = PraamidAuthStateRow['status']
+type Status = PraamidAuthStatus
 
 const STEP_ORDER: Status[] = [
   'unauthenticated',
@@ -55,38 +55,37 @@ const STEP_ORDER: Status[] = [
   'authenticated',
 ]
 
-export function PraamidAuthCard({
-  configured,
-  credentialMeta,
-  initialStatus,
-}: PraamidAuthCardProps) {
+export function PraamidAuthCard({ configured, credentialMeta, authState }: PraamidAuthCardProps) {
   const tP = useTranslations('Praamid')
   const format = useFormatter()
   const now = useNow({ updateInterval: 60_000 })
   const router = useRouter()
+  const status = authState.status
 
-  const { data: rows } = useLiveQuery((q) => q.from({ s: praamidAuthStateCollection }))
-  // Per-user PK means at most one row — but on first render before the
-  // shape has synced we show whatever the server already rendered.
-  const live = rows[0] as PraamidAuthStateRow | undefined
-  const status: Status = live?.status ?? initialStatus
+  // The login flow writes status transitions (loading →
+  // awaiting_confirmation → authenticated) from a background request.
+  // Re-run the RSC every second while the flow is active so the card
+  // observes the transitions without a realtime channel.
+  useEffect(() => {
+    if (status !== 'loading' && status !== 'awaiting_confirmation') return
+    const id = setInterval(() => router.refresh(), 1000)
+    return () => clearInterval(id)
+  }, [status, router])
 
   const [dialogOpen, setDialogOpen] = useState(false)
 
   // When the row transitions into 'authenticated': close the dialog on a
-  // short delay (so the user sees the success step) and ask the RSC to
-  // re-fetch credential metadata. prevStatus must be updated *before* any
-  // early return to avoid re-entering this branch on subsequent renders.
+  // short delay (so the user sees the success step). prevStatus must be
+  // updated *before* any early return to avoid re-entering this branch
+  // on subsequent renders.
   const prevStatus = useRef<Status>(status)
   useEffect(() => {
     const justAuthed = prevStatus.current !== 'authenticated' && status === 'authenticated'
     prevStatus.current = status
-    if (!justAuthed) return
-    router.refresh()
-    if (!dialogOpen) return
+    if (!justAuthed || !dialogOpen) return
     const t = setTimeout(() => setDialogOpen(false), 1200)
     return () => clearTimeout(t)
-  }, [status, dialogOpen, router])
+  }, [status, dialogOpen])
 
   const isAuthenticated = status === 'authenticated'
   const isActive = status === 'loading' || status === 'awaiting_confirmation'
@@ -198,6 +197,7 @@ function SigninDialog({
   status: Status
 }) {
   const tP = useTranslations('Praamid')
+  const router = useRouter()
 
   const [submitting, setSubmitting] = useState(false)
   useEffect(() => {
@@ -221,6 +221,9 @@ function SigninDialog({
         return
       }
       setSubmitting(true)
+      // Pull the first 'loading' status in immediately; after that the
+      // card's interval keeps polling every second.
+      router.refresh()
     },
   })
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
@@ -248,6 +251,7 @@ function SigninDialog({
     } catch {
       // ignore
     }
+    router.refresh()
     onOpenChange(false)
   }
 

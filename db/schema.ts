@@ -77,8 +77,6 @@ export const trips = pgTable(
   (table) => [index('trips_user_id_idx').on(table.userId)],
 )
 
-// user_id is denormalized from trips.user_id so Electric shape `where`
-// clauses (which can't join) can scope this table per user.
 export const tickets = pgTable(
   'tickets',
   {
@@ -106,7 +104,6 @@ export const tickets = pgTable(
   ],
 )
 
-// user_id is denormalized from trips.user_id — see tickets comment.
 export const tripOptions = pgTable(
   'trip_options',
   {
@@ -182,9 +179,9 @@ export const praamidCredentials = pgTable(
   (table) => [index('praamid_credentials_expires_at_idx').on(table.expiresAt)],
 )
 
-// Electric-synced mirror of the praamid auth flow. praamid_credentials holds
-// the encrypted refresh token and cannot be exposed to the client; this table
-// holds only observable state so the UI can render the login stepper live.
+// Observable mirror of the praamid auth flow. praamid_credentials holds the
+// encrypted refresh token and cannot be exposed to the client; this table
+// holds only observable state so the UI can render the login stepper.
 export const praamidAuthState = pgTable('praamid_auth_state', {
   userId: text('user_id')
     .primaryKey()
@@ -211,7 +208,7 @@ export type NewAuditLog = typeof auditLogs.$inferInsert
 export type PraamidAuthState = typeof praamidAuthState.$inferSelect
 export type NewPraamidAuthState = typeof praamidAuthState.$inferInsert
 
-// Flow state the user sees live via Electric. last_error rides alongside
+// Flow state the user observes via RSC refresh. last_error rides alongside
 // any status when the previous flow ended with an error — there is no
 // separate error state, just unauthenticated/authenticated with a message.
 export const PRAAMID_AUTH_STATUSES = [

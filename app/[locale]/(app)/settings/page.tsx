@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
-import { praamidAuthState, userSettings } from '@/db/schema'
+import { userSettings } from '@/db/schema'
 import { requireUser } from '@/lib/session'
 import { getCredentialStatus } from '@/lib/praamid-credentials'
+import { getMyPraamidAuthState } from '@/lib/queries'
 import { SettingsForm } from '@/components/settings-form'
 import { PraamidAuthCard } from '@/components/praamid-auth-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,23 +20,9 @@ export default async function SettingsPage() {
 
   const configured = Boolean(process.env.PRAAMID_CRED_KEY)
   const status = configured ? await getCredentialStatus(session.user.id) : null
-
-  // Seed the client with whatever status the server last observed, so the
-  // initial render matches reality before the Electric shape hydrates.
-  const [stateRow] = configured
-    ? await db
-        .select({ status: praamidAuthState.status })
-        .from(praamidAuthState)
-        .where(eq(praamidAuthState.userId, session.user.id))
-        .limit(1)
-    : []
-  const initialStatus =
-    (stateRow?.status as
-      | 'unauthenticated'
-      | 'loading'
-      | 'awaiting_confirmation'
-      | 'authenticated'
-      | undefined) ?? (status ? 'authenticated' : 'unauthenticated')
+  const authState = configured
+    ? await getMyPraamidAuthState()
+    : { status: 'unauthenticated' as const, lastError: null }
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -43,7 +30,7 @@ export default async function SettingsPage() {
 
       <PraamidAuthCard
         configured={configured}
-        initialStatus={initialStatus}
+        authState={authState}
         credentialMeta={
           status
             ? {

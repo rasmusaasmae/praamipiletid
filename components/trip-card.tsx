@@ -34,34 +34,9 @@ import {
   moveOption,
   removeOption,
   updateOption,
+  updateTrip,
 } from '@/actions/trips'
-import { tripsCollection } from '@/lib/collections'
-import type { Ticket } from '@/db/schema'
-
-export type TripCardData = {
-  trip: {
-    id: string
-    direction: string
-    measurementUnit: string
-    notify: boolean
-    edit: boolean
-    lastCheckedAt: Date | null
-    swapInProgress: boolean
-  }
-  options: Array<{
-    id: string
-    tripId: string
-    priority: number
-    eventUid: string
-    eventDate: string
-    eventDtstart: Date
-    stopBeforeAt: Date
-    lastCapacity: number | null
-    lastCapacityState: string | null
-    lastCapacityCheckedAt: Date | null
-  }>
-  ticket: Ticket | null
-}
+import type { TripCardData } from '@/lib/queries'
 
 function useNow(intervalMs: number) {
   const [now, setNow] = useState(() => Date.now())
@@ -116,13 +91,10 @@ export function TripCard({
     })
 
   const toggleFlag = (flag: 'notify' | 'edit', next: boolean) => {
-    const tx = tripsCollection.update(data.trip.id, (draft) => {
-      draft[flag] = next
-    })
-    tx.isPersisted.promise.then(
-      () => toast.success(t('saved')),
-      (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
-    )
+    const form = new FormData()
+    form.set('id', data.trip.id)
+    form.set(flag, next ? 'true' : '')
+    submit(() => updateTrip(form), t('saved'))
   }
 
   const onDeleteTrip = () => {

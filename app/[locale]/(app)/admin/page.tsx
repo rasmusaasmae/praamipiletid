@@ -1,7 +1,7 @@
-import { requireAdmin } from '@/lib/session'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
+import { getAdminDashboard } from '@/lib/queries'
 
 export default async function AdminPage() {
-  await requireAdmin()
-  return <AdminDashboard />
+  const data = await getAdminDashboard()
+  return <AdminDashboard data={data} />
 }
