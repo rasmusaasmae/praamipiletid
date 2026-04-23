@@ -1,7 +1,5 @@
 'use client'
 
-import { useTransition } from 'react'
-import { toast } from 'sonner'
 import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { updateUserRole } from '@/actions/admin'
+import { useOptimisticMutation } from '@/lib/mutations'
+import { adminDashboardQueryOptions, type AdminDashboardData } from '@/lib/query-options'
 
 type UserRow = {
   id: string
@@ -26,20 +26,26 @@ type UserRow = {
 }
 
 export function AdminUsersTable({ users }: { users: UserRow[] }) {
-  const [isPending, startTransition] = useTransition()
   const t = useTranslations('Admin')
   const locale = useLocale()
 
-  const toggleRole = (userId: string, current: string) => {
-    const form = new FormData()
-    form.set('userId', userId)
-    form.set('role', current === 'admin' ? 'user' : 'admin')
-    startTransition(async () => {
-      const res = await updateUserRole(form)
-      if (res.ok) toast.success(t('roleChanged'))
-      else toast.error(res.error)
-    })
-  }
+  const toggleRoleMutation = useOptimisticMutation<
+    { userId: string; nextRole: 'admin' | 'user' },
+    AdminDashboardData
+  >({
+    queryKey: adminDashboardQueryOptions.queryKey,
+    action: ({ userId, nextRole }) => {
+      const form = new FormData()
+      form.set('userId', userId)
+      form.set('role', nextRole)
+      return updateUserRole(form)
+    },
+    optimisticUpdate: (old, { userId, nextRole }) => ({
+      ...old,
+      users: old.users.map((u) => (u.id === userId ? { ...u, role: nextRole } : u)),
+    }),
+    successMessage: t('roleChanged'),
+  })
 
   if (users.length === 0) {
     return <p className="text-muted-foreground">{t('usersEmpty')}</p>
@@ -84,8 +90,12 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                 <Button
                   size="sm"
                   variant="secondary"
-                  disabled={isPending}
-                  onClick={() => toggleRole(u.id, u.role)}
+                  onClick={() =>
+                    toggleRoleMutation.mutate({
+                      userId: u.id,
+                      nextRole: u.role === 'admin' ? 'user' : 'admin',
+                    })
+                  }
                 >
                   {u.role === 'admin' ? t('roleToUser') : t('roleToAdmin')}
                 </Button>

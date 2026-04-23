@@ -1,7 +1,5 @@
 'use client'
 
-import { useTransition } from 'react'
-import { toast } from 'sonner'
 import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { deleteAnyTrip } from '@/actions/admin'
+import { useOptimisticMutation } from '@/lib/mutations'
+import { adminDashboardQueryOptions, type AdminDashboardData } from '@/lib/query-options'
 
 type Row = {
   id: string
@@ -27,25 +27,28 @@ type Row = {
 }
 
 export function AdminTripsTable({ rows }: { rows: Row[] }) {
-  const [isPending, startTransition] = useTransition()
   const t = useTranslations('Admin')
   const tCap = useTranslations('Capacity')
   const tDir = useTranslations('Directions')
   const locale = useLocale()
 
+  const deleteMutation = useOptimisticMutation<string, AdminDashboardData>({
+    queryKey: adminDashboardQueryOptions.queryKey,
+    action: (id) => {
+      const form = new FormData()
+      form.set('id', id)
+      return deleteAnyTrip(form)
+    },
+    optimisticUpdate: (old, id) => ({
+      ...old,
+      trips: old.trips.filter((r) => r.id !== id),
+    }),
+    successMessage: t('deleted'),
+  })
+
   const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
   const formatDateTime = (d: Date) =>
     `${d.toLocaleDateString(dateTag)} ${d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })}`
-
-  const onDelete = (id: string) => {
-    const form = new FormData()
-    form.set('id', id)
-    startTransition(async () => {
-      const res = await deleteAnyTrip(form)
-      if (res.ok) toast.success(t('deleted'))
-      else toast.error(res.error)
-    })
-  }
 
   if (rows.length === 0) {
     return <p className="text-muted-foreground">{t('tripsEmpty')}</p>
@@ -85,8 +88,7 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
                   <Button
                     size="sm"
                     variant="destructive"
-                    disabled={isPending}
-                    onClick={() => onDelete(r.id)}
+                    onClick={() => deleteMutation.mutate(r.id)}
                   >
                     {t('delete')}
                   </Button>

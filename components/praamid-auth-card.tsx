@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useForm, useStore } from '@tanstack/react-form'
@@ -28,9 +28,17 @@ import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { forgetPraamidCredential } from '@/actions/praamid'
+import {
+  cancelPraamidLogin,
+  forgetPraamidCredential,
+  startPraamidLogin,
+} from '@/actions/praamid'
 import { isikukoodSchema } from '@/lib/schemas'
-import { praamidAuthStateQueryOptions } from '@/lib/query-options'
+import { useOptimisticMutation } from '@/lib/mutations'
+import {
+  praamidAuthStateQueryOptions,
+  type PraamidAuthStateView,
+} from '@/lib/query-options'
 import { cn } from '@/lib/utils'
 import type { PraamidAuthStatus } from '@/db/schema'
 
@@ -159,8 +167,12 @@ function StatusBadge({ status }: { status: Status }) {
 
 function ForgetButton() {
   const t = useTranslations('Praamid')
-  const queryClient = useQueryClient()
-  const [isForgetting, startForget] = useTransition()
+  const forgetMutation = useOptimisticMutation<void, PraamidAuthStateView>({
+    queryKey: praamidAuthStateQueryOptions.queryKey,
+    action: () => forgetPraamidCredential(),
+    optimisticUpdate: () => ({ status: 'unauthenticated', lastError: null }),
+    successMessage: t('forgotten'),
+  })
   return (
     <Tooltip>
       <TooltipTrigger
@@ -169,22 +181,12 @@ function ForgetButton() {
             type="button"
             variant="ghost"
             size="icon"
-            disabled={isForgetting}
+            disabled={forgetMutation.isPending}
             aria-label={t('forget')}
-            onClick={() =>
-              startForget(async () => {
-                if (!confirm(t('forgetConfirm'))) return
-                const res = await forgetPraamidCredential()
-                if (res.ok) {
-                  toast.success(t('forgotten'))
-                  queryClient.invalidateQueries({
-                    queryKey: praamidAuthStateQueryOptions.queryKey,
-                  })
-                } else {
-                  toast.error(res.error)
-                }
-              })
-            }
+            onClick={() => {
+              if (!confirm(t('forgetConfirm'))) return
+              forgetMutation.mutate()
+            }}
           >
             <Trash2 className="size-4" />
           </Button>
@@ -218,14 +220,9 @@ function SigninDialog({
   const form = useForm({
     defaultValues: { isikukood: '' },
     onSubmit: async ({ value }) => {
-      const res = await fetch('/api/praamid-login/start', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ isikukood: value.isikukood }),
-      })
+      const res = await startPraamidLogin(value.isikukood)
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string }
-        toast.error(tP('captureFailed', { error: data.error ?? 'start_failed' }))
+        toast.error(tP('captureFailed', { error: res.error }))
         return
       }
       setSubmitting(true)
@@ -256,11 +253,7 @@ function SigninDialog({
   }, [open, form])
 
   const onCancel = async () => {
-    try {
-      await fetch('/api/praamid-login/cancel', { method: 'POST' })
-    } catch {
-      // ignore
-    }
+    await cancelPraamidLogin()
     queryClient.invalidateQueries({ queryKey: praamidAuthStateQueryOptions.queryKey })
     onOpenChange(false)
   }

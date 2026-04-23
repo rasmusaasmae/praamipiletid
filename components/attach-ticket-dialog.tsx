@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useLocale, useTranslations } from 'next-intl'
 import { Ticket as TicketIcon } from 'lucide-react'
@@ -21,6 +22,7 @@ import {
   listAttachableTickets,
   type AttachableTicket,
 } from '@/actions/tickets'
+import { tripsQueryOptions } from '@/lib/query-options'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -31,12 +33,12 @@ type Props = {
 export function AttachTicketDialog({ tripId, disabled }: Props) {
   const t = useTranslations('Ticket')
   const locale = useLocale()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [tickets, setTickets] = useState<AttachableTicket[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [listError, setListError] = useState<string | null>(null)
-  const [isAttaching, startAttach] = useTransition()
 
   const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
   const formatTicket = (raw: AttachableTicket) => {
@@ -69,20 +71,25 @@ export function AttachTicketDialog({ tripId, disabled }: Props) {
     }
   }, [open, tripId])
 
-  const onConfirm = () => {
-    if (!selected) return
-    startAttach(async () => {
+  const attachMutation = useMutation({
+    mutationFn: async (ticketCode: string) => {
       const form = new FormData()
       form.set('tripId', tripId)
-      form.set('ticketCode', selected)
+      form.set('ticketCode', ticketCode)
       const res = await attachTicket(form)
-      if (res.ok) {
-        toast.success(t('attached'))
-        setOpen(false)
-      } else {
-        toast.error(res.error)
-      }
-    })
+      if (!res.ok) throw new Error(res.error)
+    },
+    onSuccess: () => {
+      toast.success(t('attached'))
+      queryClient.invalidateQueries({ queryKey: tripsQueryOptions.queryKey })
+      setOpen(false)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  const onConfirm = () => {
+    if (!selected) return
+    attachMutation.mutate(selected)
   }
 
   return (
@@ -141,12 +148,12 @@ export function AttachTicketDialog({ tripId, disabled }: Props) {
         )}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isAttaching}>{t('attachCancel')}</AlertDialogCancel>
+          <AlertDialogCancel disabled={attachMutation.isPending}>{t('attachCancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            disabled={isAttaching || !selected}
+            disabled={attachMutation.isPending || !selected}
           >
-            {isAttaching ? t('attaching') : t('attachConfirm')}
+            {attachMutation.isPending ? t('attaching') : t('attachConfirm')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,7 +1,5 @@
 'use client'
 
-import { useTransition } from 'react'
-import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { Ticket as TicketIcon } from 'lucide-react'
 import {
@@ -18,6 +16,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { AttachTicketDialog } from '@/components/attach-ticket-dialog'
 import { detachTicket } from '@/actions/tickets'
+import { useOptimisticMutation } from '@/lib/mutations'
+import { tripsQueryOptions, type TripCardData } from '@/lib/query-options'
 import type { Ticket } from '@/db/schema'
 
 type Props = {
@@ -27,17 +27,18 @@ type Props = {
 
 export function TicketSlot({ tripId, ticket }: Props) {
   const t = useTranslations('Ticket')
-  const [isPending, startTransition] = useTransition()
 
-  const onDetach = () => {
-    startTransition(async () => {
+  const detachMutation = useOptimisticMutation<void, TripCardData[]>({
+    queryKey: tripsQueryOptions.queryKey,
+    action: () => {
       const form = new FormData()
       form.set('tripId', tripId)
-      const res = await detachTicket(form)
-      if (res.ok) toast.success(t('detached'))
-      else toast.error(res.error)
-    })
-  }
+      return detachTicket(form)
+    },
+    optimisticUpdate: (old) =>
+      old.map((c) => (c.trip.id === tripId ? { ...c, ticket: null } : c)),
+    successMessage: t('detached'),
+  })
 
   if (ticket) {
     return (
@@ -49,9 +50,9 @@ export function TicketSlot({ tripId, ticket }: Props) {
         </div>
         <AlertDialog>
           <AlertDialogTrigger
-            render={<Button size="sm" variant="outline" disabled={isPending} />}
+            render={<Button size="sm" variant="outline" disabled={detachMutation.isPending} />}
           >
-            {isPending ? t('detaching') : t('detach')}
+            {detachMutation.isPending ? t('detaching') : t('detach')}
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -60,7 +61,7 @@ export function TicketSlot({ tripId, ticket }: Props) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('attachCancel')}</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={onDetach}>
+              <AlertDialogAction variant="destructive" onClick={() => detachMutation.mutate()}>
                 {t('detach')}
               </AlertDialogAction>
             </AlertDialogFooter>

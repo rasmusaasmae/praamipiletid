@@ -9,13 +9,13 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import { tripsQueryOptions } from '@/lib/query-options'
 
-export function Home({ pollIntervalMs }: { pollIntervalMs: number }) {
+export function Home() {
   const t = useTranslations('Home')
   const tT = useTranslations('Trips')
 
   const { data: cards } = useSuspenseQuery({
     ...tripsQueryOptions,
-    refetchInterval: pollIntervalMs,
+    refetchInterval: 60_000,
   })
 
   return (
@@ -44,7 +44,7 @@ export function Home({ pollIntervalMs }: { pollIntervalMs: number }) {
       ) : (
         <div className="flex flex-col gap-4">
           {cards.map((card) => (
-            <TripCard key={card.trip.id} data={card} pollIntervalMs={pollIntervalMs} />
+            <TripCard key={card.trip.id} data={card} />
           ))}
         </div>
       )}

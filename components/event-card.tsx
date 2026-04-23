@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { addOption } from '@/actions/trips'
 import { SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
+import { tripsQueryOptions } from '@/lib/query-options'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
@@ -27,24 +28,27 @@ function formatTime(iso: string) {
 }
 
 export function EventCard({ event, tripId, date, measurementUnit, alreadyAdded }: Props) {
-  const [isPending, startTransition] = useTransition()
   const t = useTranslations('EventCard')
   const tCap = useTranslations('Capacity')
+  const queryClient = useQueryClient()
 
   const highlighted = measurementUnit
 
-  const onAdd = () => {
-    const form = new FormData()
-    form.set('tripId', tripId)
-    form.set('eventUid', event.uid)
-    form.set('date', date)
-
-    startTransition(async () => {
-      const result = await addOption(form)
-      if (result.ok) toast.success(t('optionAdded'))
-      else toast.error(result.error)
-    })
-  }
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const form = new FormData()
+      form.set('tripId', tripId)
+      form.set('eventUid', event.uid)
+      form.set('date', date)
+      const res = await addOption(form)
+      if (!res.ok) throw new Error(res.error)
+    },
+    onSuccess: () => {
+      toast.success(t('optionAdded'))
+      queryClient.invalidateQueries({ queryKey: tripsQueryOptions.queryKey })
+    },
+    onError: (err) => toast.error(err.message),
+  })
 
   return (
     <Card>
@@ -75,8 +79,15 @@ export function EventCard({ event, tripId, date, measurementUnit, alreadyAdded }
             })}
           </div>
         </div>
-        <Button disabled={isPending || alreadyAdded} onClick={onAdd}>
-          {alreadyAdded ? t('alreadyAdded') : isPending ? t('saving') : t('addOption')}
+        <Button
+          disabled={addMutation.isPending || alreadyAdded}
+          onClick={() => addMutation.mutate()}
+        >
+          {alreadyAdded
+            ? t('alreadyAdded')
+            : addMutation.isPending
+              ? t('saving')
+              : t('addOption')}
         </Button>
       </CardContent>
     </Card>

@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
-import { toast } from 'sonner'
+import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { et, enGB } from 'react-day-picker/locale'
 import { ArrowDown, ArrowRightLeft, ArrowUp, Bell, Loader2, Plus, Trash2 } from 'lucide-react'
@@ -36,46 +35,15 @@ import {
   updateOption,
   updateTrip,
 } from '@/actions/trips'
-import type { TripCardData } from '@/lib/query-options'
+import { useOptimisticMutation } from '@/lib/mutations'
+import { tripsQueryOptions, type TripCardData } from '@/lib/query-options'
 
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs)
-    return () => clearInterval(id)
-  }, [intervalMs])
-  return now
-}
-
-function formatRelative(
-  nowMs: number,
-  tsMs: number,
-  tRel: ReturnType<typeof useTranslations<'Relative'>>,
-): string {
-  const diff = Math.max(0, Math.floor((nowMs - tsMs) / 1000))
-  if (diff < 60) return tRel('secondsAgo', { s: diff })
-  const mins = Math.floor(diff / 60)
-  if (mins < 60) return tRel('minutesAgo', { m: mins })
-  const hours = Math.floor(mins / 60)
-  return tRel('hoursAgo', { h: hours })
-}
-
-export function TripCard({
-  data,
-  pollIntervalMs,
-}: {
-  data: TripCardData
-  pollIntervalMs: number
-}) {
-  const [isPending, startTransition] = useTransition()
+export function TripCard({ data }: { data: TripCardData }) {
   const t = useTranslations('Trips')
   const tOpt = useTranslations('Options')
   const tCap = useTranslations('Capacity')
   const tDir = useTranslations('Directions')
-  const tRel = useTranslations('Relative')
   const locale = useLocale()
-  const now = useNow(1000)
-  const staleThresholdMs = pollIntervalMs * 2
 
   const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
   const formatDate = (d: Date) =>
@@ -83,76 +51,134 @@ export function TripCard({
   const formatTime = (d: Date) =>
     d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })
 
-  const submit = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, okMsg: string) =>
-    startTransition(async () => {
-      const res = await fn()
-      if (res.ok) toast.success(okMsg)
-      else toast.error(res.error)
-    })
+  const tripId = data.trip.id
 
-  const toggleFlag = (flag: 'notify' | 'edit', next: boolean) => {
-    const form = new FormData()
-    form.set('id', data.trip.id)
-    form.set(flag, next ? 'true' : '')
-    submit(() => updateTrip(form), t('saved'))
-  }
+  const toggleFlagMutation = useOptimisticMutation<
+    { flag: 'notify' | 'edit'; next: boolean },
+    TripCardData[]
+  >({
+    queryKey: tripsQueryOptions.queryKey,
+    action: ({ flag, next }) => {
+      const form = new FormData()
+      form.set('id', tripId)
+      form.set(flag, next ? 'true' : '')
+      return updateTrip(form)
+    },
+    optimisticUpdate: (old, { flag, next }) =>
+      old.map((c) =>
+        c.trip.id === tripId ? { ...c, trip: { ...c.trip, [flag]: next } } : c,
+      ),
+    successMessage: t('saved'),
+  })
 
-  const onDeleteTrip = () => {
-    const form = new FormData()
-    form.set('id', data.trip.id)
-    submit(() => deleteTrip(form), t('deleted'))
-  }
+  const deleteTripMutation = useOptimisticMutation<void, TripCardData[]>({
+    queryKey: tripsQueryOptions.queryKey,
+    action: () => {
+      const form = new FormData()
+      form.set('id', tripId)
+      return deleteTrip(form)
+    },
+    optimisticUpdate: (old) => old.filter((c) => c.trip.id !== tripId),
+    successMessage: t('deleted'),
+  })
 
-  const onRemoveOption = (id: string) => {
-    const form = new FormData()
-    form.set('id', id)
-    submit(() => removeOption(form), tOpt('removed'))
-  }
+  const removeOptionMutation = useOptimisticMutation<string, TripCardData[]>({
+    queryKey: tripsQueryOptions.queryKey,
+    action: (optionId) => {
+      const form = new FormData()
+      form.set('id', optionId)
+      return removeOption(form)
+    },
+    optimisticUpdate: (old, optionId) =>
+      old.map((c) =>
+        c.trip.id === tripId
+          ? { ...c, options: c.options.filter((o) => o.id !== optionId) }
+          : c,
+      ),
+    successMessage: tOpt('removed'),
+  })
 
-  const onMoveOption = (id: string, direction: 'up' | 'down') => {
-    const form = new FormData()
-    form.set('id', id)
-    form.set('direction', direction)
-    submit(() => moveOption(form), tOpt('moved'))
-  }
+  const moveOptionMutation = useOptimisticMutation<
+    { optionId: string; direction: 'up' | 'down' },
+    TripCardData[]
+  >({
+    queryKey: tripsQueryOptions.queryKey,
+    action: ({ optionId, direction }) => {
+      const form = new FormData()
+      form.set('id', optionId)
+      form.set('direction', direction)
+      return moveOption(form)
+    },
+    // Mirror the server's priority swap: find the neighbour in the direction
+    // the user clicked (ascending sort = "up" means lower priority) and swap
+    // the two priorities so the UI reorders instantly.
+    optimisticUpdate: (old, { optionId, direction }) =>
+      old.map((c) => {
+        if (c.trip.id !== tripId) return c
+        const byPriority = [...c.options].sort((a, b) => a.priority - b.priority)
+        const idx = byPriority.findIndex((o) => o.id === optionId)
+        if (idx === -1) return c
+        const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+        if (swapIdx < 0 || swapIdx >= byPriority.length) return c
+        const a = byPriority[idx]
+        const b = byPriority[swapIdx]
+        return {
+          ...c,
+          options: c.options.map((o) => {
+            if (o.id === a.id) return { ...o, priority: b.priority }
+            if (o.id === b.id) return { ...o, priority: a.priority }
+            return o
+          }),
+        }
+      }),
+    successMessage: tOpt('moved'),
+  })
 
-  const onSaveStopBefore = (id: string, stopBeforeAt: Date) => {
-    const form = new FormData()
-    form.set('id', id)
-    form.set('stopBeforeAt', String(stopBeforeAt.getTime()))
-    submit(() => updateOption(form), t('saved'))
-  }
+  const updateOptionMutation = useOptimisticMutation<
+    { optionId: string; stopBeforeAt: Date },
+    TripCardData[]
+  >({
+    queryKey: tripsQueryOptions.queryKey,
+    action: ({ optionId, stopBeforeAt }) => {
+      const form = new FormData()
+      form.set('id', optionId)
+      form.set('stopBeforeAt', String(stopBeforeAt.getTime()))
+      return updateOption(form)
+    },
+    optimisticUpdate: (old, { optionId, stopBeforeAt }) =>
+      old.map((c) =>
+        c.trip.id === tripId
+          ? {
+              ...c,
+              options: c.options.map((o) =>
+                o.id === optionId ? { ...o, stopBeforeAt } : o,
+              ),
+            }
+          : c,
+      ),
+    successMessage: t('saved'),
+  })
 
   const sorted = [...data.options].sort((a, b) => a.priority - b.priority)
 
   return (
     <TooltipProvider>
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
-              <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
-              {data.trip.swapInProgress ? (
-                <Badge variant="secondary" className="gap-1">
-                  <Loader2 className="size-3 animate-spin" />
-                  {t('swapping')}
-                </Badge>
-              ) : null}
-            </div>
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {data.trip.lastCheckedAt
-                ? t('checkedAgo', {
-                    ago: formatRelative(now, data.trip.lastCheckedAt.getTime(), tRel),
-                  })
-                : t('notYetChecked')}
-            </span>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
+            <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
+            {data.trip.swapInProgress ? (
+              <Badge variant="secondary" className="gap-1">
+                <Loader2 className="size-3 animate-spin" />
+                {t('swapping')}
+              </Badge>
+            ) : null}
           </div>
           <Button
             size="icon"
             variant="ghost"
-            disabled={isPending}
-            onClick={onDeleteTrip}
+            onClick={() => deleteTripMutation.mutate()}
             aria-label={t('delete')}
             title={t('delete')}
           >
@@ -165,8 +191,7 @@ export function TripCard({
             <Toggle
               variant="success"
               pressed={data.trip.notify}
-              onPressedChange={(next) => toggleFlag('notify', next)}
-              disabled={isPending}
+              onPressedChange={(next) => toggleFlagMutation.mutate({ flag: 'notify', next })}
               aria-label={tOpt('badgeNotify')}
             >
               <Bell />
@@ -175,8 +200,7 @@ export function TripCard({
             <Toggle
               variant="success"
               pressed={data.trip.edit}
-              onPressedChange={(next) => toggleFlag('edit', next)}
-              disabled={isPending}
+              onPressedChange={(next) => toggleFlagMutation.mutate({ flag: 'edit', next })}
               aria-label={tOpt('badgeEdit')}
             >
               <ArrowRightLeft />
@@ -184,7 +208,7 @@ export function TripCard({
             </Toggle>
           </div>
 
-          <TicketSlot tripId={data.trip.id} ticket={data.ticket} />
+          <TicketSlot tripId={tripId} ticket={data.ticket} />
 
           {sorted.length === 0 ? (
             <p className="text-sm text-muted-foreground">{tOpt('empty')}</p>
@@ -205,8 +229,10 @@ export function TripCard({
                         <div className="flex flex-col">
                           <button
                             type="button"
-                            disabled={isPending || idx === 0}
-                            onClick={() => onMoveOption(option.id, 'up')}
+                            disabled={idx === 0}
+                            onClick={() =>
+                              moveOptionMutation.mutate({ optionId: option.id, direction: 'up' })
+                            }
                             aria-label={tOpt('moveUp')}
                             className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                           >
@@ -214,8 +240,10 @@ export function TripCard({
                           </button>
                           <button
                             type="button"
-                            disabled={isPending || idx === sorted.length - 1}
-                            onClick={() => onMoveOption(option.id, 'down')}
+                            disabled={idx === sorted.length - 1}
+                            onClick={() =>
+                              moveOptionMutation.mutate({ optionId: option.id, direction: 'down' })
+                            }
                             aria-label={tOpt('moveDown')}
                             className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                           >
@@ -231,41 +259,25 @@ export function TripCard({
                           <CutoffEditor
                             eventStart={option.eventDtstart}
                             stopBeforeAt={option.stopBeforeAt}
-                            disabled={isPending || past}
+                            disabled={past}
                             locale={locale}
-                            onSave={(d) => onSaveStopBefore(option.id, d)}
+                            onSave={(stopBeforeAt) =>
+                              updateOptionMutation.mutate({ optionId: option.id, stopBeforeAt })
+                            }
                             titleText={`${formatDate(option.eventDtstart)} · ${formatTime(option.eventDtstart)}`}
                           />
                           {isCurrent ? (
                             <Badge variant="secondary">{tOpt('current')}</Badge>
                           ) : null}
                         </span>
-                        <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-                          <span>
-                            {past
-                              ? tOpt('past')
-                              : option.lastCapacity == null
-                                ? tOpt('notYetChecked')
-                                : state === 'above'
-                                  ? `${option.lastCapacity} ${tOpt('above')}`
-                                  : tOpt('below')}
-                          </span>
-                          {!past && option.lastCapacityCheckedAt ? (
-                            <span
-                              className={
-                                now - option.lastCapacityCheckedAt.getTime() > staleThresholdMs
-                                  ? 'tabular-nums text-amber-600 dark:text-amber-400'
-                                  : 'tabular-nums'
-                              }
-                            >
-                              ·{' '}
-                              {formatRelative(
-                                now,
-                                option.lastCapacityCheckedAt.getTime(),
-                                tRel,
-                              )}
-                            </span>
-                          ) : null}
+                        <span className="text-xs text-muted-foreground">
+                          {past
+                            ? tOpt('past')
+                            : option.lastCapacity == null
+                              ? tOpt('notYetChecked')
+                              : state === 'above'
+                                ? `${option.lastCapacity} ${tOpt('above')}`
+                                : tOpt('below')}
                         </span>
                       </div>
                     </div>
@@ -273,8 +285,7 @@ export function TripCard({
                       <Button
                         size="icon"
                         variant="ghost"
-                        disabled={isPending}
-                        onClick={() => onRemoveOption(option.id)}
+                        onClick={() => removeOptionMutation.mutate(option.id)}
                         aria-label={tOpt('remove')}
                       >
                         <Trash2 className="size-4" />
@@ -287,7 +298,7 @@ export function TripCard({
           ) : null}
 
           <Link
-            href={`/trips/${data.trip.id}/options`}
+            href={`/trips/${tripId}/options`}
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             <Plus className="size-4" />
