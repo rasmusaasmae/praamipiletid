@@ -1,33 +1,22 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import { TripCard } from '@/components/trip-card'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
-import type { TripCardData } from '@/lib/queries'
+import { tripsQueryOptions } from '@/lib/query-options'
 
-export function HomeClient({
-  cards,
-  pollIntervalMs,
-}: {
-  cards: TripCardData[]
-  pollIntervalMs: number
-}) {
+export function Home({ pollIntervalMs }: { pollIntervalMs: number }) {
   const t = useTranslations('Home')
   const tT = useTranslations('Trips')
-  const router = useRouter()
 
-  // Capacity is written by the server-side poller at `pollIntervalMs`
-  // cadence. Re-fetch the RSC on the same interval so the card labels
-  // (above/below, ago timestamps) stay in sync.
-  useEffect(() => {
-    const id = setInterval(() => router.refresh(), pollIntervalMs)
-    return () => clearInterval(id)
-  }, [pollIntervalMs, router])
+  const { data: cards } = useSuspenseQuery({
+    ...tripsQueryOptions,
+    refetchInterval: pollIntervalMs,
+  })
 
   return (
     <div className="flex flex-col gap-6">

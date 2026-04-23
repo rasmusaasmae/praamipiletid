@@ -5,6 +5,7 @@ import { setRequestLocale } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Providers } from '@/components/providers'
 import { ThemeProvider } from '@/components/theme-provider'
 import { routing } from '@/i18n/routing'
 import '../globals.css'
@@ -50,14 +51,16 @@ export default async function LocaleLayout({
       className={cn('h-full antialiased', geistSans.variable, geistMono.variable)}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <NextIntlClientProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            <TooltipProvider>
-              {children}
-              <Toaster richColors position="top-right" />
-            </TooltipProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
+        <Providers>
+          <NextIntlClientProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+              <TooltipProvider>
+                {children}
+                <Toaster richColors position="top-right" />
+              </TooltipProvider>
+            </ThemeProvider>
+          </NextIntlClientProvider>
+        </Providers>
       </body>
     </html>
   )

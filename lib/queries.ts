@@ -1,4 +1,5 @@
-import 'server-only'
+'use server'
+
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import {
@@ -8,35 +9,16 @@ import {
   trips,
   user,
   type PraamidAuthStatus,
-  type Ticket,
 } from '@/db/schema'
 import { requireAdmin, requireUser } from '@/lib/session'
 import { getAllSettings } from '@/lib/settings'
-
-export type TripCardData = {
-  trip: {
-    id: string
-    direction: string
-    measurementUnit: string
-    notify: boolean
-    edit: boolean
-    lastCheckedAt: Date | null
-    swapInProgress: boolean
-  }
-  options: Array<{
-    id: string
-    tripId: string
-    priority: number
-    eventUid: string
-    eventDate: string
-    eventDtstart: Date
-    stopBeforeAt: Date
-    lastCapacity: number | null
-    lastCapacityState: string | null
-    lastCapacityCheckedAt: Date | null
-  }>
-  ticket: Ticket | null
-}
+import type {
+  AdminDashboardData,
+  AdminTripRow,
+  AdminUserRow,
+  PraamidAuthStateView,
+  TripCardData,
+} from './query-options'
 
 export async function getMyTripCards(): Promise<TripCardData[]> {
   const session = await requireUser()
@@ -93,11 +75,6 @@ export async function getMyTripCards(): Promise<TripCardData[]> {
     })
 }
 
-export type PraamidAuthStateView = {
-  status: PraamidAuthStatus
-  lastError: string | null
-}
-
 export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
   const session = await requireUser()
   const [row] = await db
@@ -109,34 +86,6 @@ export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
     status: (row?.status as PraamidAuthStatus | undefined) ?? 'unauthenticated',
     lastError: row?.lastError ?? null,
   }
-}
-
-export type AdminUserRow = {
-  id: string
-  name: string
-  email: string
-  role: string
-  banned: boolean
-  createdAt: Date
-  subCount: number
-}
-
-export type AdminTripRow = {
-  id: string
-  userEmail: string
-  direction: string
-  measurementUnit: string
-  eventUid: string
-  eventDate: string
-  eventDtstart: Date
-  lastCapacity: number | null
-}
-
-export type AdminDashboardData = {
-  pollIntervalMs: number
-  editGloballyEnabled: boolean
-  users: AdminUserRow[]
-  trips: AdminTripRow[]
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {

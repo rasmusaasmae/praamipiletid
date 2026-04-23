@@ -1,17 +1,15 @@
+import { HydrationBoundary, dehydrate } from '@tanstack/react-query'
 import { eq } from 'drizzle-orm'
-import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
 import { userSettings } from '@/db/schema'
 import { requireUser } from '@/lib/session'
 import { getCredentialStatus } from '@/lib/praamid-credentials'
-import { getMyPraamidAuthState } from '@/lib/queries'
-import { SettingsForm } from '@/components/settings-form'
-import { PraamidAuthCard } from '@/components/praamid-auth-card'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getQueryClient } from '@/lib/get-query-client'
+import { praamidAuthStateQueryOptions } from '@/lib/query-options'
+import { Settings } from '@/components/settings'
 
 export default async function SettingsPage() {
   const session = await requireUser()
-  const t = await getTranslations('Settings')
   const [me] = await db
     .select({ ntfyTopic: userSettings.ntfyTopic })
     .from(userSettings)
@@ -20,17 +18,17 @@ export default async function SettingsPage() {
 
   const configured = Boolean(process.env.PRAAMID_CRED_KEY)
   const status = configured ? await getCredentialStatus(session.user.id) : null
-  const authState = configured
-    ? await getMyPraamidAuthState()
-    : { status: 'unauthenticated' as const, lastError: null }
+
+  const queryClient = getQueryClient()
+  if (configured) {
+    void queryClient.prefetchQuery(praamidAuthStateQueryOptions)
+  }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">{t('title')}</h1>
-
-      <PraamidAuthCard
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <Settings
         configured={configured}
-        authState={authState}
+        currentTopic={me?.ntfyTopic ?? ''}
         credentialMeta={
           status
             ? {
@@ -42,22 +40,6 @@ export default async function SettingsPage() {
             : null
         }
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('cardTitle')}</CardTitle>
-          <CardDescription>
-            {t('descriptionBefore')}{' '}
-            <a className="underline" href="https://ntfy.sh/app" target="_blank" rel="noreferrer">
-              {t('descriptionLink')}
-            </a>{' '}
-            {t('descriptionAfter')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SettingsForm currentTopic={me?.ntfyTopic ?? ''} />
-        </CardContent>
-      </Card>
-    </div>
+    </HydrationBoundary>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { AdminTripsTable } from '@/components/admin/admin-trips-table'
 import { AdminUsersTable } from '@/components/admin/admin-users-table'
@@ -7,10 +8,11 @@ import { PollIntervalForm } from '@/components/admin/poll-interval-form'
 import { EditEnabledForm } from '@/components/admin/edit-enabled-form'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import type { AdminDashboardData } from '@/lib/queries'
+import { adminDashboardQueryOptions } from '@/lib/query-options'
 
-export function AdminDashboard({ data }: { data: AdminDashboardData }) {
+export function Admin() {
   const t = useTranslations('Admin')
+  const { data } = useSuspenseQuery(adminDashboardQueryOptions)
 
   return (
     <div className="flex flex-col gap-6">

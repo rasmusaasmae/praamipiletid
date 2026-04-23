@@ -36,7 +36,7 @@ import {
   updateOption,
   updateTrip,
 } from '@/actions/trips'
-import type { TripCardData } from '@/lib/queries'
+import type { TripCardData } from '@/lib/query-options'
 
 function useNow(intervalMs: number) {
   const [now, setNow] = useState(() => Date.now())

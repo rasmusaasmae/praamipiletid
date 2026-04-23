@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useForm, useStore } from '@tanstack/react-form'
 import { toast } from 'sonner'
 import { useFormatter, useNow, useTranslations } from 'next-intl'
@@ -29,8 +30,8 @@ import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { forgetPraamidCredential } from '@/actions/praamid'
 import { isikukoodSchema } from '@/lib/schemas'
+import { praamidAuthStateQueryOptions } from '@/lib/query-options'
 import { cn } from '@/lib/utils'
-import type { PraamidAuthStateView } from '@/lib/queries'
 import type { PraamidAuthStatus } from '@/db/schema'
 
 export type PraamidCredentialMeta = {
@@ -38,12 +39,6 @@ export type PraamidCredentialMeta = {
   expiresAt: Date
   lastVerifiedAt: Date | null
   lastError: string | null
-}
-
-export type PraamidAuthCardProps = {
-  configured: boolean
-  credentialMeta: PraamidCredentialMeta | null
-  authState: PraamidAuthStateView
 }
 
 type Status = PraamidAuthStatus
@@ -55,37 +50,45 @@ const STEP_ORDER: Status[] = [
   'authenticated',
 ]
 
-export function PraamidAuthCard({ configured, credentialMeta, authState }: PraamidAuthCardProps) {
+export function PraamidAuthCard({
+  credentialMeta,
+}: {
+  credentialMeta: PraamidCredentialMeta | null
+}) {
   const tP = useTranslations('Praamid')
   const format = useFormatter()
   const now = useNow({ updateInterval: 60_000 })
   const router = useRouter()
-  const status = authState.status
 
-  // The login flow writes status transitions (loading →
-  // awaiting_confirmation → authenticated) from a background request.
-  // Re-run the RSC every second while the flow is active so the card
-  // observes the transitions without a realtime channel.
-  useEffect(() => {
-    if (status !== 'loading' && status !== 'awaiting_confirmation') return
-    const id = setInterval(() => router.refresh(), 1000)
-    return () => clearInterval(id)
-  }, [status, router])
+  // The login flow writes transitions (loading → awaiting_confirmation →
+  // authenticated) from a background request. Poll once per second while
+  // the flow is active so the card picks up each transition without a
+  // realtime channel.
+  const { data: authState } = useSuspenseQuery({
+    ...praamidAuthStateQueryOptions,
+    refetchInterval: (query) => {
+      const s = query.state.data?.status
+      return s === 'loading' || s === 'awaiting_confirmation' ? 1000 : false
+    },
+  })
+  const status = authState.status
 
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  // When the row transitions into 'authenticated': close the dialog on a
-  // short delay (so the user sees the success step). prevStatus must be
-  // updated *before* any early return to avoid re-entering this branch
-  // on subsequent renders.
+  // When the status transitions into 'authenticated': ask the RSC to
+  // re-fetch credentialMeta (which comes from the server-only credentials
+  // table, not the observable auth-state query), and close the dialog on
+  // a short delay so the user sees the success step.
   const prevStatus = useRef<Status>(status)
   useEffect(() => {
     const justAuthed = prevStatus.current !== 'authenticated' && status === 'authenticated'
     prevStatus.current = status
-    if (!justAuthed || !dialogOpen) return
+    if (!justAuthed) return
+    router.refresh()
+    if (!dialogOpen) return
     const t = setTimeout(() => setDialogOpen(false), 1200)
     return () => clearTimeout(t)
-  }, [status, dialogOpen])
+  }, [status, dialogOpen, router])
 
   const isAuthenticated = status === 'authenticated'
   const isActive = status === 'loading' || status === 'awaiting_confirmation'
@@ -124,9 +127,7 @@ export function PraamidAuthCard({ configured, credentialMeta, authState }: Praam
           </Tooltip>
         ) : null}
 
-        {!configured ? (
-          <p className="text-sm text-destructive">{tP('notConfigured')}</p>
-        ) : isAuthenticated ? null : (
+        {isAuthenticated ? null : (
           <Button type="button" onClick={() => setDialogOpen(true)} className="self-start">
             {isActive ? (
               <>
@@ -158,6 +159,7 @@ function StatusBadge({ status }: { status: Status }) {
 
 function ForgetButton() {
   const t = useTranslations('Praamid')
+  const queryClient = useQueryClient()
   const [isForgetting, startForget] = useTransition()
   return (
     <Tooltip>
@@ -173,8 +175,14 @@ function ForgetButton() {
               startForget(async () => {
                 if (!confirm(t('forgetConfirm'))) return
                 const res = await forgetPraamidCredential()
-                if (res.ok) toast.success(t('forgotten'))
-                else toast.error(res.error)
+                if (res.ok) {
+                  toast.success(t('forgotten'))
+                  queryClient.invalidateQueries({
+                    queryKey: praamidAuthStateQueryOptions.queryKey,
+                  })
+                } else {
+                  toast.error(res.error)
+                }
               })
             }
           >
@@ -197,7 +205,7 @@ function SigninDialog({
   status: Status
 }) {
   const tP = useTranslations('Praamid')
-  const router = useRouter()
+  const queryClient = useQueryClient()
 
   const [submitting, setSubmitting] = useState(false)
   useEffect(() => {
@@ -221,9 +229,11 @@ function SigninDialog({
         return
       }
       setSubmitting(true)
-      // Pull the first 'loading' status in immediately; after that the
-      // card's interval keeps polling every second.
-      router.refresh()
+      // Pull the first 'loading' status in immediately; refetchInterval
+      // takes over once the query sees an in-flight status.
+      queryClient.invalidateQueries({
+        queryKey: praamidAuthStateQueryOptions.queryKey,
+      })
     },
   })
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
@@ -251,7 +261,7 @@ function SigninDialog({
     } catch {
       // ignore
     }
-    router.refresh()
+    queryClient.invalidateQueries({ queryKey: praamidAuthStateQueryOptions.queryKey })
     onOpenChange(false)
   }
 
