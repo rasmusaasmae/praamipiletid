@@ -5,8 +5,17 @@ import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { TicketCard } from '@/components/ticket-card'
 import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
-import { Card, CardContent } from '@/components/ui/card'
-import { Link } from '@/i18n/navigation'
+import {
+  PraamidAuthCard,
+  type PraamidCredentialMeta,
+} from '@/components/praamid-auth-card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import type { LiveTicket } from '@/actions/tickets'
 import { refreshTickets } from '@/actions/tickets'
 import {
@@ -19,8 +28,13 @@ type Row =
   | { kind: 'subscribed'; bookingUid: string; eventDtstart: Date; data: TicketCardData }
   | { kind: 'live'; bookingUid: string; eventDtstart: Date; data: LiveTicket }
 
-export function Home() {
-  const tH = useTranslations('Home')
+export function Home({
+  configured,
+  credentialMeta,
+}: {
+  configured: boolean
+  credentialMeta: PraamidCredentialMeta | null
+}) {
   const tT = useTranslations('Tickets')
 
   const { data: cards } = useSuspenseQuery({
@@ -36,7 +50,7 @@ export function Home() {
     queryFn: () => refreshTickets(),
     staleTime: 60_000,
     retry: false,
-    enabled: isAuthed,
+    enabled: configured && isAuthed,
   })
 
   const rows = useMemo<Row[]>(() => {
@@ -60,6 +74,12 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-6">
+      {configured ? (
+        <PraamidAuthCard credentialMeta={credentialMeta} />
+      ) : (
+        <PraamidNotConfiguredCard />
+      )}
+
       <div>
         <h2 className="text-2xl font-semibold">{tT('title')}</h2>
         <p className="text-sm text-muted-foreground">{tT('description')}</p>
@@ -75,15 +95,6 @@ export function Home() {
             ),
           )}
         </div>
-      ) : !isAuthed ? (
-        <Card>
-          <CardContent className="flex flex-col gap-2 py-6 text-sm text-muted-foreground">
-            <p>{tH('connectPraamidDescription')}</p>
-            <Link href="/settings#praamid" className="underline hover:text-foreground">
-              {tH('connectPraamid')}
-            </Link>
-          </CardContent>
-        </Card>
       ) : (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
@@ -92,5 +103,20 @@ export function Home() {
         </Card>
       )}
     </div>
+  )
+}
+
+function PraamidNotConfiguredCard() {
+  const tP = useTranslations('Praamid')
+  return (
+    <Card id="praamid" className="scroll-mt-24">
+      <CardHeader>
+        <CardTitle>{tP('title')}</CardTitle>
+        <CardDescription>{tP('description')}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-destructive">{tP('notConfigured')}</p>
+      </CardContent>
+    </Card>
   )
 }

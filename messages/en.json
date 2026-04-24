@@ -2,7 +2,6 @@
   "NavBar": {
     "brand": "Ferry Tickets",
     "home": "Home",
-    "settings": "Settings",
     "admin": "Admin"
   },
   "Errors": {
@@ -90,9 +89,6 @@
     "secondsAgo": "{s}s ago",
     "minutesAgo": "{m}m ago",
     "hoursAgo": "{h}h ago"
-  },
-  "Settings": {
-    "title": "Settings"
   },
   "Praamid": {
     "title": "praamid.ee",

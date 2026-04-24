@@ -2,7 +2,6 @@
   "NavBar": {
     "brand": "Praamipiletid",
     "home": "Avaleht",
-    "settings": "Seaded",
     "admin": "Admin"
   },
   "Errors": {
@@ -90,9 +89,6 @@
     "secondsAgo": "{s}s tagasi",
     "minutesAgo": "{m}m tagasi",
     "hoursAgo": "{h}h tagasi"
-  },
-  "Settings": {
-    "title": "Seaded"
   },
   "Praamid": {
     "title": "praamid.ee",

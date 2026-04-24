@@ -16,19 +16,16 @@ export async function NavBar({ user }: Props) {
           <Link href="/" className="font-semibold">
             {t('brand')}
           </Link>
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground sm:gap-3">
-            <Link href="/" className="hover:text-foreground">
-              {t('home')}
-            </Link>
-            <Link href="/settings" className="hover:text-foreground">
-              {t('settings')}
-            </Link>
-            {isAdmin ? (
+          {isAdmin ? (
+            <nav className="flex items-center gap-2 text-sm text-muted-foreground sm:gap-3">
+              <Link href="/" className="hover:text-foreground">
+                {t('home')}
+              </Link>
               <Link href="/admin" className="hover:text-foreground">
                 {t('admin')}
               </Link>
-            ) : null}
-          </nav>
+            </nav>
+          ) : null}
         </div>
         <AvatarMenu user={{ email: user.email, image: user.image }} />
       </div>
