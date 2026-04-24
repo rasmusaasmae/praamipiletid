@@ -1,7 +1,7 @@
 import 'server-only'
-import { and, eq, gt, inArray } from 'drizzle-orm'
+import { and, eq, gt } from 'drizzle-orm'
 import { db } from '@/db'
-import { auditLogs, userSettings } from '@/db/schema'
+import { auditLogs } from '@/db/schema'
 import { listCredentialsNeedingReauth } from '@/lib/praamid-credentials'
 import { getNotifier } from '@/lib/notifier'
 import { logAudit } from '@/lib/audit'
@@ -36,26 +36,14 @@ async function tick() {
   if (upcoming.length === 0) return
   const now = Date.now()
 
-  const userIds = Array.from(new Set(upcoming.map((c) => c.userId)))
-  const userRows = await db
-    .select({ id: userSettings.userId, ntfyTopic: userSettings.ntfyTopic })
-    .from(userSettings)
-    .where(inArray(userSettings.userId, userIds))
-  const topicByUser = new Map(userRows.map((u) => [u.id, u.ntfyTopic]))
-
   for (const c of upcoming) {
-    const topic = topicByUser.get(c.userId)
-    if (!topic) continue
     if (await recentlyNotified(c.userId)) continue
-
     const hoursLeft = Math.max(0, Math.round((c.expiresAt.getTime() - now) / (60 * 60 * 1000)))
     try {
       await getNotifier().send({
         userId: c.userId,
-        userTopic: topic,
         title: 'praamid sessioon aegumas',
         message: `Sinu praamid.ee sessioon aegub ${hoursLeft}h pärast — salvesta uus.`,
-        tag: 'warning',
       })
       await logAudit({
         type: 'notification.credential_expiring',

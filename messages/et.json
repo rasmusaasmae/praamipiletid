@@ -16,11 +16,6 @@
     "credentialExpired": "praamid.ee sessioon on aegunud",
     "praamidError": "praamid.ee päring ebaõnnestus",
     "pollIntervalRange": "Väärtus peab olema 5000..600000 ms",
-    "topicInUse": "See teema on juba kasutusel",
-    "topicMin": "Vähemalt 4 tähemärki",
-    "topicMax": "Kuni 64 tähemärki",
-    "topicPattern": "Ainult tähed, numbrid, _ ja -",
-    "topicInvalid": "Vigane teema",
     "isikukoodInvalid": "Isikukood peab olema täpselt 11 numbrit"
   },
   "Home": {
@@ -98,16 +93,8 @@
   },
   "Settings": {
     "title": "Seaded",
-    "cardTitle": "ntfy",
-    "descriptionBefore": "Seadista oma ntfy teema. Laadi alla",
-    "descriptionLink": "ntfy app",
-    "descriptionAfter": "ja telli teavitused alloleva URL-i kaudu.",
-    "topicLabel": "Teema",
-    "save": "Salvesta",
-    "saving": "Salvestan…",
-    "saved": "Salvestatud",
-    "copy": "Kopeeri",
-    "copied": "Kopeeritud"
+    "notificationsTitle": "Teavitused",
+    "notificationsDescription": "Piletite uuendused saadetakse sellele e-posti aadressile."
   },
   "Praamid": {
     "title": "praamid.ee",

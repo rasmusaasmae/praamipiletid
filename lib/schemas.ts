@@ -43,9 +43,3 @@ export const pollIntervalSchema = z.coerce
   .max(pollIntervalRange.max)
 
 export const userRoleSchema = z.enum(['user', 'admin'])
-
-export const ntfyTopicSchema = z
-  .string()
-  .min(4, 'topicMin')
-  .max(64, 'topicMax')
-  .regex(/^[A-Za-z0-9_-]+$/, 'topicPattern')

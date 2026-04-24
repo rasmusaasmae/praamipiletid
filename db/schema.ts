@@ -38,7 +38,6 @@ export const userSettings = pgTable(
     userId: text('user_id')
       .primaryKey()
       .references(() => user.id, { onDelete: 'cascade' }),
-    ntfyTopic: text('ntfy_topic').notNull().unique(),
     locale: text('locale').default(DEFAULT_LOCALE).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })

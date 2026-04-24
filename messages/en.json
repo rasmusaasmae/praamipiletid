@@ -16,11 +16,6 @@
     "credentialExpired": "praamid.ee session expired",
     "praamidError": "praamid.ee request failed",
     "pollIntervalRange": "Value must be 5000..600000 ms",
-    "topicInUse": "This topic is already in use",
-    "topicMin": "At least 4 characters",
-    "topicMax": "At most 64 characters",
-    "topicPattern": "Only letters, numbers, _ and -",
-    "topicInvalid": "Invalid topic",
     "isikukoodInvalid": "ID code must be exactly 11 digits"
   },
   "Home": {
@@ -98,16 +93,8 @@
   },
   "Settings": {
     "title": "Settings",
-    "cardTitle": "ntfy",
-    "descriptionBefore": "Configure your ntfy topic. Download the",
-    "descriptionLink": "ntfy app",
-    "descriptionAfter": "and subscribe using the URL below.",
-    "topicLabel": "Topic",
-    "save": "Save",
-    "saving": "Saving…",
-    "saved": "Saved",
-    "copy": "Copy",
-    "copied": "Copied"
+    "notificationsTitle": "Notifications",
+    "notificationsDescription": "Ticket updates are sent to this email address."
   },
   "Praamid": {
     "title": "praamid.ee",

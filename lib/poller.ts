@@ -1,7 +1,7 @@
 import 'server-only'
-import { and, eq, gt, inArray } from 'drizzle-orm'
+import { and, eq, gt } from 'drizzle-orm'
 import { db } from '@/db'
-import { ticketOptions, tickets, userSettings } from '@/db/schema'
+import { ticketOptions, tickets } from '@/db/schema'
 import { listEvents, type PraamidEvent } from '@/lib/praamid'
 import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
@@ -113,19 +113,6 @@ async function tick() {
 
   if (openedRowsByBooking.size === 0) return
 
-  const userIds = Array.from(
-    new Set(
-      Array.from(openedRowsByBooking.values())
-        .flat()
-        .map((r) => r.userId),
-    ),
-  )
-  const users = await db
-    .select({ id: userSettings.userId, ntfyTopic: userSettings.ntfyTopic })
-    .from(userSettings)
-    .where(inArray(userSettings.userId, userIds))
-  const topicByUser = new Map(users.map((u) => [u.id, u.ntfyTopic]))
-
   for (const [bookingUid, openedRows] of openedRowsByBooking) {
     const userId = openedRows[0]!.userId
     const openedEventUids = new Set(openedRows.map((r) => r.eventUid))
@@ -148,25 +135,20 @@ async function tick() {
         eventsByUid,
       })
       if (outcome.kind === 'succeeded') {
-        const topic = topicByUser.get(userId)
-        if (topic) {
-          try {
-            await getNotifier().send({
-              userId,
-              userTopic: topic,
-              title: 'Pilet uuendatud',
-              message: `Uus pilet ${outcome.newTicketNumber} (arve ${outcome.invoiceNumber})`,
-              tag: 'ferry',
-            })
-          } catch (err) {
-            log.error(
-              {
-                bookingUid,
-                err: err instanceof Error ? err.message : String(err),
-              },
-              'swap notify failed',
-            )
-          }
+        try {
+          await getNotifier().send({
+            userId,
+            title: 'Pilet uuendatud',
+            message: `Uus pilet ${outcome.newTicketNumber} (arve ${outcome.invoiceNumber})`,
+          })
+        } catch (err) {
+          log.error(
+            {
+              bookingUid,
+              err: err instanceof Error ? err.message : String(err),
+            },
+            'swap notify failed',
+          )
         }
       }
     } catch (err) {

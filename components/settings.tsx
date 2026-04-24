@@ -2,16 +2,15 @@
 
 import { useTranslations } from 'next-intl'
 import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth-card'
-import { SettingsForm } from '@/components/settings-form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export type SettingsProps = {
   configured: boolean
   credentialMeta: PraamidCredentialMeta | null
-  currentTopic: string
+  notifyEmail: string
 }
 
-export function Settings({ configured, credentialMeta, currentTopic }: SettingsProps) {
+export function Settings({ configured, credentialMeta, notifyEmail }: SettingsProps) {
   const t = useTranslations('Settings')
 
   return (
@@ -26,17 +25,11 @@ export function Settings({ configured, credentialMeta, currentTopic }: SettingsP
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('cardTitle')}</CardTitle>
-          <CardDescription>
-            {t('descriptionBefore')}{' '}
-            <a className="underline" href="https://ntfy.sh/app" target="_blank" rel="noreferrer">
-              {t('descriptionLink')}
-            </a>{' '}
-            {t('descriptionAfter')}
-          </CardDescription>
+          <CardTitle>{t('notificationsTitle')}</CardTitle>
+          <CardDescription>{t('notificationsDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <SettingsForm currentTopic={currentTopic} />
+          <p className="text-sm font-mono">{notifyEmail}</p>
         </CardContent>
       </Card>
     </div>

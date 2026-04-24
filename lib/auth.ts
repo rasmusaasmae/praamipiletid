@@ -1,7 +1,6 @@
 import "server-only";
 import { db } from "@/db";
 import { userSettings } from "@/db/schema";
-import { generateNtfyTopic } from "@/lib/ntfy-topic";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins";
@@ -25,10 +24,7 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (created) => {
-          await db.insert(userSettings).values({
-            userId: created.id,
-            ntfyTopic: generateNtfyTopic(),
-          });
+          await db.insert(userSettings).values({ userId: created.id });
         },
       },
     },
