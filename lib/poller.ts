@@ -4,7 +4,6 @@ import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { listEvents, type PraamidEvent } from '@/lib/praamid'
 import { sendEmail } from '@/lib/email'
-import { logAudit } from '@/lib/audit'
 import { processSwapFor } from '@/lib/edit'
 import { logger } from '@/lib/logger'
 
@@ -44,11 +43,6 @@ async function loadBatchEvents(
       { dir, date, err: err instanceof Error ? err.message : String(err) },
       'listEvents failed',
     )
-    await logAudit({
-      type: 'system.poller_tick_error',
-      actor: 'system',
-      payload: { error: err instanceof Error ? err.message : String(err) },
-    })
     return null
   }
 }
@@ -124,12 +118,7 @@ async function tick() {
       .update(tickets)
       .set({ swapInProgress: true })
       .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
-    await logAudit({
-      type: 'swap.started',
-      actor: 'system',
-      userId,
-      payload: { bookingUid },
-    })
+    log.info({ bookingUid, userId }, 'swap started')
     try {
       const outcome = await processSwapFor({
         userId,
@@ -167,12 +156,7 @@ async function tick() {
         .update(tickets)
         .set({ swapInProgress: false })
         .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
-      await logAudit({
-        type: 'swap.finished',
-        actor: 'system',
-        userId,
-        payload: { bookingUid },
-      })
+      log.info({ bookingUid, userId }, 'swap finished')
     }
   }
 }
@@ -200,16 +184,8 @@ async function recoverStuckSwaps() {
     .set({ swapInProgress: false })
     .where(eq(tickets.swapInProgress, true))
     .returning({ userId: tickets.userId, bookingUid: tickets.bookingUid })
-  for (const row of stuck) {
-    await logAudit({
-      type: 'swap.recovered',
-      actor: 'system',
-      userId: row.userId,
-      payload: { bookingUid: row.bookingUid, reason: 'worker_boot' },
-    })
-  }
   if (stuck.length > 0) {
-    log.warn({ count: stuck.length }, 'cleared stuck swap_in_progress')
+    log.warn({ count: stuck.length, rows: stuck }, 'cleared stuck swap_in_progress on worker boot')
   }
 }
 

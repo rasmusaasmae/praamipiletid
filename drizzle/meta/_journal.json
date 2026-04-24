@@ -29,6 +29,13 @@
       "when": 1777071529255,
       "tag": "0003_drop_settings_table",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777072015724,
+      "tag": "0004_drop_admin_and_audit",
+      "breakpoints": true
     }
   ]
 }

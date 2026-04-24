@@ -93,22 +93,6 @@ export const ticketOptions = pgTable(
   ],
 )
 
-export const auditLogs = pgTable(
-  'audit_logs',
-  {
-    id: text('id').primaryKey(),
-    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
-    actor: text('actor').notNull(),
-    type: text('type').notNull(),
-    payload: text('payload'),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
-  },
-  (table) => [
-    index('audit_logs_user_created_idx').on(table.userId, table.createdAt),
-    index('audit_logs_type_idx').on(table.type),
-  ],
-)
-
 export const praamidCredentials = pgTable(
   'praamid_credentials',
   {
@@ -152,8 +136,6 @@ export type Ticket = typeof tickets.$inferSelect
 export type NewTicket = typeof tickets.$inferInsert
 export type TicketOption = typeof ticketOptions.$inferSelect
 export type NewTicketOption = typeof ticketOptions.$inferInsert
-export type AuditLog = typeof auditLogs.$inferSelect
-export type NewAuditLog = typeof auditLogs.$inferInsert
 export type PraamidAuthState = typeof praamidAuthState.$inferSelect
 export type NewPraamidAuthState = typeof praamidAuthState.$inferInsert
 

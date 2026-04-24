@@ -9,7 +9,6 @@ import { ticketOptions, tickets } from '@/db/schema'
 import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid-credentials'
 import { listTickets, PraamidAuthError, type Ticket as PraamidTicket } from '@/lib/praamid-authed'
 import { listEvents } from '@/lib/praamid'
-import { logAudit } from '@/lib/audit'
 import {
   optionAddSchema,
   optionMoveSchema,
@@ -135,16 +134,6 @@ export async function subscribeTicket(dto: z.input<typeof subscribeTicketSchema>
       },
     })
 
-  await logAudit({
-    type: 'ticket.subscribed',
-    actor: 'user',
-    userId: session.user.id,
-    payload: {
-      bookingUid: raw.bookingUid,
-      ticketCode: raw.ticketCode,
-      eventUid: raw.event.uid,
-    },
-  })
   log.info(
     { userId: session.user.id, bookingUid: raw.bookingUid, ticketCode: raw.ticketCode },
     'ticket subscribed',
@@ -172,16 +161,6 @@ export async function unsubscribeTicket(
     .delete(tickets)
     .where(and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)))
 
-  await logAudit({
-    type: 'ticket.unsubscribed',
-    actor: 'user',
-    userId: session.user.id,
-    payload: {
-      bookingUid: parsed.data.bookingUid,
-      ticketCode: existing.ticketCode,
-      reason: 'user',
-    },
-  })
   log.info({ userId: session.user.id, bookingUid: parsed.data.bookingUid }, 'ticket unsubscribed')
 
   revalidatePath('/')
@@ -241,16 +220,6 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
     stopBeforeMinutes,
   })
 
-  await logAudit({
-    type: 'option.added',
-    actor: 'user',
-    userId: session.user.id,
-    payload: {
-      bookingUid: ticket.bookingUid,
-      eventUid: parsed.data.eventUid,
-      priority: nextPriority,
-    },
-  })
   log.info(
     {
       bookingUid: ticket.bookingUid,
@@ -285,16 +254,6 @@ export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Pro
     .set({ stopBeforeMinutes: parsed.data.stopBeforeMinutes })
     .where(eq(ticketOptions.id, parsed.data.id))
 
-  await logAudit({
-    type: 'option.updated',
-    actor: 'user',
-    userId: session.user.id,
-    payload: {
-      bookingUid: owned.bookingUid,
-      eventUid: owned.eventUid,
-      stopBeforeMinutes: parsed.data.stopBeforeMinutes,
-    },
-  })
   log.info(
     {
       optionId: parsed.data.id,
@@ -328,16 +287,6 @@ export async function removeOption(dto: z.input<typeof RemoveOptionDto>): Promis
 
   await db.delete(ticketOptions).where(eq(ticketOptions.id, parsed.data.id))
 
-  await logAudit({
-    type: 'option.removed',
-    actor: 'user',
-    userId: session.user.id,
-    payload: {
-      bookingUid: existing.bookingUid,
-      eventUid: existing.eventUid,
-      priority: existing.priority,
-    },
-  })
   log.info(
     {
       optionId: parsed.data.id,
@@ -406,17 +355,6 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
       .where(eq(ticketOptions.id, current.id))
   })
 
-  await logAudit({
-    type: 'option.reordered',
-    actor: 'user',
-    userId: session.user.id,
-    payload: {
-      bookingUid: current.bookingUid,
-      from: current.priority,
-      to: neighbor.priority,
-      eventUid: current.eventUid,
-    },
-  })
   log.info(
     {
       optionId: current.id,

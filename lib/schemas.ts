@@ -29,5 +29,3 @@ export const optionMoveSchema = z.object({
   id: z.string().min(1),
   direction: z.enum(['up', 'down']),
 })
-
-export const userRoleSchema = z.enum(['user', 'admin'])

@@ -3,7 +3,6 @@ import { db } from '@/db'
 import { userSettings } from '@/db/schema'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin } from 'better-auth/plugins'
 
 const appUrl = process.env.APP_URL
 if (!appUrl) throw new Error('APP_URL is not set')
@@ -19,7 +18,6 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
     },
   },
-  plugins: [admin()],
   databaseHooks: {
     user: {
       create: {

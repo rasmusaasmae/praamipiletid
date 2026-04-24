@@ -12,7 +12,6 @@ import {
 } from '@/lib/praamid-authed'
 import { type PraamidEvent } from '@/lib/praamid'
 import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid-credentials'
-import { logAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'edit' })
@@ -156,40 +155,13 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     'attempting',
   )
   lastAttemptAt.set(bookingUid, Date.now())
-  await logAudit({
-    type: 'edit.attempted',
-    actor: 'system',
-    userId,
-    payload: {
-      bookingUid,
-      fromEventUid: ticket.eventUid,
-      toEventUid: target.eventUid,
-      toPriority: target.priority,
-      ticketCode: ticket.ticketCode,
-      targetEventDtstart: target.eventDtstart.getTime(),
-    },
-  })
 
-  const fail = async (
+  const fail = (
     stage: FailStage,
     reason: string,
-    httpStatus?: number,
-    errorMessage?: string,
-  ): Promise<SwapOutcome> => {
-    await logAudit({
-      type: 'edit.failed',
-      actor: 'system',
-      userId,
-      payload: {
-        bookingUid,
-        stage,
-        reason,
-        ...(httpStatus !== undefined ? { httpStatus } : {}),
-        ...(errorMessage ? { errorMessage } : {}),
-      },
-    })
-    return { kind: 'failed', stage, reason }
-  }
+    _httpStatus?: number,
+    _errorMessage?: string,
+  ): SwapOutcome => ({ kind: 'failed', stage, reason })
 
   let booking
   try {
@@ -210,25 +182,9 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
 
   const oldTicket = booking.tickets.find((t) => t.ticketCode === ticket.ticketCode)
   if (!oldTicket) {
-    await logAudit({
-      type: 'edit.failed',
-      actor: 'system',
-      userId,
-      payload: { bookingUid, stage: 'idempotency', reason: 'ticket_missing' },
-    })
     return { kind: 'idempotency_paused', reason: 'ticket_missing' }
   }
   if (oldTicket.status.code !== 'ACTIVE') {
-    await logAudit({
-      type: 'edit.failed',
-      actor: 'system',
-      userId,
-      payload: {
-        bookingUid,
-        stage: 'idempotency',
-        reason: `ticket_status_${oldTicket.status.code}`,
-      },
-    })
     return { kind: 'idempotency_paused', reason: `ticket_status_${oldTicket.status.code}` }
   }
 
@@ -248,44 +204,20 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   let balance
   try {
     balance = await getBookingBalance(credential.token, bookingUid)
-  } catch (err) {
+  } catch {
     await tryRollback(credential.token, ticket.ticketCode, oldTicket)
-    await logAudit({
-      type: 'edit.rolled_back',
-      actor: 'system',
-      userId,
-      payload: {
-        bookingUid,
-        reason: err instanceof Error ? `balance_${err.message}` : 'balance_failed',
-      },
-    })
     return { kind: 'rolled_back', reason: 'balance_failed' }
   }
   if (balance.unpaidAmount > 0) {
     await tryRollback(credential.token, ticket.ticketCode, oldTicket)
-    await logAudit({
-      type: 'edit.rolled_back',
-      actor: 'system',
-      userId,
-      payload: { bookingUid, reason: `unpaid_${balance.unpaidAmount}` },
-    })
     return { kind: 'rolled_back', reason: `unpaid_${balance.unpaidAmount}` }
   }
 
   let commitResult
   try {
     commitResult = await commitZeroSum(credential.token, bookingUid)
-  } catch (err) {
+  } catch {
     await tryRollback(credential.token, ticket.ticketCode, oldTicket)
-    await logAudit({
-      type: 'edit.rolled_back',
-      actor: 'system',
-      userId,
-      payload: {
-        bookingUid,
-        reason: err instanceof Error ? `commit_${err.message}` : 'commit_failed',
-      },
-    })
     return { kind: 'rolled_back', reason: 'commit_failed' }
   }
 
@@ -328,24 +260,6 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
 
   lastAttemptAt.delete(bookingUid)
-
-  await logAudit({
-    type: 'edit.succeeded',
-    actor: 'system',
-    userId,
-    payload: {
-      bookingUid,
-      ...(bookingUidChanged
-        ? { bookingUidChanged: true, newBookingUid: newTicket.bookingUid }
-        : {}),
-      newTicketCode: newTicket.ticketCode,
-      newTicketNumber: newTicket.ticketNumber,
-      newInvoiceNumber: commitResult.invoiceNumber,
-      fromEventUid: ticket.eventUid,
-      toEventUid: newTicket.event.uid,
-      toPriority: target.priority,
-    },
-  })
 
   return {
     kind: 'succeeded',

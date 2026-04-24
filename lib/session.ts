@@ -13,9 +13,3 @@ export async function requireUser() {
   if (!session) redirect('/sign-in')
   return session
 }
-
-export async function requireAdmin() {
-  const session = await requireUser()
-  if (session.user.role !== 'admin') redirect('/')
-  return session
-}

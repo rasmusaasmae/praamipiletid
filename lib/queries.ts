@@ -2,15 +2,9 @@
 
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { praamidAuthState, ticketOptions, tickets, user, type PraamidAuthStatus } from '@/db/schema'
-import { requireAdmin, requireUser } from '@/lib/session'
-import type {
-  AdminDashboardData,
-  AdminTicketRow,
-  AdminUserRow,
-  PraamidAuthStateView,
-  TicketCardData,
-} from './query-options'
+import { praamidAuthState, ticketOptions, tickets, type PraamidAuthStatus } from '@/db/schema'
+import { requireUser } from '@/lib/session'
+import type { PraamidAuthStateView, TicketCardData } from './query-options'
 
 export async function getMyTicketCards(): Promise<TicketCardData[]> {
   const session = await requireUser()
@@ -72,58 +66,5 @@ export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
   return {
     status: (row?.status as PraamidAuthStatus | undefined) ?? 'unauthenticated',
     lastError: row?.lastError ?? null,
-  }
-}
-
-export async function getAdminDashboard(): Promise<AdminDashboardData> {
-  await requireAdmin()
-
-  const [users, allTickets, allOptions] = await Promise.all([
-    db.select().from(user),
-    db.select().from(tickets),
-    db.select().from(ticketOptions),
-  ])
-
-  const ticketCountByUser = new Map<string, number>()
-  for (const t of allTickets) {
-    ticketCountByUser.set(t.userId, (ticketCountByUser.get(t.userId) ?? 0) + 1)
-  }
-
-  const userRows: AdminUserRow[] = [...users]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .map((u) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role ?? 'user',
-      banned: u.banned ?? false,
-      createdAt: u.createdAt,
-      subCount: ticketCountByUser.get(u.id) ?? 0,
-    }))
-
-  const emailById = new Map(users.map((u) => [u.id, u.email]))
-
-  const optionsByBooking = new Map<string, number>()
-  for (const o of allOptions) {
-    optionsByBooking.set(o.bookingUid, (optionsByBooking.get(o.bookingUid) ?? 0) + 1)
-  }
-
-  const ticketRows: AdminTicketRow[] = allTickets
-    .map<AdminTicketRow>((t) => ({
-      userId: t.userId,
-      userEmail: emailById.get(t.userId) ?? '—',
-      bookingUid: t.bookingUid,
-      ticketCode: t.ticketCode,
-      direction: t.direction,
-      measurementUnit: t.measurementUnit,
-      eventUid: t.eventUid,
-      eventDtstart: t.eventDtstart,
-      optionsCount: optionsByBooking.get(t.bookingUid) ?? 0,
-    }))
-    .sort((a, b) => b.eventDtstart.getTime() - a.eventDtstart.getTime())
-
-  return {
-    users: userRows,
-    tickets: ticketRows,
   }
 }
