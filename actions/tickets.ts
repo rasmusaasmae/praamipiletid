@@ -6,10 +6,17 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
-import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
+import {
+  forgetCredential,
+  getCredential,
+  invalidateCredential,
+  markVerified,
+} from '@/lib/praamid/credentials'
 import { listEvents, listTickets, PraamidAuthError } from '@/lib/praamid/api'
+import { cancelLogin, startLogin } from '@/lib/praamid/login'
 import type { Ticket as PraamidTicket } from '@/lib/praamid/types'
 import {
+  isikukoodSchema,
   optionAddSchema,
   optionMoveSchema,
   optionUpdateSchema,
@@ -367,4 +374,30 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
   )
 
   revalidatePath('/')
+}
+
+// Praamid auth flow actions ------------------------------------------------
+
+export async function forgetPraamidCredential(): Promise<void> {
+  const session = await requireUser()
+  try {
+    await forgetCredential(session.user.id)
+    revalidatePath('/')
+  } catch {
+    throw new Error('Invalid data')
+  }
+}
+
+const StartPraamidLoginDto = z.object({ isikukood: isikukoodSchema })
+
+export async function startPraamidLogin(dto: z.input<typeof StartPraamidLoginDto>): Promise<void> {
+  const session = await requireUser()
+  const parsed = StartPraamidLoginDto.safeParse(dto)
+  if (!parsed.success) throw new Error('invalid_isikukood')
+  await startLogin(session.user.id, parsed.data.isikukood)
+}
+
+export async function cancelPraamidLogin(): Promise<void> {
+  const session = await requireUser()
+  await cancelLogin(session.user.id)
 }
