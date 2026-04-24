@@ -1,12 +1,12 @@
 import 'server-only'
-import { eq, gt, inArray } from 'drizzle-orm'
+import { and, eq, gt, inArray } from 'drizzle-orm'
 import { db } from '@/db'
-import { tickets, tripOptions, trips, userSettings } from '@/db/schema'
-import { CAPACITY_LABELS, listEvents, type PraamidEvent } from '@/lib/praamid'
+import { ticketOptions, tickets, userSettings } from '@/db/schema'
+import { listEvents, type PraamidEvent } from '@/lib/praamid'
 import { getNotifier } from '@/lib/notifier'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
-import { processEditForTrip } from '@/lib/edit'
+import { processSwapFor } from '@/lib/edit'
 import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'poller' })
@@ -15,46 +15,28 @@ let running = false
 
 type JoinedOption = {
   optionId: string
-  tripId: string
+  bookingUid: string
   userId: string
   direction: string
   measurementUnit: string
-  notify: boolean
-  edit: boolean
-  stopBeforeAt: Date
   priority: number
   eventUid: string
   eventDate: string
   eventDtstart: Date
-  lastCapacity: number | null
-  lastCapacityState: string | null
-  currentTicketEventUid: string | null
+  stopBeforeMinutes: number
+  currentTicketEventUid: string
 }
 
-function formatTime(date: Date) {
-  const h = date.getHours().toString().padStart(2, '0')
-  const m = date.getMinutes().toString().padStart(2, '0')
-  return `${h}:${m}`
-}
-
-async function processBatch(
+async function loadBatchEvents(
   dir: string,
   date: string,
-  rows: JoinedOption[],
-  topicByUser: Map<string, string | null>,
   timeShift: number,
-  checkedAt: Date,
-) {
-  let events: PraamidEvent[]
+): Promise<PraamidEvent[] | null> {
   try {
-    events = await listEvents(dir, date, timeShift)
+    return await listEvents(dir, date, timeShift)
   } catch (err) {
     log.error(
-      {
-        dir,
-        date,
-        err: err instanceof Error ? err.message : String(err),
-      },
+      { dir, date, err: err instanceof Error ? err.message : String(err) },
       'listEvents failed',
     )
     await logAudit({
@@ -62,89 +44,7 @@ async function processBatch(
       actor: 'system',
       payload: { error: err instanceof Error ? err.message : String(err) },
     })
-    return
-  }
-  log.debug({ dir, date, rows: rows.length, events: events.length }, 'processBatch')
-
-  const eventByUid = new Map(events.map((e) => [e.uid, e]))
-
-  for (const row of rows) {
-    const event = eventByUid.get(row.eventUid)
-    if (!event) continue
-    const capacity = event.capacities?.[row.measurementUnit] ?? 0
-    const nextState: 'above' | 'below' = capacity >= 1 ? 'above' : 'below'
-    const prevState = row.lastCapacityState as 'above' | 'below' | null
-
-    const transition: 'opened' | 'closed' | null =
-      nextState === 'above' && prevState !== 'above'
-        ? 'opened'
-        : nextState === 'below' && prevState === 'above'
-          ? 'closed'
-          : null
-    const isCurrentTicket = row.currentTicketEventUid === row.eventUid
-
-    if (transition && row.notify && !isCurrentTicket) {
-      const topic = topicByUser.get(row.userId)
-      if (!topic) {
-        log.warn({ userId: row.userId, optionId: row.optionId }, 'no ntfy topic, skipping notify')
-      } else {
-        const label = CAPACITY_LABELS[row.measurementUnit]?.et ?? row.measurementUnit
-        const title = `${dir} ${date} ${formatTime(row.eventDtstart)}`
-        const msg =
-          transition === 'opened'
-            ? `${label}: ${capacity} kohta vaba`
-            : `${label}: kinni`
-        try {
-          await getNotifier().send({
-            userId: row.userId,
-            userTopic: topic,
-            title,
-            message: msg,
-            tag: 'ferry',
-          })
-          log.info(
-            {
-              userId: row.userId,
-              tripId: row.tripId,
-              transition,
-              capacity,
-              priority: row.priority,
-            },
-            'notified',
-          )
-          await logAudit({
-            type: 'notification.availability_changed',
-            actor: 'system',
-            userId: row.userId,
-            tripId: row.tripId,
-            payload: {
-              eventUid: row.eventUid,
-              from: prevState,
-              to: nextState,
-              capacity,
-              priority: row.priority,
-            },
-          })
-        } catch (err) {
-          log.error(
-            {
-              optionId: row.optionId,
-              err: err instanceof Error ? err.message : String(err),
-            },
-            'notify failed',
-          )
-        }
-      }
-    }
-
-    await db
-      .update(tripOptions)
-      .set({
-        lastCapacity: capacity,
-        lastCapacityState: nextState,
-        lastCapacityCheckedAt: checkedAt,
-      })
-      .where(eq(tripOptions.id, row.optionId))
+    return null
   }
 }
 
@@ -152,38 +52,35 @@ async function tick() {
   const now = new Date()
   const rows = await db
     .select({
-      optionId: tripOptions.id,
-      tripId: trips.id,
-      userId: trips.userId,
-      direction: trips.direction,
-      measurementUnit: trips.measurementUnit,
-      notify: trips.notify,
-      edit: trips.edit,
-      stopBeforeAt: tripOptions.stopBeforeAt,
-      priority: tripOptions.priority,
-      eventUid: tripOptions.eventUid,
-      eventDate: tripOptions.eventDate,
-      eventDtstart: tripOptions.eventDtstart,
-      lastCapacity: tripOptions.lastCapacity,
-      lastCapacityState: tripOptions.lastCapacityState,
+      optionId: ticketOptions.id,
+      bookingUid: ticketOptions.bookingUid,
+      userId: ticketOptions.userId,
+      direction: tickets.direction,
+      measurementUnit: tickets.measurementUnit,
+      priority: ticketOptions.priority,
+      eventUid: ticketOptions.eventUid,
+      eventDate: ticketOptions.eventDate,
+      eventDtstart: ticketOptions.eventDtstart,
+      stopBeforeMinutes: ticketOptions.stopBeforeMinutes,
       currentTicketEventUid: tickets.eventUid,
     })
-    .from(trips)
-    .innerJoin(tripOptions, eq(tripOptions.tripId, trips.id))
-    .leftJoin(tickets, eq(tickets.tripId, trips.id))
-    .where(gt(tripOptions.eventDtstart, now))
+    .from(ticketOptions)
+    .innerJoin(
+      tickets,
+      and(
+        eq(tickets.userId, ticketOptions.userId),
+        eq(tickets.bookingUid, ticketOptions.bookingUid),
+      ),
+    )
+    .where(gt(ticketOptions.eventDtstart, now))
 
-  const due = rows.filter((r) => r.stopBeforeAt.getTime() > now.getTime())
+  const due: JoinedOption[] = rows.filter(
+    (r) => r.eventDtstart.getTime() - r.stopBeforeMinutes * 60_000 > now.getTime(),
+  )
   if (due.length === 0) return
 
-  const userIds = Array.from(new Set(due.map((r) => r.userId)))
-  const users = await db
-    .select({ id: userSettings.userId, ntfyTopic: userSettings.ntfyTopic })
-    .from(userSettings)
-    .where(inArray(userSettings.userId, userIds))
-  const topicByUser = new Map(users.map((u) => [u.id, u.ntfyTopic]))
-
   const { pollTimeShift } = await getAllSettings()
+
   const batches = new Map<string, JoinedOption[]>()
   for (const r of due) {
     const key = `${r.direction}|${r.eventDate}`
@@ -192,48 +89,70 @@ async function tick() {
     batches.set(key, list)
   }
 
-  const checkedAt = new Date()
+  const eventsByUid = new Map<string, PraamidEvent>()
+  const openedRowsByBooking = new Map<string, JoinedOption[]>()
+
   for (const [key, batch] of batches) {
     const [dir, date] = key.split('|') as [string, string]
-    await processBatch(dir, date, batch, topicByUser, pollTimeShift, checkedAt)
+    const events = await loadBatchEvents(dir, date, pollTimeShift)
+    if (!events) continue
+    for (const e of events) eventsByUid.set(e.uid, e)
+    const batchEventByUid = new Map(events.map((e) => [e.uid, e]))
+
+    for (const row of batch) {
+      const event = batchEventByUid.get(row.eventUid)
+      if (!event) continue
+      if (row.eventUid === row.currentTicketEventUid) continue
+      const capacity = event.capacities?.[row.measurementUnit] ?? 0
+      if (capacity < 1) continue
+      const list = openedRowsByBooking.get(row.bookingUid) ?? []
+      list.push(row)
+      openedRowsByBooking.set(row.bookingUid, list)
+    }
   }
 
-  const processedTripIds = Array.from(new Set(due.map((r) => r.tripId)))
-  if (processedTripIds.length > 0) {
+  if (openedRowsByBooking.size === 0) return
+
+  const userIds = Array.from(
+    new Set(
+      Array.from(openedRowsByBooking.values())
+        .flat()
+        .map((r) => r.userId),
+    ),
+  )
+  const users = await db
+    .select({ id: userSettings.userId, ntfyTopic: userSettings.ntfyTopic })
+    .from(userSettings)
+    .where(inArray(userSettings.userId, userIds))
+  const topicByUser = new Map(users.map((u) => [u.id, u.ntfyTopic]))
+
+  for (const [bookingUid, openedRows] of openedRowsByBooking) {
+    const userId = openedRows[0]!.userId
+    const openedEventUids = new Set(openedRows.map((r) => r.eventUid))
+
     await db
-      .update(trips)
-      .set({ lastCheckedAt: checkedAt })
-      .where(inArray(trips.id, processedTripIds))
-  }
-
-  const editTripIds = new Set<string>()
-  const userByTrip = new Map<string, string>()
-  for (const r of due) {
-    if (!r.edit) continue
-    if (r.currentTicketEventUid === r.eventUid) continue
-    if (r.lastCapacityState !== 'above') continue
-    if ((r.lastCapacity ?? 0) < 1) continue
-    editTripIds.add(r.tripId)
-    userByTrip.set(r.tripId, r.userId)
-  }
-  for (const tripId of editTripIds) {
-    const userId = userByTrip.get(tripId)
-    await db.update(trips).set({ swapInProgress: true }).where(eq(trips.id, tripId))
+      .update(tickets)
+      .set({ swapInProgress: true })
+      .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
     await logAudit({
       type: 'swap.started',
       actor: 'system',
-      userId: userId ?? null,
-      tripId,
-      payload: {},
+      userId,
+      payload: { bookingUid },
     })
     try {
-      const outcome = await processEditForTrip(tripId)
+      const outcome = await processSwapFor({
+        userId,
+        bookingUid,
+        openedEventUids,
+        eventsByUid,
+      })
       if (outcome.kind === 'succeeded') {
-        const topic = userId ? topicByUser.get(userId) : null
+        const topic = topicByUser.get(userId)
         if (topic) {
           try {
             await getNotifier().send({
-              userId: userId!,
+              userId,
               userTopic: topic,
               title: 'Pilet uuendatud',
               message: `Uus pilet ${outcome.newTicketNumber} (arve ${outcome.invoiceNumber})`,
@@ -242,10 +161,10 @@ async function tick() {
           } catch (err) {
             log.error(
               {
-                tripId,
+                bookingUid,
                 err: err instanceof Error ? err.message : String(err),
               },
-              'edit notify failed',
+              'swap notify failed',
             )
           }
         }
@@ -253,22 +172,21 @@ async function tick() {
     } catch (err) {
       log.error(
         {
-          tripId,
+          bookingUid,
           err: err instanceof Error ? err.message : String(err),
         },
-        'processEditForTrip threw',
+        'processSwapFor threw',
       )
     } finally {
       await db
-        .update(trips)
+        .update(tickets)
         .set({ swapInProgress: false })
-        .where(eq(trips.id, tripId))
+        .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
       await logAudit({
         type: 'swap.finished',
         actor: 'system',
-        userId: userId ?? null,
-        tripId,
-        payload: {},
+        userId,
+        payload: { bookingUid },
       })
     }
   }
@@ -294,17 +212,16 @@ async function recoverStuckSwaps() {
   // Worker owns swap_in_progress. If we're starting, nothing is in flight —
   // clear any leftovers from a prior crash.
   const stuck = await db
-    .update(trips)
+    .update(tickets)
     .set({ swapInProgress: false })
-    .where(eq(trips.swapInProgress, true))
-    .returning({ id: trips.id, userId: trips.userId })
+    .where(eq(tickets.swapInProgress, true))
+    .returning({ userId: tickets.userId, bookingUid: tickets.bookingUid })
   for (const row of stuck) {
     await logAudit({
       type: 'swap.recovered',
       actor: 'system',
       userId: row.userId,
-      tripId: row.id,
-      payload: { reason: 'worker_boot' },
+      payload: { bookingUid: row.bookingUid, reason: 'worker_boot' },
     })
   }
   if (stuck.length > 0) {
@@ -319,18 +236,14 @@ export function startPoller() {
   recoverStuckSwaps()
     .catch((err) => {
       log.error(
-        {
-          err: err instanceof Error ? err.message : String(err),
-        },
+        { err: err instanceof Error ? err.message : String(err) },
         'recoverStuckSwaps failed',
       )
     })
     .finally(() => {
       loop().catch((err) => {
         log.error(
-          {
-            err: err instanceof Error ? err.message : String(err),
-          },
+          { err: err instanceof Error ? err.message : String(err) },
           'loop crashed',
         )
         running = false

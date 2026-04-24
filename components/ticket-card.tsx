@@ -2,12 +2,10 @@
 
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { et, enGB } from 'react-day-picker/locale'
-import { ArrowDown, ArrowRightLeft, ArrowUp, Bell, Loader2, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useForm, useStore } from '@tanstack/react-form'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +17,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Toggle } from '@/components/ui/toggle'
 import {
   Tooltip,
   TooltipContent,
@@ -27,19 +24,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Link } from '@/i18n/navigation'
-import { TicketSlot } from '@/components/ticket-slot'
 import {
-  deleteTrip,
   moveOption,
   removeOption,
+  unsubscribeTicket,
   updateOption,
-  updateTrip,
-} from '@/actions/trips'
+} from '@/actions/tickets'
 import { useOptimisticMutation } from '@/lib/mutations'
-import { tripsQueryOptions, type TripCardData } from '@/lib/query-options'
+import { ticketsQueryOptions, type TicketCardData } from '@/lib/query-options'
 
-export function TripCard({ data }: { data: TripCardData }) {
-  const t = useTranslations('Trips')
+export function TicketCard({ data }: { data: TicketCardData }) {
+  const t = useTranslations('Tickets')
   const tOpt = useTranslations('Options')
   const tCap = useTranslations('Capacity')
   const tDir = useTranslations('Directions')
@@ -51,38 +46,21 @@ export function TripCard({ data }: { data: TripCardData }) {
   const formatTime = (d: Date) =>
     d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })
 
-  const tripId = data.trip.id
+  const bookingUid = data.ticket.bookingUid
 
-  const toggleFlagMutation = useOptimisticMutation<
-    { flag: 'notify' | 'edit'; next: boolean },
-    TripCardData[]
-  >({
-    queryKey: tripsQueryOptions.queryKey,
-    mutationFn: ({ flag, next }) =>
-      updateTrip({
-        id: tripId,
-        ...(flag === 'notify' ? { notify: next } : { edit: next }),
-      }),
-    optimisticUpdate: (old, { flag, next }) =>
-      old.map((c) =>
-        c.trip.id === tripId ? { ...c, trip: { ...c.trip, [flag]: next } } : c,
-      ),
-    successMessage: t('saved'),
-  })
-
-  const deleteTripMutation = useOptimisticMutation<void, TripCardData[]>({
-    queryKey: tripsQueryOptions.queryKey,
-    mutationFn: () => deleteTrip({ id: tripId }),
-    optimisticUpdate: (old) => old.filter((c) => c.trip.id !== tripId),
+  const unsubscribeMutation = useOptimisticMutation<void, TicketCardData[]>({
+    queryKey: ticketsQueryOptions.queryKey,
+    mutationFn: () => unsubscribeTicket({ bookingUid }),
+    optimisticUpdate: (old) => old.filter((c) => c.ticket.bookingUid !== bookingUid),
     successMessage: t('deleted'),
   })
 
-  const removeOptionMutation = useOptimisticMutation<string, TripCardData[]>({
-    queryKey: tripsQueryOptions.queryKey,
+  const removeOptionMutation = useOptimisticMutation<string, TicketCardData[]>({
+    queryKey: ticketsQueryOptions.queryKey,
     mutationFn: (optionId) => removeOption({ id: optionId }),
     optimisticUpdate: (old, optionId) =>
       old.map((c) =>
-        c.trip.id === tripId
+        c.ticket.bookingUid === bookingUid
           ? { ...c, options: c.options.filter((o) => o.id !== optionId) }
           : c,
       ),
@@ -91,23 +69,20 @@ export function TripCard({ data }: { data: TripCardData }) {
 
   const moveOptionMutation = useOptimisticMutation<
     { optionId: string; direction: 'up' | 'down' },
-    TripCardData[]
+    TicketCardData[]
   >({
-    queryKey: tripsQueryOptions.queryKey,
+    queryKey: ticketsQueryOptions.queryKey,
     mutationFn: ({ optionId, direction }) => moveOption({ id: optionId, direction }),
-    // Mirror the server's priority swap: find the neighbour in the direction
-    // the user clicked (ascending sort = "up" means lower priority) and swap
-    // the two priorities so the UI reorders instantly.
     optimisticUpdate: (old, { optionId, direction }) =>
       old.map((c) => {
-        if (c.trip.id !== tripId) return c
+        if (c.ticket.bookingUid !== bookingUid) return c
         const byPriority = [...c.options].sort((a, b) => a.priority - b.priority)
         const idx = byPriority.findIndex((o) => o.id === optionId)
         if (idx === -1) return c
         const swapIdx = direction === 'up' ? idx - 1 : idx + 1
         if (swapIdx < 0 || swapIdx >= byPriority.length) return c
-        const a = byPriority[idx]
-        const b = byPriority[swapIdx]
+        const a = byPriority[idx]!
+        const b = byPriority[swapIdx]!
         return {
           ...c,
           options: c.options.map((o) => {
@@ -121,19 +96,19 @@ export function TripCard({ data }: { data: TripCardData }) {
   })
 
   const updateOptionMutation = useOptimisticMutation<
-    { optionId: string; stopBeforeAt: Date },
-    TripCardData[]
+    { optionId: string; stopBeforeMinutes: number },
+    TicketCardData[]
   >({
-    queryKey: tripsQueryOptions.queryKey,
-    mutationFn: ({ optionId, stopBeforeAt }) =>
-      updateOption({ id: optionId, stopBeforeAt: stopBeforeAt.getTime() }),
-    optimisticUpdate: (old, { optionId, stopBeforeAt }) =>
+    queryKey: ticketsQueryOptions.queryKey,
+    mutationFn: ({ optionId, stopBeforeMinutes }) =>
+      updateOption({ id: optionId, stopBeforeMinutes }),
+    optimisticUpdate: (old, { optionId, stopBeforeMinutes }) =>
       old.map((c) =>
-        c.trip.id === tripId
+        c.ticket.bookingUid === bookingUid
           ? {
               ...c,
               options: c.options.map((o) =>
-                o.id === optionId ? { ...o, stopBeforeAt } : o,
+                o.id === optionId ? { ...o, stopBeforeMinutes } : o,
               ),
             }
           : c,
@@ -147,20 +122,30 @@ export function TripCard({ data }: { data: TripCardData }) {
     <TooltipProvider>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold">{tDir(data.trip.direction as 'VK')}</span>
-            <Badge variant="outline">{tCap(data.trip.measurementUnit as 'sv')}</Badge>
-            {data.trip.swapInProgress ? (
-              <Badge variant="secondary" className="gap-1">
-                <Loader2 className="size-3 animate-spin" />
-                {t('swapping')}
-              </Badge>
-            ) : null}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">
+                {tDir(data.ticket.direction as 'VK')}
+              </span>
+              <Badge variant="outline">{tCap(data.ticket.measurementUnit as 'sv')}</Badge>
+              {data.ticket.swapInProgress ? (
+                <Badge variant="secondary" className="gap-1">
+                  <Loader2 className="size-3 animate-spin" />
+                  {t('swapping')}
+                </Badge>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="font-mono">{data.ticket.ticketNumber}</span>
+              <span>·</span>
+              <span>{formatDate(data.ticket.eventDtstart)}</span>
+              <span>{formatTime(data.ticket.eventDtstart)}</span>
+            </div>
           </div>
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => deleteTripMutation.mutate()}
+            onClick={() => unsubscribeMutation.mutate()}
             aria-label={t('delete')}
             title={t('delete')}
           >
@@ -169,29 +154,6 @@ export function TripCard({ data }: { data: TripCardData }) {
         </CardHeader>
 
         <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2">
-            <Toggle
-              variant="success"
-              pressed={data.trip.notify}
-              onPressedChange={(next) => toggleFlagMutation.mutate({ flag: 'notify', next })}
-              aria-label={tOpt('badgeNotify')}
-            >
-              <Bell />
-              {tOpt('badgeNotify')}
-            </Toggle>
-            <Toggle
-              variant="success"
-              pressed={data.trip.edit}
-              onPressedChange={(next) => toggleFlagMutation.mutate({ flag: 'edit', next })}
-              aria-label={tOpt('badgeEdit')}
-            >
-              <ArrowRightLeft />
-              {tOpt('badgeEdit')}
-            </Toggle>
-          </div>
-
-          <TicketSlot tripId={tripId} ticket={data.ticket} />
-
           {sorted.length === 0 ? (
             <p className="text-sm text-muted-foreground">{tOpt('empty')}</p>
           ) : null}
@@ -199,8 +161,7 @@ export function TripCard({ data }: { data: TripCardData }) {
             <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
               {sorted.map((option, idx) => {
                 const past = option.eventDtstart.getTime() < Date.now()
-                const state = option.lastCapacityState
-                const isCurrent = data.ticket?.eventUid === option.eventUid
+                const isCurrent = data.ticket.eventUid === option.eventUid
                 return (
                   <li
                     key={option.id}
@@ -224,7 +185,10 @@ export function TripCard({ data }: { data: TripCardData }) {
                             type="button"
                             disabled={idx === sorted.length - 1}
                             onClick={() =>
-                              moveOptionMutation.mutate({ optionId: option.id, direction: 'down' })
+                              moveOptionMutation.mutate({
+                                optionId: option.id,
+                                direction: 'down',
+                              })
                             }
                             aria-label={tOpt('moveDown')}
                             className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
@@ -239,12 +203,13 @@ export function TripCard({ data }: { data: TripCardData }) {
                       <div className="flex flex-col">
                         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
                           <CutoffEditor
-                            eventStart={option.eventDtstart}
-                            stopBeforeAt={option.stopBeforeAt}
+                            stopBeforeMinutes={option.stopBeforeMinutes}
                             disabled={past}
-                            locale={locale}
-                            onSave={(stopBeforeAt) =>
-                              updateOptionMutation.mutate({ optionId: option.id, stopBeforeAt })
+                            onSave={(stopBeforeMinutes) =>
+                              updateOptionMutation.mutate({
+                                optionId: option.id,
+                                stopBeforeMinutes,
+                              })
                             }
                             titleText={`${formatDate(option.eventDtstart)} · ${formatTime(option.eventDtstart)}`}
                           />
@@ -252,15 +217,11 @@ export function TripCard({ data }: { data: TripCardData }) {
                             <Badge variant="secondary">{tOpt('current')}</Badge>
                           ) : null}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {past
-                            ? tOpt('past')
-                            : option.lastCapacity == null
-                              ? tOpt('notYetChecked')
-                              : state === 'above'
-                                ? `${option.lastCapacity} ${tOpt('above')}`
-                                : tOpt('below')}
-                        </span>
+                        {past ? (
+                          <span className="text-xs text-muted-foreground">
+                            {tOpt('past')}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -280,7 +241,7 @@ export function TripCard({ data }: { data: TripCardData }) {
           ) : null}
 
           <Link
-            href={`/trips/${tripId}/options`}
+            href={`/tickets/${bookingUid}/options`}
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             <Plus className="size-4" />
@@ -292,89 +253,34 @@ export function TripCard({ data }: { data: TripCardData }) {
   )
 }
 
-function startOfDay(d: Date) {
-  const c = new Date(d)
-  c.setHours(0, 0, 0, 0)
-  return c
-}
-
-function formatHHMM(d: Date) {
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
-}
-
-function combineDateTime(date: Date, time: string): Date | null {
-  const [hStr, mStr] = time.split(':')
-  const h = Number(hStr)
-  const m = Number(mStr)
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
-  const combined = new Date(date)
-  combined.setHours(h, m, 0, 0)
-  return combined
-}
-
 function CutoffEditor({
-  eventStart,
-  stopBeforeAt,
+  stopBeforeMinutes,
   disabled,
-  locale,
   onSave,
   titleText,
 }: {
-  eventStart: Date
-  stopBeforeAt: Date
+  stopBeforeMinutes: number
   disabled: boolean
-  locale: string
-  onSave: (cutoff: Date) => void
+  onSave: (minutes: number) => void
   titleText: string
 }) {
   const tOpt = useTranslations('Options')
-  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
-  const dpLocale = locale === 'et' ? et : enGB
-
-  const sameInstant = stopBeforeAt.getTime() === eventStart.getTime()
-  const sameDay =
-    stopBeforeAt.getFullYear() === eventStart.getFullYear() &&
-    stopBeforeAt.getMonth() === eventStart.getMonth() &&
-    stopBeforeAt.getDate() === eventStart.getDate()
-
-  const cutoffLabel = sameInstant
-    ? null
-    : sameDay
-      ? tOpt('cutoffAt', {
-          time: stopBeforeAt.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' }),
-        })
-      : tOpt('cutoffAtDated', {
-          date: stopBeforeAt.toLocaleDateString(dateTag, {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-          }),
-          time: stopBeforeAt.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' }),
-        })
 
   const [open, setOpen] = useState(false)
-  const eventDayStart = startOfDay(eventStart)
 
   const form = useForm({
-    defaultValues: {
-      date: startOfDay(stopBeforeAt),
-      time: formatHHMM(stopBeforeAt),
-    },
+    defaultValues: { minutes: stopBeforeMinutes },
     validators: {
       onChange: ({ value }) => {
-        const combined = combineDateTime(value.date, value.time)
-        if (!combined) return { fields: { time: 'invalid time' } }
-        if (combined.getTime() >= eventStart.getTime()) {
-          return tOpt('cutoffMustBeBeforeStart')
+        if (!Number.isFinite(value.minutes) || value.minutes < 0) {
+          return tOpt('cutoffMustBePositive')
         }
         return undefined
       },
     },
     onSubmit: ({ value }) => {
-      const combined = combineDateTime(value.date, value.time)
-      if (!combined) return
       setOpen(false)
-      onSave(combined)
+      onSave(Math.floor(value.minutes))
     },
   })
 
@@ -382,14 +288,11 @@ function CutoffEditor({
   const formErrors = useStore(form.store, (s) => s.errors)
 
   const onOpenChange = (next: boolean) => {
-    if (next) {
-      form.reset({
-        date: startOfDay(stopBeforeAt),
-        time: formatHHMM(stopBeforeAt),
-      })
-    }
+    if (next) form.reset({ minutes: stopBeforeMinutes })
     setOpen(next)
   }
+
+  const minutesLabel = tOpt('cutoffMinutesSummary', { minutes: stopBeforeMinutes })
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -404,11 +307,9 @@ function CutoffEditor({
                   className="inline-flex items-baseline gap-1 rounded text-left disabled:pointer-events-none disabled:opacity-50"
                 >
                   <span>{titleText}</span>
-                  {cutoffLabel ? (
-                    <span className="text-xs font-normal text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground">
-                      {cutoffLabel}
-                    </span>
-                  ) : null}
+                  <span className="text-xs font-normal text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground">
+                    {minutesLabel}
+                  </span>
                 </button>
               }
             />
@@ -428,32 +329,20 @@ function CutoffEditor({
           }}
           className="flex flex-col gap-2"
         >
-          <form.Field name="date">
-            {(field) => (
-              <Calendar
-                mode="single"
-                selected={field.state.value}
-                onSelect={(d) => {
-                  if (d) field.handleChange(startOfDay(d))
-                }}
-                disabled={(d) => d.getTime() > eventDayStart.getTime()}
-                defaultMonth={field.state.value}
-                locale={dpLocale}
-              />
-            )}
-          </form.Field>
-          <form.Field name="time">
+          <form.Field name="minutes">
             {(field) => (
               <div className="flex flex-col gap-1">
-                <Label htmlFor="cutoff-time" className="text-xs">
-                  {tOpt('cutoffTime')}
+                <Label htmlFor="cutoff-minutes" className="text-xs">
+                  {tOpt('cutoffMinutesLabel')}
                 </Label>
                 <Input
-                  id="cutoff-time"
-                  type="time"
+                  id="cutoff-minutes"
+                  type="number"
+                  min={0}
+                  step={5}
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="h-8 text-sm tabular-nums"
+                  onChange={(e) => field.handleChange(Number(e.target.value))}
+                  className="h-8 w-28 text-sm tabular-nums"
                 />
               </div>
             )}

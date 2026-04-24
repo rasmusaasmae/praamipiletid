@@ -1,12 +1,12 @@
 import { and, asc, eq } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
 import { db } from '@/db'
-import { tickets, tripOptions, trips } from '@/db/schema'
+import { ticketOptions, tickets } from '@/db/schema'
 import { listEvents } from '@/lib/praamid'
 import { requireUser } from '@/lib/session'
 import { Link } from '@/i18n/navigation'
-import { TripsFilter } from '@/components/trips-filter'
 import { EventCard } from '@/components/event-card'
+import { OptionsDateFilter } from '@/components/options-date-filter'
 import { Card, CardContent } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
 
@@ -18,7 +18,11 @@ function todayIso() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-type RouteParams = Promise<{ id: string; locale: string }>
+function toIsoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+type RouteParams = Promise<{ bookingUid: string; locale: string }>
 type SearchParams = Promise<Record<string, string | undefined>>
 
 export default async function AddOptionPage({
@@ -29,29 +33,30 @@ export default async function AddOptionPage({
   searchParams: SearchParams
 }) {
   const session = await requireUser()
-  const { id: tripId } = await params
+  const { bookingUid } = await params
   const query = await searchParams
   const t = await getTranslations('AddOption')
   const tDir = await getTranslations('Directions')
   const tCap = await getTranslations('Capacity')
 
-  const directions = DIRECTION_CODES.map((code) => ({ code, label: tDir(code) }))
-
-  const [trip] = await db
+  const [ticket] = await db
     .select({
-      id: trips.id,
-      direction: trips.direction,
-      measurementUnit: trips.measurementUnit,
+      bookingUid: tickets.bookingUid,
+      direction: tickets.direction,
+      measurementUnit: tickets.measurementUnit,
+      eventDtstart: tickets.eventDtstart,
     })
-    .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.userId, session.user.id)))
+    .from(tickets)
+    .where(
+      and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, bookingUid)),
+    )
     .limit(1)
 
-  if (!trip) {
+  if (!ticket) {
     return (
       <Card>
         <CardContent className="flex flex-col items-start gap-3 py-6">
-          <p className="text-sm text-destructive">{t('tripNotFound')}</p>
+          <p className="text-sm text-destructive">{t('ticketNotFound')}</p>
           <Link href="/" className={buttonVariants({ variant: 'secondary' })}>
             {t('backHome')}
           </Link>
@@ -60,25 +65,17 @@ export default async function AddOptionPage({
     )
   }
 
-  const direction = trip.direction as DirectionCode
+  const direction = ticket.direction as DirectionCode
 
   const existingOptions = await db
-    .select({ eventUid: tripOptions.eventUid, eventDate: tripOptions.eventDate })
-    .from(tripOptions)
-    .where(eq(tripOptions.tripId, trip.id))
-    .orderBy(asc(tripOptions.priority))
+    .select({ eventUid: ticketOptions.eventUid, eventDate: ticketOptions.eventDate })
+    .from(ticketOptions)
+    .where(eq(ticketOptions.bookingUid, ticket.bookingUid))
+    .orderBy(asc(ticketOptions.priority))
   const takenUids = new Set(existingOptions.map((o) => o.eventUid))
 
-  const [ticket] = await db
-    .select({ eventDtstart: tickets.eventDtstart })
-    .from(tickets)
-    .where(eq(tickets.tripId, trip.id))
-    .limit(1)
-  const ticketDate = ticket
-    ? `${ticket.eventDtstart.getFullYear()}-${String(ticket.eventDtstart.getMonth() + 1).padStart(2, '0')}-${String(ticket.eventDtstart.getDate()).padStart(2, '0')}`
-    : null
-
-  const fallbackDate = existingOptions[0]?.eventDate ?? ticketDate ?? todayIso()
+  const fallbackDate =
+    existingOptions[0]?.eventDate ?? toIsoDate(ticket.eventDtstart) ?? todayIso()
   const date =
     query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : fallbackDate
 
@@ -98,16 +95,11 @@ export default async function AddOptionPage({
         </Link>
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p className="text-sm text-muted-foreground">
-          {tDir(direction)} · {tCap(trip.measurementUnit as 'sv')}
+          {tDir(direction)} · {tCap(ticket.measurementUnit as 'sv')}
         </p>
       </div>
 
-      <TripsFilter
-        directions={directions}
-        currentDirection={direction}
-        currentDate={date}
-        tripId={trip.id}
-      />
+      <OptionsDateFilter bookingUid={ticket.bookingUid} currentDate={date} />
 
       {error ? (
         <Card>
@@ -123,9 +115,9 @@ export default async function AddOptionPage({
             <EventCard
               key={event.uid}
               event={event}
-              tripId={trip.id}
+              bookingUid={ticket.bookingUid}
               date={date}
-              measurementUnit={trip.measurementUnit}
+              measurementUnit={ticket.measurementUnit}
               alreadyAdded={takenUids.has(event.uid)}
             />
           ))}

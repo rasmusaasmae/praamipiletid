@@ -11,33 +11,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { deleteAnyTrip } from '@/actions/admin'
+import { deleteAnyTicket } from '@/actions/admin'
 import { useOptimisticMutation } from '@/lib/mutations'
-import { adminDashboardQueryOptions, type AdminDashboardData } from '@/lib/query-options'
+import {
+  adminDashboardQueryOptions,
+  type AdminDashboardData,
+  type AdminTicketRow,
+} from '@/lib/query-options'
 
-type Row = {
-  id: string
-  userEmail: string
-  direction: string
-  measurementUnit: string
-  eventUid: string
-  eventDate: string
-  eventDtstart: Date
-  lastCapacity: number | null
-}
-
-export function AdminTripsTable({ rows }: { rows: Row[] }) {
+export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
   const t = useTranslations('Admin')
   const tCap = useTranslations('Capacity')
   const tDir = useTranslations('Directions')
   const locale = useLocale()
 
-  const deleteMutation = useOptimisticMutation<string, AdminDashboardData>({
+  const deleteMutation = useOptimisticMutation<
+    { userId: string; bookingUid: string },
+    AdminDashboardData
+  >({
     queryKey: adminDashboardQueryOptions.queryKey,
-    mutationFn: (id) => deleteAnyTrip({ id }),
-    optimisticUpdate: (old, id) => ({
+    mutationFn: ({ userId, bookingUid }) => deleteAnyTicket({ userId, bookingUid }),
+    optimisticUpdate: (old, { userId, bookingUid }) => ({
       ...old,
-      trips: old.trips.filter((r) => r.id !== id),
+      tickets: old.tickets.filter(
+        (r) => !(r.userId === userId && r.bookingUid === bookingUid),
+      ),
     }),
     successMessage: t('deleted'),
   })
@@ -47,7 +45,7 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
     `${d.toLocaleDateString(dateTag)} ${d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })}`
 
   if (rows.length === 0) {
-    return <p className="text-muted-foreground">{t('tripsEmpty')}</p>
+    return <p className="text-muted-foreground">{t('ticketsEmpty')}</p>
   }
 
   return (
@@ -56,9 +54,9 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
         <TableHeader>
           <TableRow>
             <TableHead>{t('columnUser')}</TableHead>
-            <TableHead>{t('columnTrip')}</TableHead>
+            <TableHead>{t('columnTicket')}</TableHead>
             <TableHead>{t('columnType')}</TableHead>
-            <TableHead>{t('columnLast')}</TableHead>
+            <TableHead>{t('columnOptions')}</TableHead>
             <TableHead>{t('columnStatus')}</TableHead>
             <TableHead className="text-right">{t('columnActions')}</TableHead>
           </TableRow>
@@ -67,16 +65,17 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
           {rows.map((r) => {
             const past = r.eventDtstart.getTime() < Date.now()
             return (
-              <TableRow key={r.id}>
+              <TableRow key={`${r.userId}|${r.bookingUid}`}>
                 <TableCell className="text-xs">{r.userEmail}</TableCell>
                 <TableCell>
                   <div className="font-medium">{tDir(r.direction as 'VK')}</div>
                   <div className="text-xs text-muted-foreground">
                     {formatDateTime(r.eventDtstart)}
                   </div>
+                  <div className="text-xs font-mono text-muted-foreground">{r.ticketCode}</div>
                 </TableCell>
                 <TableCell>{tCap(r.measurementUnit as 'sv')}</TableCell>
-                <TableCell>{r.lastCapacity != null ? `${r.lastCapacity}` : '—'}</TableCell>
+                <TableCell>{r.optionsCount}</TableCell>
                 <TableCell>
                   {past ? <Badge variant="secondary">{t('statusPast')}</Badge> : null}
                 </TableCell>
@@ -84,7 +83,9 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={() => deleteMutation.mutate(r.id)}
+                    onClick={() =>
+                      deleteMutation.mutate({ userId: r.userId, bookingUid: r.bookingUid })
+                    }
                   >
                     {t('delete')}
                   </Button>

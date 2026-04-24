@@ -1,50 +1,82 @@
 'use client'
 
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { Plus } from 'lucide-react'
-import { TripCard } from '@/components/trip-card'
-import { buttonVariants } from '@/components/ui/button'
+import { TicketCard } from '@/components/ticket-card'
+import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
 import { Card, CardContent } from '@/components/ui/card'
-import { Link } from '@/i18n/navigation'
-import { tripsQueryOptions } from '@/lib/query-options'
+import { refreshTickets } from '@/actions/tickets'
+import { ticketsQueryOptions } from '@/lib/query-options'
 
 export function Home() {
-  const t = useTranslations('Home')
-  const tT = useTranslations('Trips')
+  const tH = useTranslations('Home')
+  const tT = useTranslations('Tickets')
 
   const { data: cards } = useSuspenseQuery({
-    ...tripsQueryOptions,
+    ...ticketsQueryOptions,
     refetchInterval: 60_000,
   })
 
+  const liveTickets = useQuery({
+    queryKey: ['praamidTickets'],
+    queryFn: () => refreshTickets(),
+    staleTime: 60_000,
+    retry: false,
+  })
+
+  const subscribedBookingUids = new Set(cards.map((c) => c.ticket.bookingUid))
+  const unsubscribed = (liveTickets.data ?? []).filter(
+    (lt) => !subscribedBookingUids.has(lt.bookingUid),
+  )
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold">{tT('title')}</h2>
-          <p className="text-sm text-muted-foreground">{tT('description')}</p>
-        </div>
-        <Link href="/trips/new" className={buttonVariants()}>
-          <Plus className="size-4" />
-          {t('addTrip')}
-        </Link>
+      <div>
+        <h2 className="text-2xl font-semibold">{tT('title')}</h2>
+        <p className="text-sm text-muted-foreground">{tT('description')}</p>
       </div>
 
       {cards.length === 0 ? (
         <Card>
-          <CardContent className="py-6 text-muted-foreground">
-            {tT('empty')}{' '}
-            <Link className="underline" href="/trips/new">
-              {tT('emptyLink')}
-            </Link>
-            .
-          </CardContent>
+          <CardContent className="py-6 text-muted-foreground">{tT('empty')}</CardContent>
         </Card>
       ) : (
         <div className="flex flex-col gap-4">
           {cards.map((card) => (
-            <TripCard key={card.trip.id} data={card} />
+            <TicketCard key={card.ticket.bookingUid} data={card} />
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-col gap-2">
+        <h3 className="text-lg font-semibold">{tH('availableTitle')}</h3>
+        <p className="text-sm text-muted-foreground">{tH('availableDescription')}</p>
+      </div>
+
+      {liveTickets.isLoading ? (
+        <Card>
+          <CardContent className="py-6 text-muted-foreground">{tH('loading')}</CardContent>
+        </Card>
+      ) : liveTickets.error ? (
+        <Card>
+          <CardContent className="py-6 text-destructive">
+            {liveTickets.error.message}
+          </CardContent>
+        </Card>
+      ) : unsubscribed.length === 0 ? (
+        <Card>
+          <CardContent className="py-6 text-muted-foreground">
+            {tH('noAvailable')}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {unsubscribed.map((ticket) => (
+            <SubscribableTicketCard
+              key={ticket.bookingUid}
+              ticket={ticket}
+              alreadySubscribed={false}
+            />
           ))}
         </div>
       )}

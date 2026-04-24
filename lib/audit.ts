@@ -4,32 +4,22 @@ import { db } from '@/db'
 import { auditLogs } from '@/db/schema'
 
 export type AuditPayload = {
-  'trip.created': { direction: string; measurementUnit: string }
-  'trip.updated': { changes: Record<string, unknown> }
-  'trip.deleted': { direction: string }
-  'option.added': { eventUid: string; priority: number }
-  'option.removed': { eventUid: string; priority: number }
-  'option.reordered': { from: number; to: number; eventUid: string }
-  'option.paused': { eventUid: string; priority: number }
-  'option.resumed': { eventUid: string; priority: number }
-  'ticket.attached': { ticketCode: string; bookingUid: string; eventUid: string }
-  'ticket.detached': { ticketCode: string; reason: string }
+  'ticket.subscribed': { bookingUid: string; ticketCode: string; eventUid: string }
+  'ticket.unsubscribed': { bookingUid: string; ticketCode: string; reason: string }
+  'option.added': { bookingUid: string; eventUid: string; priority: number }
+  'option.removed': { bookingUid: string; eventUid: string; priority: number }
+  'option.reordered': { bookingUid: string; from: number; to: number; eventUid: string }
+  'option.updated': { bookingUid: string; eventUid: string; stopBeforeMinutes: number }
   'credential.captured': { expiresAt: string; praamidSub: string }
   'credential.verified': Record<string, never>
   'credential.expired': Record<string, never>
   'credential.forgotten': Record<string, never>
-  'notification.availability_changed': {
-    eventUid: string
-    from: 'above' | 'below' | null
-    to: 'above' | 'below'
-    capacity: number
-    priority: number
-  }
   'notification.credential_expiring': {
     expiresAt: string
     hoursLeft: number
   }
   'edit.attempted': {
+    bookingUid: string
     fromEventUid: string
     toEventUid: string
     toPriority: number
@@ -37,6 +27,9 @@ export type AuditPayload = {
     targetEventDtstart: number
   }
   'edit.succeeded': {
+    bookingUid: string
+    newBookingUid?: string
+    bookingUidChanged?: boolean
     newTicketCode: string
     newTicketNumber: string
     newInvoiceNumber: string
@@ -45,15 +38,16 @@ export type AuditPayload = {
     toPriority: number
   }
   'edit.failed': {
+    bookingUid: string
     stage: 'put' | 'balance' | 'commit' | 'auth' | 'idempotency' | 'internal'
     httpStatus?: number
     errorMessage?: string
     reason: string
   }
-  'edit.rolled_back': { reason: string }
-  'swap.started': Record<string, never>
-  'swap.finished': Record<string, never>
-  'swap.recovered': { reason: 'worker_boot' }
+  'edit.rolled_back': { bookingUid: string; reason: string }
+  'swap.started': { bookingUid: string }
+  'swap.finished': { bookingUid: string }
+  'swap.recovered': { bookingUid: string; reason: 'worker_boot' }
   'system.poller_tick_error': { error: string }
 }
 
@@ -63,7 +57,6 @@ export type LogAuditArgs<T extends AuditType> = {
   type: T
   actor: 'user' | 'system'
   userId?: string | null
-  tripId?: string | null
   payload: AuditPayload[T]
 }
 
@@ -73,7 +66,6 @@ export async function logAudit<T extends AuditType>(args: LogAuditArgs<T>): Prom
     userId: args.userId ?? null,
     actor: args.actor,
     type: args.type,
-    tripId: args.tripId ?? null,
     payload: JSON.stringify(args.payload),
   })
 }

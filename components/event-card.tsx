@@ -6,15 +6,15 @@ import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { addOption } from '@/actions/trips'
+import { addOption } from '@/actions/tickets'
 import { SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
-import { tripsQueryOptions } from '@/lib/query-options'
+import { ticketsQueryOptions } from '@/lib/query-options'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
 type Props = {
   event: PraamidEvent
-  tripId: string
+  bookingUid: string
   date: string
   measurementUnit: string
   alreadyAdded: boolean
@@ -27,7 +27,13 @@ function formatTime(iso: string) {
   return `${h}:${m}`
 }
 
-export function EventCard({ event, tripId, date, measurementUnit, alreadyAdded }: Props) {
+export function EventCard({
+  event,
+  bookingUid,
+  date,
+  measurementUnit,
+  alreadyAdded,
+}: Props) {
   const t = useTranslations('EventCard')
   const tCap = useTranslations('Capacity')
   const queryClient = useQueryClient()
@@ -35,10 +41,10 @@ export function EventCard({ event, tripId, date, measurementUnit, alreadyAdded }
   const highlighted = measurementUnit
 
   const addMutation = useMutation({
-    mutationFn: () => addOption({ tripId, eventUid: event.uid, date }),
+    mutationFn: () => addOption({ bookingUid, eventUid: event.uid, date }),
     onSuccess: () => {
       toast.success(t('optionAdded'))
-      queryClient.invalidateQueries({ queryKey: tripsQueryOptions.queryKey })
+      queryClient.invalidateQueries({ queryKey: ticketsQueryOptions.queryKey })
     },
     onError: (err) => toast.error(err.message),
   })

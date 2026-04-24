@@ -1,11 +1,11 @@
 'use server'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
-import { trips, user } from '@/db/schema'
+import { tickets, user } from '@/db/schema'
 import { logAudit } from '@/lib/audit'
 import { pollIntervalNumberSchema, userRoleSchema } from '@/lib/schemas'
 import { requireAdmin } from '@/lib/session'
@@ -56,28 +56,46 @@ export async function updateUserRole(
   revalidatePath('/admin')
 }
 
-const DeleteAnyTripDto = z.object({ id: z.string().min(1) })
+const DeleteAnyTicketDto = z.object({
+  userId: z.string().min(1),
+  bookingUid: z.string().min(1),
+})
 
-export async function deleteAnyTrip(
-  dto: z.input<typeof DeleteAnyTripDto>,
+export async function deleteAnyTicket(
+  dto: z.input<typeof DeleteAnyTicketDto>,
 ): Promise<void> {
   const session = await requireAdmin()
   const t = await getTranslations('Errors')
-  const parsed = DeleteAnyTripDto.safeParse(dto)
+  const parsed = DeleteAnyTicketDto.safeParse(dto)
   if (!parsed.success) throw new Error(t('missingId'))
   const [target] = await db
-    .select({ direction: trips.direction, userId: trips.userId })
-    .from(trips)
-    .where(eq(trips.id, parsed.data.id))
+    .select({ ticketCode: tickets.ticketCode })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.userId, parsed.data.userId),
+        eq(tickets.bookingUid, parsed.data.bookingUid),
+      ),
+    )
     .limit(1)
-  if (!target) throw new Error(t('tripNotFound'))
-  await db.delete(trips).where(eq(trips.id, parsed.data.id))
+  if (!target) throw new Error(t('ticketNotFound'))
+  await db
+    .delete(tickets)
+    .where(
+      and(
+        eq(tickets.userId, parsed.data.userId),
+        eq(tickets.bookingUid, parsed.data.bookingUid),
+      ),
+    )
   await logAudit({
-    type: 'trip.deleted',
+    type: 'ticket.unsubscribed',
     actor: 'user',
     userId: session.user.id,
-    tripId: null,
-    payload: { direction: target.direction },
+    payload: {
+      bookingUid: parsed.data.bookingUid,
+      ticketCode: target.ticketCode,
+      reason: 'admin',
+    },
   })
   revalidatePath('/admin')
 }

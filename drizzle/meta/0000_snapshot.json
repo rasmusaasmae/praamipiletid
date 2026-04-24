@@ -1,5 +1,5 @@
 {
-  "id": "e2467437-d7ac-43f1-ba49-28c0ce5a62af",
+  "id": "19d14ab1-4c5e-443b-8cfc-85262e0f6add",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -31,12 +31,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "payload": {
           "name": "payload",
@@ -88,21 +82,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "audit_logs_trip_idx": {
-          "name": "audit_logs_trip_idx",
-          "columns": [
-            {
-              "expression": "trip_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -112,19 +91,6 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "audit_logs_trip_id_trips_id_fk": {
-          "name": "audit_logs_trip_id_trips_id_fk",
-          "tableFrom": "audit_logs",
-          "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
           ],
           "columnsTo": [
             "id"
@@ -329,140 +295,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tickets": {
-      "name": "tickets",
-      "schema": "",
-      "columns": {
-        "trip_id": {
-          "name": "trip_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ticket_code": {
-          "name": "ticket_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ticket_number": {
-          "name": "ticket_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "booking_uid": {
-          "name": "booking_uid",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "event_uid": {
-          "name": "event_uid",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ticket_date": {
-          "name": "ticket_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "event_dtstart": {
-          "name": "event_dtstart",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "captured_at": {
-          "name": "captured_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "tickets_event_uid_idx": {
-          "name": "tickets_event_uid_idx",
-          "columns": [
-            {
-              "expression": "event_uid",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tickets_user_id_idx": {
-          "name": "tickets_user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "tickets_trip_id_trips_id_fk": {
-          "name": "tickets_trip_id_trips_id_fk",
-          "tableFrom": "tickets",
-          "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "tickets_user_id_user_id_fk": {
-          "name": "tickets_user_id_user_id_fk",
-          "tableFrom": "tickets",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.trip_options": {
-      "name": "trip_options",
+    "public.ticket_options": {
+      "name": "ticket_options",
       "schema": "",
       "columns": {
         "id": {
@@ -471,14 +305,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "trip_id": {
-          "name": "trip_id",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
+        "booking_uid": {
+          "name": "booking_uid",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -507,29 +341,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "stop_before_at": {
-          "name": "stop_before_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_capacity": {
-          "name": "last_capacity",
+        "stop_before_minutes": {
+          "name": "stop_before_minutes",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
-        },
-        "last_capacity_state": {
-          "name": "last_capacity_state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_capacity_checked_at": {
-          "name": "last_capacity_checked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -547,11 +363,11 @@
         }
       },
       "indexes": {
-        "trip_options_event_unique": {
-          "name": "trip_options_event_unique",
+        "ticket_options_event_unique": {
+          "name": "ticket_options_event_unique",
           "columns": [
             {
-              "expression": "trip_id",
+              "expression": "booking_uid",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -568,11 +384,11 @@
           "method": "btree",
           "with": {}
         },
-        "trip_options_priority_unique": {
-          "name": "trip_options_priority_unique",
+        "ticket_options_priority_unique": {
+          "name": "ticket_options_priority_unique",
           "columns": [
             {
-              "expression": "trip_id",
+              "expression": "booking_uid",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -589,8 +405,8 @@
           "method": "btree",
           "with": {}
         },
-        "trip_options_dtstart_idx": {
-          "name": "trip_options_dtstart_idx",
+        "ticket_options_dtstart_idx": {
+          "name": "ticket_options_dtstart_idx",
           "columns": [
             {
               "expression": "event_dtstart",
@@ -604,8 +420,8 @@
           "method": "btree",
           "with": {}
         },
-        "trip_options_user_id_idx": {
-          "name": "trip_options_user_id_idx",
+        "ticket_options_user_id_idx": {
+          "name": "ticket_options_user_id_idx",
           "columns": [
             {
               "expression": "user_id",
@@ -621,12 +437,12 @@
         }
       },
       "foreignKeys": {
-        "trip_options_trip_id_trips_id_fk": {
-          "name": "trip_options_trip_id_trips_id_fk",
-          "tableFrom": "trip_options",
-          "tableTo": "trips",
+        "ticket_options_user_id_user_id_fk": {
+          "name": "ticket_options_user_id_user_id_fk",
+          "tableFrom": "ticket_options",
+          "tableTo": "user",
           "columnsFrom": [
-            "trip_id"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -634,15 +450,17 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "trip_options_user_id_user_id_fk": {
-          "name": "trip_options_user_id_user_id_fk",
-          "tableFrom": "trip_options",
-          "tableTo": "user",
+        "ticket_options_ticket_fk": {
+          "name": "ticket_options_ticket_fk",
+          "tableFrom": "ticket_options",
+          "tableTo": "tickets",
           "columnsFrom": [
-            "user_id"
+            "user_id",
+            "booking_uid"
           ],
           "columnsTo": [
-            "id"
+            "user_id",
+            "booking_uid"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -654,18 +472,36 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.trips": {
-      "name": "trips",
+    "public.tickets": {
+      "name": "tickets",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
         "user_id": {
           "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "booking_uid": {
+          "name": "booking_uid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ticket_id": {
+          "name": "ticket_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ticket_code": {
+          "name": "ticket_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ticket_number": {
+          "name": "ticket_number",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -682,25 +518,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "notify": {
-          "name": "notify",
-          "type": "boolean",
+        "event_uid": {
+          "name": "event_uid",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": true
+          "notNull": true
         },
-        "edit": {
-          "name": "edit",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "last_checked_at": {
-          "name": "last_checked_at",
+        "event_dtstart": {
+          "name": "event_dtstart",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
+        },
+        "ticket_date": {
+          "name": "ticket_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
         "swap_in_progress": {
           "name": "swap_in_progress",
@@ -709,12 +543,11 @@
           "notNull": true,
           "default": false
         },
-        "created_at": {
-          "name": "created_at",
+        "captured_at": {
+          "name": "captured_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
@@ -725,8 +558,8 @@
         }
       },
       "indexes": {
-        "trips_user_id_idx": {
-          "name": "trips_user_id_idx",
+        "tickets_user_id_idx": {
+          "name": "tickets_user_id_idx",
           "columns": [
             {
               "expression": "user_id",
@@ -739,12 +572,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "tickets_event_uid_idx": {
+          "name": "tickets_event_uid_idx",
+          "columns": [
+            {
+              "expression": "event_uid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "trips_user_id_user_id_fk": {
-          "name": "trips_user_id_user_id_fk",
-          "tableFrom": "trips",
+        "tickets_user_id_user_id_fk": {
+          "name": "tickets_user_id_user_id_fk",
+          "tableFrom": "tickets",
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
@@ -756,7 +604,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "tickets_pk": {
+          "name": "tickets_pk",
+          "columns": [
+            "user_id",
+            "booking_uid"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

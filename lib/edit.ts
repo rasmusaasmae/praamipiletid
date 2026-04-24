@@ -1,7 +1,7 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
-import { tickets, tripOptions, trips } from '@/db/schema'
+import { ticketOptions, tickets } from '@/db/schema'
 import {
   commitZeroSum,
   editTicket,
@@ -10,7 +10,7 @@ import {
   PraamidAuthError,
   type Ticket as PraamidTicket,
 } from '@/lib/praamid-authed'
-import { listEvents, type PraamidEvent } from '@/lib/praamid'
+import { type PraamidEvent } from '@/lib/praamid'
 import {
   getCredential,
   invalidateCredential,
@@ -23,14 +23,14 @@ import { logger } from '@/lib/logger'
 const log = logger.child({ scope: 'edit' })
 
 const CREDENTIAL_BUFFER_MS = 15 * 60 * 1000
-const TRIP_BACKOFF_MS = 10 * 60 * 1000
+const BOOKING_BACKOFF_MS = 10 * 60 * 1000
 
 // Process-local backoff. Resets on app restart — acceptable for v1.
 const lastAttemptAt = new Map<string, number>()
 
 type FailStage = 'put' | 'balance' | 'commit' | 'auth' | 'idempotency' | 'internal'
 
-export type EditOutcome =
+export type SwapOutcome =
   | { kind: 'no_target' }
   | { kind: 'gate_blocked'; reason: string }
   | { kind: 'idempotency_paused'; reason: string }
@@ -43,49 +43,52 @@ export type EditOutcome =
       invoiceNumber: string
     }
 
-export async function processEditForTrip(tripId: string): Promise<EditOutcome> {
-  log.debug({ tripId }, 'start')
-  const outcome = await runEdit(tripId)
+export type SwapInput = {
+  userId: string
+  bookingUid: string
+  openedEventUids: Set<string>
+  eventsByUid: Map<string, PraamidEvent>
+}
+
+export async function processSwapFor(input: SwapInput): Promise<SwapOutcome> {
+  log.debug({ bookingUid: input.bookingUid }, 'start')
+  const outcome = await runSwap(input)
   if (outcome.kind === 'succeeded') {
     log.info(
       {
-        tripId,
+        bookingUid: input.bookingUid,
         newTicketNumber: outcome.newTicketNumber,
         invoiceNumber: outcome.invoiceNumber,
       },
       'succeeded',
     )
   } else if (outcome.kind === 'failed') {
-    log.error({ tripId, stage: outcome.stage, reason: outcome.reason }, 'failed')
+    log.error(
+      { bookingUid: input.bookingUid, stage: outcome.stage, reason: outcome.reason },
+      'failed',
+    )
   } else if (outcome.kind === 'rolled_back') {
-    log.warn({ tripId, reason: outcome.reason }, 'rolled_back')
+    log.warn({ bookingUid: input.bookingUid, reason: outcome.reason }, 'rolled_back')
   } else if (outcome.kind === 'idempotency_paused') {
-    log.warn({ tripId, reason: outcome.reason }, 'idempotency_paused')
+    log.warn({ bookingUid: input.bookingUid, reason: outcome.reason }, 'idempotency_paused')
   } else {
-    log.debug({ tripId, ...('reason' in outcome ? { reason: outcome.reason } : {}) }, outcome.kind)
+    log.debug(
+      {
+        bookingUid: input.bookingUid,
+        ...('reason' in outcome ? { reason: outcome.reason } : {}),
+      },
+      outcome.kind,
+    )
   }
   return outcome
 }
 
-async function runEdit(tripId: string): Promise<EditOutcome> {
+async function runSwap(input: SwapInput): Promise<SwapOutcome> {
+  const { userId, bookingUid, openedEventUids, eventsByUid } = input
+
   const { editGloballyEnabled } = await getAllSettings()
   if (!editGloballyEnabled) {
     return { kind: 'gate_blocked', reason: 'edit_disabled' }
-  }
-
-  const [trip] = await db
-    .select({
-      id: trips.id,
-      userId: trips.userId,
-      direction: trips.direction,
-      edit: trips.edit,
-    })
-    .from(trips)
-    .where(eq(trips.id, tripId))
-    .limit(1)
-  if (!trip) return { kind: 'gate_blocked', reason: 'trip_missing' }
-  if (!trip.edit) {
-    return { kind: 'gate_blocked', reason: 'trip_not_eligible' }
   }
 
   const [ticket] = await db
@@ -94,36 +97,35 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
       ticketNumber: tickets.ticketNumber,
       bookingUid: tickets.bookingUid,
       eventUid: tickets.eventUid,
+      direction: tickets.direction,
     })
     .from(tickets)
-    .where(eq(tickets.tripId, tripId))
+    .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
     .limit(1)
-  if (!ticket) return { kind: 'gate_blocked', reason: 'no_ticket' }
+  if (!ticket) return { kind: 'gate_blocked', reason: 'ticket_missing' }
 
-  const credential = await getCredential(trip.userId)
+  const credential = await getCredential(userId)
   if (!credential) return { kind: 'gate_blocked', reason: 'no_credential' }
   if (credential.expiresAt.getTime() < Date.now() + CREDENTIAL_BUFFER_MS) {
     return { kind: 'gate_blocked', reason: 'credential_expiring' }
   }
 
-  const last = lastAttemptAt.get(tripId) ?? 0
-  if (Date.now() - last < TRIP_BACKOFF_MS) {
+  const last = lastAttemptAt.get(bookingUid) ?? 0
+  if (Date.now() - last < BOOKING_BACKOFF_MS) {
     return { kind: 'gate_blocked', reason: 'backoff' }
   }
 
   const options = await db
     .select({
-      id: tripOptions.id,
-      priority: tripOptions.priority,
-      eventUid: tripOptions.eventUid,
-      eventDate: tripOptions.eventDate,
-      eventDtstart: tripOptions.eventDtstart,
-      stopBeforeAt: tripOptions.stopBeforeAt,
-      lastCapacity: tripOptions.lastCapacity,
-      lastCapacityState: tripOptions.lastCapacityState,
+      id: ticketOptions.id,
+      priority: ticketOptions.priority,
+      eventUid: ticketOptions.eventUid,
+      eventDate: ticketOptions.eventDate,
+      eventDtstart: ticketOptions.eventDtstart,
+      stopBeforeMinutes: ticketOptions.stopBeforeMinutes,
     })
-    .from(tripOptions)
-    .where(eq(tripOptions.tripId, tripId))
+    .from(ticketOptions)
+    .where(eq(ticketOptions.bookingUid, bookingUid))
 
   const now = Date.now()
   const currentOption = options.find((o) => o.eventUid === ticket.eventUid)
@@ -131,17 +133,15 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
 
   const target = options
     .filter((o) => o.eventUid !== ticket.eventUid)
-    .filter((o) => o.stopBeforeAt.getTime() > now)
-    .filter(
-      (o) => o.lastCapacityState === 'above' && (o.lastCapacity ?? 0) >= 1,
-    )
+    .filter((o) => openedEventUids.has(o.eventUid))
+    .filter((o) => o.eventDtstart.getTime() - o.stopBeforeMinutes * 60_000 > now)
     .filter((o) => o.priority < currentPriority)
     .sort((a, b) => a.priority - b.priority)[0]
 
   if (!target) {
     log.debug(
       {
-        tripId,
+        bookingUid,
         currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
         consideredCount: options.length,
       },
@@ -150,9 +150,14 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     return { kind: 'no_target' }
   }
 
+  const targetEvent = eventsByUid.get(target.eventUid)
+  if (!targetEvent) {
+    return { kind: 'failed', stage: 'internal', reason: 'target_event_missing' }
+  }
+
   log.info(
     {
-      tripId,
+      bookingUid,
       fromEventUid: ticket.eventUid,
       toEventUid: target.eventUid,
       toPriority: target.priority,
@@ -160,13 +165,13 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     },
     'attempting',
   )
-  lastAttemptAt.set(tripId, Date.now())
+  lastAttemptAt.set(bookingUid, Date.now())
   await logAudit({
     type: 'edit.attempted',
     actor: 'system',
-    userId: trip.userId,
-    tripId,
+    userId,
     payload: {
+      bookingUid,
       fromEventUid: ticket.eventUid,
       toEventUid: target.eventUid,
       toPriority: target.priority,
@@ -180,27 +185,37 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     reason: string,
     httpStatus?: number,
     errorMessage?: string,
-  ): Promise<EditOutcome> => {
+  ): Promise<SwapOutcome> => {
     await logAudit({
       type: 'edit.failed',
       actor: 'system',
-      userId: trip.userId,
-      tripId,
-      payload: { stage, reason, ...(httpStatus !== undefined ? { httpStatus } : {}), ...(errorMessage ? { errorMessage } : {}) },
+      userId,
+      payload: {
+        bookingUid,
+        stage,
+        reason,
+        ...(httpStatus !== undefined ? { httpStatus } : {}),
+        ...(errorMessage ? { errorMessage } : {}),
+      },
     })
     return { kind: 'failed', stage, reason }
   }
 
   let booking
   try {
-    booking = await getBooking(credential.token, ticket.bookingUid)
-    await markVerified(trip.userId)
+    booking = await getBooking(credential.token, bookingUid)
+    await markVerified(userId)
   } catch (err) {
     if (err instanceof PraamidAuthError && (err.status === 401 || err.status === 403)) {
-      await invalidateCredential(trip.userId, `getBooking ${err.status}`)
+      await invalidateCredential(userId, `getBooking ${err.status}`)
       return fail('auth', 'auth_failed', err.status, err.message)
     }
-    return fail('idempotency', 'get_booking_failed', undefined, err instanceof Error ? err.message : String(err))
+    return fail(
+      'idempotency',
+      'get_booking_failed',
+      undefined,
+      err instanceof Error ? err.message : String(err),
+    )
   }
 
   const oldTicket = booking.tickets.find((t) => t.ticketCode === ticket.ticketCode)
@@ -208,9 +223,8 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     await logAudit({
       type: 'edit.failed',
       actor: 'system',
-      userId: trip.userId,
-      tripId,
-      payload: { stage: 'idempotency', reason: 'ticket_missing' },
+      userId,
+      payload: { bookingUid, stage: 'idempotency', reason: 'ticket_missing' },
     })
     return { kind: 'idempotency_paused', reason: 'ticket_missing' }
   }
@@ -218,22 +232,14 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     await logAudit({
       type: 'edit.failed',
       actor: 'system',
-      userId: trip.userId,
-      tripId,
-      payload: { stage: 'idempotency', reason: `ticket_status_${oldTicket.status.code}` },
+      userId,
+      payload: {
+        bookingUid,
+        stage: 'idempotency',
+        reason: `ticket_status_${oldTicket.status.code}`,
+      },
     })
     return { kind: 'idempotency_paused', reason: `ticket_status_${oldTicket.status.code}` }
-  }
-
-  let events: PraamidEvent[]
-  try {
-    events = await listEvents(trip.direction, target.eventDate)
-  } catch (err) {
-    return fail('internal', 'list_events_failed', undefined, err instanceof Error ? err.message : String(err))
-  }
-  const targetEvent = events.find((e) => e.uid === target.eventUid)
-  if (!targetEvent) {
-    return fail('internal', 'target_event_missing')
   }
 
   const patchedBody = patchTicketEvent(oldTicket, targetEvent)
@@ -242,7 +248,7 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     await editTicket(credential.token, ticket.ticketCode, patchedBody)
   } catch (err) {
     if (err instanceof PraamidAuthError && (err.status === 401 || err.status === 403)) {
-      await invalidateCredential(trip.userId, `editTicket ${err.status}`)
+      await invalidateCredential(userId, `editTicket ${err.status}`)
       return fail('auth', 'auth_failed', err.status, err.message)
     }
     const status = err instanceof PraamidAuthError ? err.status : undefined
@@ -251,15 +257,17 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
 
   let balance
   try {
-    balance = await getBookingBalance(credential.token, ticket.bookingUid)
+    balance = await getBookingBalance(credential.token, bookingUid)
   } catch (err) {
     await tryRollback(credential.token, ticket.ticketCode, oldTicket)
     await logAudit({
       type: 'edit.rolled_back',
       actor: 'system',
-      userId: trip.userId,
-      tripId,
-      payload: { reason: err instanceof Error ? `balance_${err.message}` : 'balance_failed' },
+      userId,
+      payload: {
+        bookingUid,
+        reason: err instanceof Error ? `balance_${err.message}` : 'balance_failed',
+      },
     })
     return { kind: 'rolled_back', reason: 'balance_failed' }
   }
@@ -268,33 +276,39 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
     await logAudit({
       type: 'edit.rolled_back',
       actor: 'system',
-      userId: trip.userId,
-      tripId,
-      payload: { reason: `unpaid_${balance.unpaidAmount}` },
+      userId,
+      payload: { bookingUid, reason: `unpaid_${balance.unpaidAmount}` },
     })
     return { kind: 'rolled_back', reason: `unpaid_${balance.unpaidAmount}` }
   }
 
   let commitResult
   try {
-    commitResult = await commitZeroSum(credential.token, ticket.bookingUid)
+    commitResult = await commitZeroSum(credential.token, bookingUid)
   } catch (err) {
     await tryRollback(credential.token, ticket.ticketCode, oldTicket)
     await logAudit({
       type: 'edit.rolled_back',
       actor: 'system',
-      userId: trip.userId,
-      tripId,
-      payload: { reason: err instanceof Error ? `commit_${err.message}` : 'commit_failed' },
+      userId,
+      payload: {
+        bookingUid,
+        reason: err instanceof Error ? `commit_${err.message}` : 'commit_failed',
+      },
     })
     return { kind: 'rolled_back', reason: 'commit_failed' }
   }
 
   let updated
   try {
-    updated = await getBooking(credential.token, ticket.bookingUid)
+    updated = await getBooking(credential.token, bookingUid)
   } catch (err) {
-    return fail('internal', 'post_commit_get_booking_failed', undefined, err instanceof Error ? err.message : String(err))
+    return fail(
+      'internal',
+      'post_commit_get_booking_failed',
+      undefined,
+      err instanceof Error ? err.message : String(err),
+    )
   }
 
   const newTicket = updated.tickets.find(
@@ -302,27 +316,38 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
   )
   if (!newTicket) return fail('internal', 'new_ticket_not_found')
 
+  const bookingUidChanged = newTicket.bookingUid !== bookingUid
+  if (bookingUidChanged) {
+    log.warn(
+      { bookingUid, newBookingUid: newTicket.bookingUid },
+      'bookingUid rotated on swap — options will orphan',
+    )
+  }
+
   await db
     .update(tickets)
     .set({
+      ticketId: newTicket.id,
       ticketCode: newTicket.ticketCode,
       ticketNumber: newTicket.ticketNumber,
-      bookingUid: newTicket.bookingUid,
       eventUid: newTicket.event.uid,
       ticketDate: newTicket.ticketDate,
       eventDtstart: new Date(newTicket.event.dtstart),
       capturedAt: new Date(),
     })
-    .where(eq(tickets.tripId, tripId))
+    .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
 
-  lastAttemptAt.delete(tripId)
+  lastAttemptAt.delete(bookingUid)
 
   await logAudit({
     type: 'edit.succeeded',
     actor: 'system',
-    userId: trip.userId,
-    tripId,
+    userId,
     payload: {
+      bookingUid,
+      ...(bookingUidChanged
+        ? { bookingUidChanged: true, newBookingUid: newTicket.bookingUid }
+        : {}),
       newTicketCode: newTicket.ticketCode,
       newTicketNumber: newTicket.ticketNumber,
       newInvoiceNumber: commitResult.invoiceNumber,
@@ -340,10 +365,7 @@ async function runEdit(tripId: string): Promise<EditOutcome> {
   }
 }
 
-function patchTicketEvent(
-  oldTicket: PraamidTicket,
-  newEvent: PraamidEvent,
-): PraamidTicket {
+function patchTicketEvent(oldTicket: PraamidTicket, newEvent: PraamidEvent): PraamidTicket {
   return {
     ...oldTicket,
     event: {

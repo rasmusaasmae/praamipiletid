@@ -1,30 +1,31 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { PraamidAuthStatus, Ticket } from '@/db/schema'
-import { getAdminDashboard, getMyPraamidAuthState, getMyTripCards } from './queries'
+import type { PraamidAuthStatus } from '@/db/schema'
+import { getAdminDashboard, getMyPraamidAuthState, getMyTicketCards } from './queries'
 
-export type TripCardData = {
-  trip: {
-    id: string
+export type TicketCardData = {
+  ticket: {
+    userId: string
+    bookingUid: string
+    ticketId: number
+    ticketCode: string
+    ticketNumber: string
     direction: string
     measurementUnit: string
-    notify: boolean
-    edit: boolean
-    lastCheckedAt: Date | null
+    eventUid: string
+    eventDtstart: Date
+    ticketDate: string
     swapInProgress: boolean
+    capturedAt: Date
   }
   options: Array<{
     id: string
-    tripId: string
+    bookingUid: string
     priority: number
     eventUid: string
     eventDate: string
     eventDtstart: Date
-    stopBeforeAt: Date
-    lastCapacity: number | null
-    lastCapacityState: string | null
-    lastCapacityCheckedAt: Date | null
+    stopBeforeMinutes: number
   }>
-  ticket: Ticket | null
 }
 
 export type PraamidAuthStateView = {
@@ -42,27 +43,28 @@ export type AdminUserRow = {
   subCount: number
 }
 
-export type AdminTripRow = {
-  id: string
+export type AdminTicketRow = {
+  userId: string
   userEmail: string
+  bookingUid: string
+  ticketCode: string
   direction: string
   measurementUnit: string
   eventUid: string
-  eventDate: string
   eventDtstart: Date
-  lastCapacity: number | null
+  optionsCount: number
 }
 
 export type AdminDashboardData = {
   pollIntervalMs: number
   editGloballyEnabled: boolean
   users: AdminUserRow[]
-  trips: AdminTripRow[]
+  tickets: AdminTicketRow[]
 }
 
-export const tripsQueryOptions = queryOptions({
-  queryKey: ['trips'],
-  queryFn: () => getMyTripCards(),
+export const ticketsQueryOptions = queryOptions({
+  queryKey: ['tickets'],
+  queryFn: () => getMyTicketCards(),
 })
 
 export const praamidAuthStateQueryOptions = queryOptions({

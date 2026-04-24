@@ -2,9 +2,11 @@ import { sql } from 'drizzle-orm'
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -22,9 +24,6 @@ export const settings = pgTable('settings', {
     .notNull(),
 })
 
-// Per-user preferences that don't belong on the better-auth `user` row
-// (kept there only for data better-auth itself manages). user_id is the
-// PK and FK, so there's at most one settings row per user.
 export const SUPPORTED_LOCALES = ['et', 'en'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 export const DEFAULT_LOCALE: SupportedLocale = 'et'
@@ -55,43 +54,27 @@ export const userSettings = pgTable(
   ],
 )
 
-export const trips = pgTable(
-  'trips',
-  {
-    id: text('id').primaryKey(),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    direction: text('direction').notNull(),
-    measurementUnit: text('measurement_unit').notNull(),
-    notify: boolean('notify').default(true).notNull(),
-    edit: boolean('edit').default(false).notNull(),
-    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true, mode: 'date' }),
-    swapInProgress: boolean('swap_in_progress').default(false).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [index('trips_user_id_idx').on(table.userId)],
-)
-
+// Cache of the user's praamid.ee tickets that they have opted into
+// monitoring. PK is (userId, bookingUid): bookingUid is praamid's stable
+// booking handle and survives a swap (the ticket inside the booking
+// changes, the booking stays). Options FK against this composite, so they
+// stay attached to the same row across an in-place ticket swap.
 export const tickets = pgTable(
   'tickets',
   {
-    tripId: text('trip_id')
-      .primaryKey()
-      .references(() => trips.id, { onDelete: 'cascade' }),
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
+    bookingUid: text('booking_uid').notNull(),
+    ticketId: integer('ticket_id').notNull(),
     ticketCode: text('ticket_code').notNull(),
     ticketNumber: text('ticket_number').notNull(),
-    bookingUid: text('booking_uid').notNull(),
+    direction: text('direction').notNull(),
+    measurementUnit: text('measurement_unit').notNull(),
     eventUid: text('event_uid').notNull(),
-    ticketDate: text('ticket_date').notNull(),
     eventDtstart: timestamp('event_dtstart', { withTimezone: true, mode: 'date' }).notNull(),
+    ticketDate: text('ticket_date').notNull(),
+    swapInProgress: boolean('swap_in_progress').default(false).notNull(),
     capturedAt: timestamp('captured_at', { withTimezone: true, mode: 'date' }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
       .defaultNow()
@@ -99,32 +82,25 @@ export const tickets = pgTable(
       .notNull(),
   },
   (table) => [
-    index('tickets_event_uid_idx').on(table.eventUid),
+    primaryKey({ name: 'tickets_pk', columns: [table.userId, table.bookingUid] }),
     index('tickets_user_id_idx').on(table.userId),
+    index('tickets_event_uid_idx').on(table.eventUid),
   ],
 )
 
-export const tripOptions = pgTable(
-  'trip_options',
+export const ticketOptions = pgTable(
+  'ticket_options',
   {
     id: text('id').primaryKey(),
-    tripId: text('trip_id')
-      .notNull()
-      .references(() => trips.id, { onDelete: 'cascade' }),
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
+    bookingUid: text('booking_uid').notNull(),
     priority: integer('priority').notNull(),
     eventUid: text('event_uid').notNull(),
     eventDate: text('event_date').notNull(),
     eventDtstart: timestamp('event_dtstart', { withTimezone: true, mode: 'date' }).notNull(),
-    stopBeforeAt: timestamp('stop_before_at', { withTimezone: true, mode: 'date' }).notNull(),
-    lastCapacity: integer('last_capacity'),
-    lastCapacityState: text('last_capacity_state'),
-    lastCapacityCheckedAt: timestamp('last_capacity_checked_at', {
-      withTimezone: true,
-      mode: 'date',
-    }),
+    stopBeforeMinutes: integer('stop_before_minutes').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
       .defaultNow()
@@ -132,10 +108,15 @@ export const tripOptions = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('trip_options_event_unique').on(table.tripId, table.eventUid),
-    uniqueIndex('trip_options_priority_unique').on(table.tripId, table.priority),
-    index('trip_options_dtstart_idx').on(table.eventDtstart),
-    index('trip_options_user_id_idx').on(table.userId),
+    foreignKey({
+      name: 'ticket_options_ticket_fk',
+      columns: [table.userId, table.bookingUid],
+      foreignColumns: [tickets.userId, tickets.bookingUid],
+    }).onDelete('cascade'),
+    uniqueIndex('ticket_options_event_unique').on(table.bookingUid, table.eventUid),
+    uniqueIndex('ticket_options_priority_unique').on(table.bookingUid, table.priority),
+    index('ticket_options_dtstart_idx').on(table.eventDtstart),
+    index('ticket_options_user_id_idx').on(table.userId),
   ],
 )
 
@@ -146,14 +127,12 @@ export const auditLogs = pgTable(
     userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
     actor: text('actor').notNull(),
     type: text('type').notNull(),
-    tripId: text('trip_id').references(() => trips.id, { onDelete: 'set null' }),
     payload: text('payload'),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
   },
   (table) => [
     index('audit_logs_user_created_idx').on(table.userId, table.createdAt),
     index('audit_logs_type_idx').on(table.type),
-    index('audit_logs_trip_idx').on(table.tripId),
   ],
 )
 
@@ -197,12 +176,10 @@ export const praamidAuthState = pgTable('praamid_auth_state', {
 export type Setting = typeof settings.$inferSelect
 export type PraamidCredential = typeof praamidCredentials.$inferSelect
 export type NewPraamidCredential = typeof praamidCredentials.$inferInsert
-export type Trip = typeof trips.$inferSelect
-export type NewTrip = typeof trips.$inferInsert
 export type Ticket = typeof tickets.$inferSelect
 export type NewTicket = typeof tickets.$inferInsert
-export type TripOption = typeof tripOptions.$inferSelect
-export type NewTripOption = typeof tripOptions.$inferInsert
+export type TicketOption = typeof ticketOptions.$inferSelect
+export type NewTicketOption = typeof ticketOptions.$inferInsert
 export type AuditLog = typeof auditLogs.$inferSelect
 export type NewAuditLog = typeof auditLogs.$inferInsert
 export type PraamidAuthState = typeof praamidAuthState.$inferSelect

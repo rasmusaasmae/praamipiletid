@@ -1,11 +1,12 @@
 'use server'
 
-import { and, eq } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
+import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
-import { tickets, trips } from '@/db/schema'
+import { ticketOptions, tickets } from '@/db/schema'
 import {
   getCredential,
   invalidateCredential,
@@ -16,17 +17,31 @@ import {
   PraamidAuthError,
   type Ticket as PraamidTicket,
 } from '@/lib/praamid-authed'
+import { listEvents } from '@/lib/praamid'
 import { logAudit } from '@/lib/audit'
+import {
+  optionAddSchema,
+  optionMoveSchema,
+  optionUpdateSchema,
+  subscribeTicketSchema,
+  unsubscribeTicketSchema,
+} from '@/lib/schemas'
 import { requireUser } from '@/lib/session'
+import { logger } from '@/lib/logger'
 
-export type AttachableTicket = {
+const log = logger.child({ scope: 'actions/tickets' })
+
+const DEFAULT_MEASUREMENT_UNIT = 'sv'
+const DEFAULT_STOP_BEFORE_MINUTES = 60
+
+export type LiveTicket = {
   ticketCode: string
   ticketNumber: string
   ticketDate: string
   bookingUid: string
   eventUid: string
   eventDtstart: string
-  directionCode: string
+  direction: string
 }
 
 async function fetchPraamidTickets(
@@ -51,70 +66,44 @@ async function fetchPraamidTickets(
   }
 }
 
-const ListAttachableDto = z.object({ tripId: z.string().min(1) })
-
-export async function listAttachableTickets(
-  dto: z.input<typeof ListAttachableDto>,
-): Promise<AttachableTicket[]> {
+// Returns the user's active, future-dated tickets on praamid.ee. The home
+// page uses this to render "monitor" CTAs for tickets we don't yet cache.
+// Does not mutate DB.
+export async function refreshTickets(): Promise<LiveTicket[]> {
   const session = await requireUser()
   const errT = await getTranslations('Errors')
-
-  const parsed = ListAttachableDto.safeParse(dto)
-  if (!parsed.success) throw new Error(errT('missingId'))
-
-  const [trip] = await db
-    .select({ id: trips.id, direction: trips.direction })
-    .from(trips)
-    .where(and(eq(trips.id, parsed.data.tripId), eq(trips.userId, session.user.id)))
-    .limit(1)
-  if (!trip) throw new Error(errT('tripNotFound'))
-
-  const fetched = await fetchPraamidTickets(session.user.id, errT)
+  const raw = await fetchPraamidTickets(session.user.id, errT)
   const now = Date.now()
-
-  return fetched
-    .filter((raw) => raw.status.code === 'ACTIVE')
-    .filter((raw) => raw.direction.code === trip.direction)
-    .filter((raw) => {
-      const ts = Date.parse(raw.event.dtstart)
+  return raw
+    .filter((t) => t.status.code === 'ACTIVE')
+    .filter((t) => {
+      const ts = Date.parse(t.event.dtstart)
       return !Number.isNaN(ts) && ts > now
     })
-    .map((raw) => ({
-      ticketCode: raw.ticketCode,
-      ticketNumber: raw.ticketNumber,
-      ticketDate: raw.ticketDate,
-      bookingUid: raw.bookingUid,
-      eventUid: raw.event.uid,
-      eventDtstart: raw.event.dtstart,
-      directionCode: raw.direction.code,
+    .map<LiveTicket>((t) => ({
+      ticketCode: t.ticketCode,
+      ticketNumber: t.ticketNumber,
+      ticketDate: t.ticketDate,
+      bookingUid: t.bookingUid,
+      eventUid: t.event.uid,
+      eventDtstart: t.event.dtstart,
+      direction: t.direction.code,
     }))
     .sort((a, b) => Date.parse(a.eventDtstart) - Date.parse(b.eventDtstart))
 }
 
-const AttachTicketDto = z.object({
-  tripId: z.string().min(1),
-  ticketCode: z.string().min(1),
-})
-
-export async function attachTicket(
-  dto: z.input<typeof AttachTicketDto>,
+export async function subscribeTicket(
+  dto: z.input<typeof subscribeTicketSchema>,
 ): Promise<void> {
   const session = await requireUser()
   const errT = await getTranslations('Errors')
 
-  const parsed = AttachTicketDto.safeParse(dto)
+  const parsed = subscribeTicketSchema.safeParse(dto)
   if (!parsed.success) throw new Error(errT('invalidData'))
-
-  const [trip] = await db
-    .select({ id: trips.id, direction: trips.direction })
-    .from(trips)
-    .where(and(eq(trips.id, parsed.data.tripId), eq(trips.userId, session.user.id)))
-    .limit(1)
-  if (!trip) throw new Error(errT('tripNotFound'))
 
   const fetched = await fetchPraamidTickets(session.user.id, errT)
   const raw = fetched.find(
-    (t) => t.ticketCode === parsed.data.ticketCode && t.direction.code === trip.direction,
+    (t) => t.bookingUid === parsed.data.bookingUid && t.ticketCode === parsed.data.ticketCode,
   )
   if (!raw) throw new Error(errT('ticketNotFound'))
 
@@ -127,83 +116,360 @@ export async function attachTicket(
   await db
     .insert(tickets)
     .values({
-      tripId: trip.id,
       userId: session.user.id,
+      bookingUid: raw.bookingUid,
+      ticketId: raw.id,
       ticketCode: raw.ticketCode,
       ticketNumber: raw.ticketNumber,
-      bookingUid: raw.bookingUid,
+      direction: raw.direction.code,
+      measurementUnit: DEFAULT_MEASUREMENT_UNIT,
       eventUid: raw.event.uid,
-      ticketDate: raw.ticketDate,
       eventDtstart,
+      ticketDate: raw.ticketDate,
       capturedAt: now,
     })
     .onConflictDoUpdate({
-      target: tickets.tripId,
+      target: [tickets.userId, tickets.bookingUid],
       set: {
+        ticketId: raw.id,
         ticketCode: raw.ticketCode,
         ticketNumber: raw.ticketNumber,
-        bookingUid: raw.bookingUid,
+        direction: raw.direction.code,
         eventUid: raw.event.uid,
-        ticketDate: raw.ticketDate,
         eventDtstart,
+        ticketDate: raw.ticketDate,
         capturedAt: now,
       },
     })
 
   await logAudit({
-    type: 'ticket.attached',
+    type: 'ticket.subscribed',
     actor: 'user',
     userId: session.user.id,
-    tripId: trip.id,
     payload: {
-      ticketCode: raw.ticketCode,
       bookingUid: raw.bookingUid,
+      ticketCode: raw.ticketCode,
       eventUid: raw.event.uid,
     },
   })
+  log.info(
+    { userId: session.user.id, bookingUid: raw.bookingUid, ticketCode: raw.ticketCode },
+    'ticket subscribed',
+  )
 
   revalidatePath('/')
 }
 
-const DetachTicketDto = z.object({ tripId: z.string().min(1) })
-
-export async function detachTicket(
-  dto: z.input<typeof DetachTicketDto>,
+export async function unsubscribeTicket(
+  dto: z.input<typeof unsubscribeTicketSchema>,
 ): Promise<void> {
   const session = await requireUser()
   const errT = await getTranslations('Errors')
 
-  const parsed = DetachTicketDto.safeParse(dto)
+  const parsed = unsubscribeTicketSchema.safeParse(dto)
   if (!parsed.success) throw new Error(errT('missingId'))
-
-  const [owned] = await db
-    .select({ id: trips.id, edit: trips.edit })
-    .from(trips)
-    .where(and(eq(trips.id, parsed.data.tripId), eq(trips.userId, session.user.id)))
-    .limit(1)
-  if (!owned) throw new Error(errT('tripNotFound'))
 
   const [existing] = await db
     .select({ ticketCode: tickets.ticketCode })
     .from(tickets)
-    .where(eq(tickets.tripId, parsed.data.tripId))
+    .where(
+      and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)),
+    )
     .limit(1)
-  if (!existing) return
+  if (!existing) throw new Error(errT('ticketNotFound'))
 
-  await db.transaction(async (tx) => {
-    await tx.delete(tickets).where(eq(tickets.tripId, parsed.data.tripId))
-    if (owned.edit) {
-      await tx.update(trips).set({ edit: false }).where(eq(trips.id, parsed.data.tripId))
-    }
+  await db
+    .delete(tickets)
+    .where(
+      and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)),
+    )
+
+  await logAudit({
+    type: 'ticket.unsubscribed',
+    actor: 'user',
+    userId: session.user.id,
+    payload: {
+      bookingUid: parsed.data.bookingUid,
+      ticketCode: existing.ticketCode,
+      reason: 'user',
+    },
+  })
+  log.info(
+    { userId: session.user.id, bookingUid: parsed.data.bookingUid },
+    'ticket unsubscribed',
+  )
+
+  revalidatePath('/')
+}
+
+export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<void> {
+  const session = await requireUser()
+  const errT = await getTranslations('Errors')
+
+  const parsed = optionAddSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(errT('invalidData'))
+
+  const [ticket] = await db
+    .select({
+      bookingUid: tickets.bookingUid,
+      direction: tickets.direction,
+    })
+    .from(tickets)
+    .where(
+      and(
+        eq(tickets.userId, session.user.id),
+        eq(tickets.bookingUid, parsed.data.bookingUid),
+      ),
+    )
+    .limit(1)
+  if (!ticket) throw new Error(errT('ticketNotFound'))
+
+  const events = await listEvents(ticket.direction, parsed.data.date)
+  const event = events.find((e) => e.uid === parsed.data.eventUid)
+  if (!event) throw new Error(errT('eventNotFound'))
+
+  const [duplicate] = await db
+    .select({ id: ticketOptions.id })
+    .from(ticketOptions)
+    .where(
+      and(
+        eq(ticketOptions.bookingUid, ticket.bookingUid),
+        eq(ticketOptions.eventUid, parsed.data.eventUid),
+      ),
+    )
+    .limit(1)
+  if (duplicate) throw new Error(errT('optionExists'))
+
+  const [top] = await db
+    .select({ priority: ticketOptions.priority })
+    .from(ticketOptions)
+    .where(eq(ticketOptions.bookingUid, ticket.bookingUid))
+    .orderBy(desc(ticketOptions.priority))
+    .limit(1)
+  const nextPriority = (top?.priority ?? 0) + 1
+
+  const stopBeforeMinutes = parsed.data.stopBeforeMinutes ?? DEFAULT_STOP_BEFORE_MINUTES
+
+  const optionId = randomUUID()
+  await db.insert(ticketOptions).values({
+    id: optionId,
+    userId: session.user.id,
+    bookingUid: ticket.bookingUid,
+    priority: nextPriority,
+    eventUid: parsed.data.eventUid,
+    eventDate: parsed.data.date,
+    eventDtstart: new Date(event.dtstart),
+    stopBeforeMinutes,
   })
 
   await logAudit({
-    type: 'ticket.detached',
+    type: 'option.added',
     actor: 'user',
     userId: session.user.id,
-    tripId: parsed.data.tripId,
-    payload: { ticketCode: existing.ticketCode, reason: 'user' },
+    payload: {
+      bookingUid: ticket.bookingUid,
+      eventUid: parsed.data.eventUid,
+      priority: nextPriority,
+    },
   })
+  log.info(
+    {
+      bookingUid: ticket.bookingUid,
+      userId: session.user.id,
+      eventUid: parsed.data.eventUid,
+      priority: nextPriority,
+    },
+    'option added',
+  )
+
+  revalidatePath('/')
+}
+
+export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Promise<void> {
+  const session = await requireUser()
+  const errT = await getTranslations('Errors')
+  const parsed = optionUpdateSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(errT('invalidData'))
+
+  const [owned] = await db
+    .select({
+      id: ticketOptions.id,
+      bookingUid: ticketOptions.bookingUid,
+      eventUid: ticketOptions.eventUid,
+    })
+    .from(ticketOptions)
+    .where(
+      and(
+        eq(ticketOptions.id, parsed.data.id),
+        eq(ticketOptions.userId, session.user.id),
+      ),
+    )
+    .limit(1)
+  if (!owned) throw new Error(errT('optionNotFound'))
+
+  await db
+    .update(ticketOptions)
+    .set({ stopBeforeMinutes: parsed.data.stopBeforeMinutes })
+    .where(eq(ticketOptions.id, parsed.data.id))
+
+  await logAudit({
+    type: 'option.updated',
+    actor: 'user',
+    userId: session.user.id,
+    payload: {
+      bookingUid: owned.bookingUid,
+      eventUid: owned.eventUid,
+      stopBeforeMinutes: parsed.data.stopBeforeMinutes,
+    },
+  })
+  log.info(
+    {
+      optionId: parsed.data.id,
+      userId: session.user.id,
+      stopBeforeMinutes: parsed.data.stopBeforeMinutes,
+    },
+    'option updated',
+  )
+
+  revalidatePath('/')
+}
+
+const RemoveOptionDto = z.object({ id: z.string().min(1) })
+
+export async function removeOption(
+  dto: z.input<typeof RemoveOptionDto>,
+): Promise<void> {
+  const session = await requireUser()
+  const errT = await getTranslations('Errors')
+  const parsed = RemoveOptionDto.safeParse(dto)
+  if (!parsed.success) throw new Error(errT('missingId'))
+
+  const [existing] = await db
+    .select({
+      id: ticketOptions.id,
+      bookingUid: ticketOptions.bookingUid,
+      eventUid: ticketOptions.eventUid,
+      priority: ticketOptions.priority,
+    })
+    .from(ticketOptions)
+    .where(
+      and(
+        eq(ticketOptions.id, parsed.data.id),
+        eq(ticketOptions.userId, session.user.id),
+      ),
+    )
+    .limit(1)
+  if (!existing) throw new Error(errT('optionNotFound'))
+
+  await db.delete(ticketOptions).where(eq(ticketOptions.id, parsed.data.id))
+
+  await logAudit({
+    type: 'option.removed',
+    actor: 'user',
+    userId: session.user.id,
+    payload: {
+      bookingUid: existing.bookingUid,
+      eventUid: existing.eventUid,
+      priority: existing.priority,
+    },
+  })
+  log.info(
+    {
+      optionId: parsed.data.id,
+      bookingUid: existing.bookingUid,
+      userId: session.user.id,
+      priority: existing.priority,
+    },
+    'option removed',
+  )
+
+  revalidatePath('/')
+}
+
+export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise<void> {
+  const session = await requireUser()
+  const errT = await getTranslations('Errors')
+  const parsed = optionMoveSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(errT('invalidData'))
+
+  const [current] = await db
+    .select({
+      id: ticketOptions.id,
+      bookingUid: ticketOptions.bookingUid,
+      priority: ticketOptions.priority,
+      eventUid: ticketOptions.eventUid,
+    })
+    .from(ticketOptions)
+    .where(
+      and(
+        eq(ticketOptions.id, parsed.data.id),
+        eq(ticketOptions.userId, session.user.id),
+      ),
+    )
+    .limit(1)
+  if (!current) throw new Error(errT('optionNotFound'))
+
+  const neighborFilter =
+    parsed.data.direction === 'up'
+      ? lt(ticketOptions.priority, current.priority)
+      : gt(ticketOptions.priority, current.priority)
+  const neighborOrder =
+    parsed.data.direction === 'up'
+      ? desc(ticketOptions.priority)
+      : asc(ticketOptions.priority)
+
+  const [neighbor] = await db
+    .select({ id: ticketOptions.id, priority: ticketOptions.priority })
+    .from(ticketOptions)
+    .where(and(eq(ticketOptions.bookingUid, current.bookingUid), neighborFilter))
+    .orderBy(neighborOrder)
+    .limit(1)
+  if (!neighbor) return
+
+  const [topRow] = await db
+    .select({ priority: ticketOptions.priority })
+    .from(ticketOptions)
+    .where(eq(ticketOptions.bookingUid, current.bookingUid))
+    .orderBy(desc(ticketOptions.priority))
+    .limit(1)
+  const parkingSpot = (topRow?.priority ?? 0) + 1
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(ticketOptions)
+      .set({ priority: parkingSpot })
+      .where(eq(ticketOptions.id, current.id))
+    await tx
+      .update(ticketOptions)
+      .set({ priority: current.priority })
+      .where(eq(ticketOptions.id, neighbor.id))
+    await tx
+      .update(ticketOptions)
+      .set({ priority: neighbor.priority })
+      .where(eq(ticketOptions.id, current.id))
+  })
+
+  await logAudit({
+    type: 'option.reordered',
+    actor: 'user',
+    userId: session.user.id,
+    payload: {
+      bookingUid: current.bookingUid,
+      from: current.priority,
+      to: neighbor.priority,
+      eventUid: current.eventUid,
+    },
+  })
+  log.info(
+    {
+      optionId: current.id,
+      bookingUid: current.bookingUid,
+      userId: session.user.id,
+      from: current.priority,
+      to: neighbor.priority,
+    },
+    'option reordered',
+  )
 
   revalidatePath('/')
 }

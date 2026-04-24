@@ -3,7 +3,6 @@ CREATE TABLE "audit_logs" (
 	"user_id" text,
 	"actor" text NOT NULL,
 	"type" text NOT NULL,
-	"trip_id" text,
 	"payload" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -34,46 +33,34 @@ CREATE TABLE "settings" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "tickets" (
-	"trip_id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"ticket_code" text NOT NULL,
-	"ticket_number" text NOT NULL,
-	"booking_uid" text NOT NULL,
-	"event_uid" text NOT NULL,
-	"ticket_date" text NOT NULL,
-	"event_dtstart" timestamp with time zone NOT NULL,
-	"captured_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "trip_options" (
+CREATE TABLE "ticket_options" (
 	"id" text PRIMARY KEY NOT NULL,
-	"trip_id" text NOT NULL,
 	"user_id" text NOT NULL,
+	"booking_uid" text NOT NULL,
 	"priority" integer NOT NULL,
 	"event_uid" text NOT NULL,
 	"event_date" text NOT NULL,
 	"event_dtstart" timestamp with time zone NOT NULL,
-	"stop_before_at" timestamp with time zone NOT NULL,
-	"last_capacity" integer,
-	"last_capacity_state" text,
-	"last_capacity_checked_at" timestamp with time zone,
+	"stop_before_minutes" integer NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "trips" (
-	"id" text PRIMARY KEY NOT NULL,
+CREATE TABLE "tickets" (
 	"user_id" text NOT NULL,
+	"booking_uid" text NOT NULL,
+	"ticket_id" integer NOT NULL,
+	"ticket_code" text NOT NULL,
+	"ticket_number" text NOT NULL,
 	"direction" text NOT NULL,
 	"measurement_unit" text NOT NULL,
-	"notify" boolean DEFAULT true NOT NULL,
-	"edit" boolean DEFAULT false NOT NULL,
-	"last_checked_at" timestamp with time zone,
+	"event_uid" text NOT NULL,
+	"event_dtstart" timestamp with time zone NOT NULL,
+	"ticket_date" text NOT NULL,
 	"swap_in_progress" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"captured_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "tickets_pk" PRIMARY KEY("user_id","booking_uid")
 );
 --> statement-breakpoint
 CREATE TABLE "user_settings" (
@@ -140,28 +127,23 @@ CREATE TABLE "verification" (
 );
 --> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "praamid_auth_state" ADD CONSTRAINT "praamid_auth_state_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "praamid_credentials" ADD CONSTRAINT "praamid_credentials_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tickets" ADD CONSTRAINT "tickets_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ticket_options" ADD CONSTRAINT "ticket_options_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ticket_options" ADD CONSTRAINT "ticket_options_ticket_fk" FOREIGN KEY ("user_id","booking_uid") REFERENCES "public"."tickets"("user_id","booking_uid") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trip_options" ADD CONSTRAINT "trip_options_trip_id_trips_id_fk" FOREIGN KEY ("trip_id") REFERENCES "public"."trips"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trip_options" ADD CONSTRAINT "trip_options_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trips" ADD CONSTRAINT "trips_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_logs_user_created_idx" ON "audit_logs" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX "audit_logs_type_idx" ON "audit_logs" USING btree ("type");--> statement-breakpoint
-CREATE INDEX "audit_logs_trip_idx" ON "audit_logs" USING btree ("trip_id");--> statement-breakpoint
 CREATE INDEX "praamid_credentials_expires_at_idx" ON "praamid_credentials" USING btree ("expires_at");--> statement-breakpoint
-CREATE INDEX "tickets_event_uid_idx" ON "tickets" USING btree ("event_uid");--> statement-breakpoint
+CREATE UNIQUE INDEX "ticket_options_event_unique" ON "ticket_options" USING btree ("booking_uid","event_uid");--> statement-breakpoint
+CREATE UNIQUE INDEX "ticket_options_priority_unique" ON "ticket_options" USING btree ("booking_uid","priority");--> statement-breakpoint
+CREATE INDEX "ticket_options_dtstart_idx" ON "ticket_options" USING btree ("event_dtstart");--> statement-breakpoint
+CREATE INDEX "ticket_options_user_id_idx" ON "ticket_options" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "tickets_user_id_idx" ON "tickets" USING btree ("user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "trip_options_event_unique" ON "trip_options" USING btree ("trip_id","event_uid");--> statement-breakpoint
-CREATE UNIQUE INDEX "trip_options_priority_unique" ON "trip_options" USING btree ("trip_id","priority");--> statement-breakpoint
-CREATE INDEX "trip_options_dtstart_idx" ON "trip_options" USING btree ("event_dtstart");--> statement-breakpoint
-CREATE INDEX "trip_options_user_id_idx" ON "trip_options" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "trips_user_id_idx" ON "trips" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "tickets_event_uid_idx" ON "tickets" USING btree ("event_uid");--> statement-breakpoint
 CREATE INDEX "account_userId_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");

@@ -2,7 +2,7 @@
 
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { AdminTripsTable } from '@/components/admin/admin-trips-table'
+import { AdminTicketsTable } from '@/components/admin/admin-tickets-table'
 import { AdminUsersTable } from '@/components/admin/admin-users-table'
 import { PollIntervalForm } from '@/components/admin/poll-interval-form'
 import { EditEnabledForm } from '@/components/admin/edit-enabled-form'
@@ -59,10 +59,10 @@ export function Admin() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('trips')}</CardTitle>
+          <CardTitle>{t('tickets')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <AdminTripsTable rows={data.trips} />
+          <AdminTicketsTable rows={data.tickets} />
         </CardContent>
       </Card>
     </div>

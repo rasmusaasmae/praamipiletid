@@ -4,29 +4,25 @@ export const directionSchema = z.enum(['VK', 'KV', 'RH', 'HR'])
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 export const isikukoodSchema = z.string().regex(/^\d{11}$/, 'isikukoodInvalid')
 
-export const tripCreateSchema = z.object({
-  direction: directionSchema,
-  measurementUnit: z.string().min(1),
-  notify: z.coerce.boolean().optional(),
-  edit: z.coerce.boolean().optional(),
+export const subscribeTicketSchema = z.object({
+  bookingUid: z.string().min(1),
+  ticketCode: z.string().min(1),
 })
 
-export const tripUpdateSchema = z.object({
-  id: z.string().min(1),
-  notify: z.coerce.boolean().optional(),
-  edit: z.coerce.boolean().optional(),
+export const unsubscribeTicketSchema = z.object({
+  bookingUid: z.string().min(1),
 })
 
 export const optionAddSchema = z.object({
-  tripId: z.string().min(1),
+  bookingUid: z.string().min(1),
   eventUid: z.string().min(1),
   date: dateSchema,
-  stopBeforeAt: z.coerce.number().int().optional(),
+  stopBeforeMinutes: z.coerce.number().int().min(0).optional(),
 })
 
 export const optionUpdateSchema = z.object({
   id: z.string().min(1),
-  stopBeforeAt: z.coerce.number().int(),
+  stopBeforeMinutes: z.coerce.number().int().min(0),
 })
 
 export const optionMoveSchema = z.object({
