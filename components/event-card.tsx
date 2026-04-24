@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { addOption } from '@/actions/tickets'
-import { CAPACITY_LABELS, SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
+import type { PraamidEvent } from '@/lib/praamid/types'
+import { CAPACITY_LABELS, SHIP_NAMES } from '@/lib/praamid/labels'
 import { ticketsQueryOptions } from '@/lib/query-options'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { subscribeTicket } from '@/actions/tickets'
 import type { LiveTicket } from '@/actions/tickets'
-import { DIRECTION_LABELS } from '@/lib/praamid'
+import { DIRECTION_LABELS } from '@/lib/praamid/labels'
 import { ticketsQueryOptions } from '@/lib/query-options'
 
 type Props = {

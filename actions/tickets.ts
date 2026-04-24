@@ -6,9 +6,9 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
-import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid-credentials'
-import { listTickets, PraamidAuthError, type Ticket as PraamidTicket } from '@/lib/praamid-authed'
-import { listEvents } from '@/lib/praamid'
+import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
+import { listEvents, listTickets, PraamidAuthError } from '@/lib/praamid/api'
+import type { Ticket as PraamidTicket } from '@/lib/praamid/types'
 import {
   optionAddSchema,
   optionMoveSchema,

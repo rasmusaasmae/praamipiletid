@@ -8,10 +8,9 @@ import {
   getBooking,
   getBookingBalance,
   PraamidAuthError,
-  type Ticket as PraamidTicket,
-} from '@/lib/praamid-authed'
-import { type PraamidEvent } from '@/lib/praamid'
-import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid-credentials'
+} from '@/lib/praamid/api'
+import type { PraamidEvent, Ticket as PraamidTicket } from '@/lib/praamid/types'
+import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
 import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'edit' })

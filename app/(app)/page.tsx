@@ -3,7 +3,7 @@ import { Home } from '@/components/home'
 import { getQueryClient } from '@/lib/get-query-client'
 import { praamidAuthStateQueryOptions, ticketsQueryOptions } from '@/lib/query-options'
 import { refreshTickets } from '@/actions/tickets'
-import { getCredentialStatus } from '@/lib/praamid-credentials'
+import { getCredentialStatus } from '@/lib/praamid/credentials'
 import { requireUser } from '@/lib/session'
 
 export default async function HomePage() {

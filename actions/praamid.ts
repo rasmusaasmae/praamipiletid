@@ -3,8 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requireUser } from '@/lib/session'
-import { forgetCredential } from '@/lib/praamid-credentials'
-import { cancelLogin, startLogin } from '@/lib/praamid-login'
+import { forgetCredential } from '@/lib/praamid/credentials'
+import { cancelLogin, startLogin } from '@/lib/praamid/login'
 import { isikukoodSchema } from '@/lib/schemas'
 
 export async function forgetPraamidCredential(): Promise<void> {
