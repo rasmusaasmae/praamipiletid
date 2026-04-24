@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import { useTransition } from 'react'
-import { MoonIcon, SunIcon, MonitorIcon, LogOutIcon, UserIcon, CheckIcon } from 'lucide-react'
+import { MoonIcon, SunIcon, MonitorIcon, LogOutIcon, UserIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useLocale, useTranslations } from 'next-intl'
 import { authClient } from '@/lib/auth-client'
@@ -12,6 +12,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -38,12 +40,13 @@ export function AvatarMenu({ user }: Props) {
   const tLocale = useTranslations('LocaleToggle')
   const tSignOut = useTranslations('SignOut')
 
-  const setLocale = (next: (typeof routing.locales)[number]) => {
+  const setLocale = (next: string) => {
+    if (next === locale) return
     startTransition(() => {
       router.replace(
         // @ts-expect-error — params are compatible with the current route's typed params
         { pathname, params },
-        { locale: next },
+        { locale: next as (typeof routing.locales)[number] },
       )
     })
   }
@@ -66,31 +69,31 @@ export function AvatarMenu({ user }: Props) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>{tTheme('label')}</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => setTheme('light')}>
-            <SunIcon className="mr-2 size-4" />
-            {tTheme('light')}
-            {theme === 'light' ? <CheckIcon className="ml-auto size-4" /> : null}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme('dark')}>
-            <MoonIcon className="mr-2 size-4" />
-            {tTheme('dark')}
-            {theme === 'dark' ? <CheckIcon className="ml-auto size-4" /> : null}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme('system')}>
-            <MonitorIcon className="mr-2 size-4" />
-            {tTheme('system')}
-            {theme === 'system' ? <CheckIcon className="ml-auto size-4" /> : null}
-          </DropdownMenuItem>
+          <DropdownMenuRadioGroup value={theme ?? 'system'} onValueChange={setTheme}>
+            <DropdownMenuRadioItem value="light">
+              <SunIcon />
+              {tTheme('light')}
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="dark">
+              <MoonIcon />
+              {tTheme('dark')}
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="system">
+              <MonitorIcon />
+              {tTheme('system')}
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>{tLocale('label')}</DropdownMenuLabel>
-          {routing.locales.map((l) => (
-            <DropdownMenuItem key={l} onClick={() => setLocale(l)} disabled={l === locale}>
-              {LOCALE_LABELS[l]}
-              {l === locale ? <CheckIcon className="ml-auto size-4" /> : null}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuRadioGroup value={locale} onValueChange={setLocale}>
+            {routing.locales.map((l) => (
+              <DropdownMenuRadioItem key={l} value={l}>
+                {LOCALE_LABELS[l]}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -101,7 +104,7 @@ export function AvatarMenu({ user }: Props) {
             router.refresh()
           }}
         >
-          <LogOutIcon className="mr-2 size-4" />
+          <LogOutIcon />
           {tSignOut('button')}
         </DropdownMenuItem>
       </DropdownMenuContent>
