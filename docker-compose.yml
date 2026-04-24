@@ -28,8 +28,11 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      NOTIFIER: ${NOTIFIER:-ntfy}
-      NTFY_BASE_URL: ${NTFY_BASE_URL:-https://ntfy.sh}
+      SMTP_HOST: ${SMTP_HOST:-smtp.protonmail.ch}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
       PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
       DATABASE_URL: postgres://${POSTGRES_USER:-ferry}:${POSTGRES_PASSWORD:-ferry}@postgres:5432/${POSTGRES_DB:-ferry}
     # Chromium crashes with the default 64MB /dev/shm when Playwright drives
