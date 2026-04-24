@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server'
+import { Ship } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { AvatarMenu } from '@/components/avatar-menu'
 
@@ -13,7 +14,8 @@ export async function NavBar({ user }: Props) {
     <header className="border-b border-border">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-3 sm:gap-4">
-          <Link href="/" className="font-semibold">
+          <Link href="/" className="flex items-center gap-2 font-semibold">
+            <Ship className="size-5" aria-hidden />
             {t('brand')}
           </Link>
           {isAdmin ? (
