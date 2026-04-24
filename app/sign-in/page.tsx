@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { GoogleSignInButton } from '@/components/google-sign-in-button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSession } from '@/lib/session'
+import { redirect } from 'next/navigation'
 
 export default async function SignInPage() {
   const session = await getSession()
@@ -11,7 +11,7 @@ export default async function SignInPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Ferry Tickets</CardTitle>
-          <CardDescription>Get notified when a ferry slot opens up.</CardDescription>
+          <CardDescription>Automatically swap tickets when a spot opens up.</CardDescription>
         </CardHeader>
         <CardContent>
           <GoogleSignInButton />
