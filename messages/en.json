@@ -27,7 +27,8 @@
     "subscribe": "Monitor",
     "subscribing": "Adding…",
     "subscribed": "Now monitoring",
-    "connectPraamid": "Connect praamid.ee to see your tickets"
+    "connectPraamidDescription": "You're not connected to praamid.ee yet.",
+    "connectPraamid": "Connect praamid.ee"
   },
   "ThemeToggle": {
     "label": "Toggle theme",

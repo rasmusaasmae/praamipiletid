@@ -9,7 +9,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
 import type { LiveTicket } from '@/actions/tickets'
 import { refreshTickets } from '@/actions/tickets'
-import { ticketsQueryOptions, type TicketCardData } from '@/lib/query-options'
+import {
+  praamidAuthStateQueryOptions,
+  ticketsQueryOptions,
+  type TicketCardData,
+} from '@/lib/query-options'
 
 type Row =
   | { kind: 'subscribed'; bookingUid: string; eventDtstart: Date; data: TicketCardData }
@@ -24,11 +28,15 @@ export function Home() {
     refetchInterval: 60_000,
   })
 
+  const authState = useQuery(praamidAuthStateQueryOptions)
+  const isAuthed = authState.data?.status === 'authenticated'
+
   const liveTickets = useQuery({
     queryKey: ['praamidTickets'],
     queryFn: () => refreshTickets(),
     staleTime: 60_000,
     retry: false,
+    enabled: isAuthed,
   })
 
   const rows = useMemo<Row[]>(() => {
@@ -57,16 +65,7 @@ export function Home() {
         <p className="text-sm text-muted-foreground">{tT('description')}</p>
       </div>
 
-      {rows.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col gap-2 py-6 text-sm text-muted-foreground">
-            <p>{tT('empty')}</p>
-            <Link href="/settings#praamid" className="underline hover:text-foreground">
-              {tH('connectPraamid')}
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
+      {rows.length > 0 ? (
         <div className="flex flex-col gap-4">
           {rows.map((row) =>
             row.kind === 'subscribed' ? (
@@ -76,6 +75,21 @@ export function Home() {
             ),
           )}
         </div>
+      ) : !isAuthed ? (
+        <Card>
+          <CardContent className="flex flex-col gap-2 py-6 text-sm text-muted-foreground">
+            <p>{tH('connectPraamidDescription')}</p>
+            <Link href="/settings#praamid" className="underline hover:text-foreground">
+              {tH('connectPraamid')}
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="py-6 text-sm text-muted-foreground">
+            {tT('empty')}
+          </CardContent>
+        </Card>
       )}
     </div>
   )

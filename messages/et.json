@@ -27,7 +27,8 @@
     "subscribe": "Jälgi",
     "subscribing": "Lisan…",
     "subscribed": "Jälgin",
-    "connectPraamid": "Ühenda praamid.ee, et näha oma pileteid"
+    "connectPraamidDescription": "praamid.ee pole veel ühendatud.",
+    "connectPraamid": "Ühenda praamid.ee"
   },
   "ThemeToggle": {
     "label": "Vaheta teemat",
