@@ -3,7 +3,7 @@ import { and, eq, gt } from 'drizzle-orm'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { listEvents, type PraamidEvent } from '@/lib/praamid'
-import { getNotifier } from '@/lib/notifier'
+import { sendEmail } from '@/lib/email'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
 import { processSwapFor } from '@/lib/edit'
@@ -136,10 +136,10 @@ async function tick() {
       })
       if (outcome.kind === 'succeeded') {
         try {
-          await getNotifier().send({
+          await sendEmail({
             userId,
-            title: 'Ticket updated',
-            message: `New ticket ${outcome.newTicketNumber} (invoice ${outcome.invoiceNumber})`,
+            subject: 'Ticket updated',
+            body: `New ticket ${outcome.newTicketNumber} (invoice ${outcome.invoiceNumber})`,
           })
         } catch (err) {
           log.error(

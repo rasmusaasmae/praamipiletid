@@ -3,7 +3,7 @@ import { and, eq, gt } from 'drizzle-orm'
 import { db } from '@/db'
 import { auditLogs } from '@/db/schema'
 import { listCredentialsNeedingReauth } from '@/lib/praamid-credentials'
-import { getNotifier } from '@/lib/notifier'
+import { sendEmail } from '@/lib/email'
 import { logAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
@@ -40,10 +40,10 @@ async function tick() {
     if (await recentlyNotified(c.userId)) continue
     const hoursLeft = Math.max(0, Math.round((c.expiresAt.getTime() - now) / (60 * 60 * 1000)))
     try {
-      await getNotifier().send({
+      await sendEmail({
         userId: c.userId,
-        title: 'praamid.ee session expiring',
-        message: `Your praamid.ee session expires in ${hoursLeft}h — re-authenticate to keep auto-swap working.`,
+        subject: 'praamid.ee session expiring',
+        body: `Your praamid.ee session expires in ${hoursLeft}h — re-authenticate to keep auto-swap working.`,
       })
       await logAudit({
         type: 'notification.credential_expiring',
