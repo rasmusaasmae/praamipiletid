@@ -3,21 +3,18 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { praamidCredentials } from '@/db/schema'
+import { getEnv } from '@/lib/env'
 import { setAuthState, settleAuthState } from '@/lib/praamid-auth-state'
 
 const IV_BYTES = 12
 const TAG_BYTES = 16
 
 function getKey(): Buffer {
-  const hex = process.env.PRAAMID_CRED_KEY
+  const hex = getEnv().PRAAMID_CRED_KEY
   if (!hex) {
     throw new Error('PRAAMID_CRED_KEY not set — required to encrypt praamid tokens')
   }
-  const key = Buffer.from(hex, 'hex')
-  if (key.length !== 32) {
-    throw new Error(`PRAAMID_CRED_KEY must be 32 bytes (64 hex chars), got ${key.length}`)
-  }
-  return key
+  return Buffer.from(hex, 'hex')
 }
 
 export function encryptToken(plaintext: string): string {
