@@ -169,7 +169,7 @@ function ForgetButton() {
   const t = useTranslations('Praamid')
   const forgetMutation = useOptimisticMutation<void, PraamidAuthStateView>({
     queryKey: praamidAuthStateQueryOptions.queryKey,
-    action: () => forgetPraamidCredential(),
+    mutationFn: () => forgetPraamidCredential(),
     optimisticUpdate: () => ({ status: 'unauthenticated', lastError: null }),
     successMessage: t('forgotten'),
   })
@@ -220,17 +220,18 @@ function SigninDialog({
   const form = useForm({
     defaultValues: { isikukood: '' },
     onSubmit: async ({ value }) => {
-      const res = await startPraamidLogin(value.isikukood)
-      if (!res.ok) {
-        toast.error(tP('captureFailed', { error: res.error }))
-        return
+      try {
+        await startPraamidLogin({ isikukood: value.isikukood })
+        setSubmitting(true)
+        // Pull the first 'loading' status in immediately; refetchInterval
+        // takes over once the query sees an in-flight status.
+        queryClient.invalidateQueries({
+          queryKey: praamidAuthStateQueryOptions.queryKey,
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'start_failed'
+        toast.error(tP('captureFailed', { error: message }))
       }
-      setSubmitting(true)
-      // Pull the first 'loading' status in immediately; refetchInterval
-      // takes over once the query sees an in-flight status.
-      queryClient.invalidateQueries({
-        queryKey: praamidAuthStateQueryOptions.queryKey,
-      })
     },
   })
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
@@ -253,7 +254,11 @@ function SigninDialog({
   }, [open, form])
 
   const onCancel = async () => {
-    await cancelPraamidLogin()
+    try {
+      await cancelPraamidLogin()
+    } catch {
+      // ignore cancellation errors — we're closing the dialog anyway
+    }
     queryClient.invalidateQueries({ queryKey: praamidAuthStateQueryOptions.queryKey })
     onOpenChange(false)
   }

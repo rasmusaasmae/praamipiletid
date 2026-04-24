@@ -11,11 +11,7 @@ export function EditEnabledForm({ enabled }: { enabled: boolean }) {
 
   const toggleMutation = useOptimisticMutation<boolean, AdminDashboardData>({
     queryKey: adminDashboardQueryOptions.queryKey,
-    action: (next) => {
-      const form = new FormData()
-      form.set('enabled', next ? '1' : '0')
-      return setEditGloballyEnabled(form)
-    },
+    mutationFn: (next) => setEditGloballyEnabled({ enabled: next }),
     optimisticUpdate: (old, next) => ({ ...old, editGloballyEnabled: next }),
     successMessage: t('saved'),
   })

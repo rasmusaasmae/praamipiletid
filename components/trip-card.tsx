@@ -58,12 +58,11 @@ export function TripCard({ data }: { data: TripCardData }) {
     TripCardData[]
   >({
     queryKey: tripsQueryOptions.queryKey,
-    action: ({ flag, next }) => {
-      const form = new FormData()
-      form.set('id', tripId)
-      form.set(flag, next ? 'true' : '')
-      return updateTrip(form)
-    },
+    mutationFn: ({ flag, next }) =>
+      updateTrip({
+        id: tripId,
+        ...(flag === 'notify' ? { notify: next } : { edit: next }),
+      }),
     optimisticUpdate: (old, { flag, next }) =>
       old.map((c) =>
         c.trip.id === tripId ? { ...c, trip: { ...c.trip, [flag]: next } } : c,
@@ -73,22 +72,14 @@ export function TripCard({ data }: { data: TripCardData }) {
 
   const deleteTripMutation = useOptimisticMutation<void, TripCardData[]>({
     queryKey: tripsQueryOptions.queryKey,
-    action: () => {
-      const form = new FormData()
-      form.set('id', tripId)
-      return deleteTrip(form)
-    },
+    mutationFn: () => deleteTrip({ id: tripId }),
     optimisticUpdate: (old) => old.filter((c) => c.trip.id !== tripId),
     successMessage: t('deleted'),
   })
 
   const removeOptionMutation = useOptimisticMutation<string, TripCardData[]>({
     queryKey: tripsQueryOptions.queryKey,
-    action: (optionId) => {
-      const form = new FormData()
-      form.set('id', optionId)
-      return removeOption(form)
-    },
+    mutationFn: (optionId) => removeOption({ id: optionId }),
     optimisticUpdate: (old, optionId) =>
       old.map((c) =>
         c.trip.id === tripId
@@ -103,12 +94,7 @@ export function TripCard({ data }: { data: TripCardData }) {
     TripCardData[]
   >({
     queryKey: tripsQueryOptions.queryKey,
-    action: ({ optionId, direction }) => {
-      const form = new FormData()
-      form.set('id', optionId)
-      form.set('direction', direction)
-      return moveOption(form)
-    },
+    mutationFn: ({ optionId, direction }) => moveOption({ id: optionId, direction }),
     // Mirror the server's priority swap: find the neighbour in the direction
     // the user clicked (ascending sort = "up" means lower priority) and swap
     // the two priorities so the UI reorders instantly.
@@ -139,12 +125,8 @@ export function TripCard({ data }: { data: TripCardData }) {
     TripCardData[]
   >({
     queryKey: tripsQueryOptions.queryKey,
-    action: ({ optionId, stopBeforeAt }) => {
-      const form = new FormData()
-      form.set('id', optionId)
-      form.set('stopBeforeAt', String(stopBeforeAt.getTime()))
-      return updateOption(form)
-    },
+    mutationFn: ({ optionId, stopBeforeAt }) =>
+      updateOption({ id: optionId, stopBeforeAt: stopBeforeAt.getTime() }),
     optimisticUpdate: (old, { optionId, stopBeforeAt }) =>
       old.map((c) =>
         c.trip.id === tripId

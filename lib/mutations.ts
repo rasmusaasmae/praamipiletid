@@ -1,24 +1,19 @@
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
-type ActionResult = { ok: true } | { ok: false; error: string }
-
 // Wraps a server action in a useMutation with optimistic cache writes,
 // automatic rollback on failure, and invalidation on settle. The callback
 // shape mirrors TanStack's own onMutate/onError/onSettled but centralises
 // the boilerplate we repeat per mutation.
 export function useOptimisticMutation<TVars, TData>(options: {
   queryKey: QueryKey
-  action: (vars: TVars) => Promise<ActionResult>
+  mutationFn: (vars: TVars) => Promise<unknown>
   optimisticUpdate: (old: TData, vars: TVars) => TData
   successMessage?: string
 }) {
   const queryClient = useQueryClient()
-  return useMutation<void, Error, TVars, { previous: TData | undefined }>({
-    mutationFn: async (vars) => {
-      const res = await options.action(vars)
-      if (!res.ok) throw new Error(res.error)
-    },
+  return useMutation<unknown, Error, TVars, { previous: TData | undefined }>({
+    mutationFn: options.mutationFn,
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: options.queryKey })
       const previous = queryClient.getQueryData<TData>(options.queryKey)

@@ -17,11 +17,12 @@ export function SettingsForm({ currentTopic }: { currentTopic: string }) {
   const form = useForm({
     defaultValues: { ntfyTopic: currentTopic },
     onSubmit: async ({ value }) => {
-      const fd = new FormData()
-      fd.set('ntfyTopic', value.ntfyTopic)
-      const res = await updateNtfyTopic(fd)
-      if (res.ok) toast.success(t('saved'))
-      else toast.error(res.error)
+      try {
+        await updateNtfyTopic({ ntfyTopic: value.ntfyTopic })
+        toast.success(t('saved'))
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err))
+      }
     },
   })
 

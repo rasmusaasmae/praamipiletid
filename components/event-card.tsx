@@ -35,14 +35,7 @@ export function EventCard({ event, tripId, date, measurementUnit, alreadyAdded }
   const highlighted = measurementUnit
 
   const addMutation = useMutation({
-    mutationFn: async () => {
-      const form = new FormData()
-      form.set('tripId', tripId)
-      form.set('eventUid', event.uid)
-      form.set('date', date)
-      const res = await addOption(form)
-      if (!res.ok) throw new Error(res.error)
-    },
+    mutationFn: () => addOption({ tripId, eventUid: event.uid, date }),
     onSuccess: () => {
       toast.success(t('optionAdded'))
       queryClient.invalidateQueries({ queryKey: tripsQueryOptions.queryKey })

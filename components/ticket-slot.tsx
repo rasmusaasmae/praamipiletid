@@ -30,11 +30,7 @@ export function TicketSlot({ tripId, ticket }: Props) {
 
   const detachMutation = useOptimisticMutation<void, TripCardData[]>({
     queryKey: tripsQueryOptions.queryKey,
-    action: () => {
-      const form = new FormData()
-      form.set('tripId', tripId)
-      return detachTicket(form)
-    },
+    mutationFn: () => detachTicket({ tripId }),
     optimisticUpdate: (old) =>
       old.map((c) => (c.trip.id === tripId ? { ...c, ticket: null } : c)),
     successMessage: t('detached'),

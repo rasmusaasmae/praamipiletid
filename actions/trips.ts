@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getTranslations } from 'next-intl/server'
+import { z } from 'zod'
 import { db } from '@/db'
 import { tickets, tripOptions, trips } from '@/db/schema'
 import { listEvents } from '@/lib/praamid'
@@ -20,23 +21,15 @@ import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'actions/trips' })
 
-export type ActionResult = { ok: true } | { ok: false; error: string }
-export type CreateTripResult =
-  | { ok: true; tripId: string }
-  | { ok: false; error: string }
-
-export async function createTrip(formData: FormData): Promise<CreateTripResult> {
+export async function createTrip(
+  dto: z.input<typeof tripCreateSchema>,
+): Promise<{ tripId: string }> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
 
-  const parsed = tripCreateSchema.safeParse({
-    direction: formData.get('direction'),
-    measurementUnit: formData.get('measurementUnit'),
-    notify: formData.get('notify') ?? undefined,
-    edit: formData.get('edit') ?? undefined,
-  })
-  if (!parsed.success) return { ok: false, error: t('invalidData') }
-  if (parsed.data.edit) return { ok: false, error: t('editRequiresTicket') }
+  const parsed = tripCreateSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(t('invalidData'))
+  if (parsed.data.edit) throw new Error(t('editRequiresTicket'))
 
   const tripId = randomUUID()
   await db.insert(trips).values({
@@ -59,30 +52,22 @@ export async function createTrip(formData: FormData): Promise<CreateTripResult> 
     },
   })
   log.info(
-    {
-      tripId,
-      userId: session.user.id,
-      direction: parsed.data.direction,
-    },
+    { tripId, userId: session.user.id, direction: parsed.data.direction },
     'trip created',
   )
 
   revalidatePath('/')
-  return { ok: true, tripId }
+  return { tripId }
 }
 
-export async function updateTrip(formData: FormData): Promise<ActionResult> {
+export async function updateTrip(dto: z.input<typeof tripUpdateSchema>): Promise<void> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const parsed = tripUpdateSchema.safeParse({
-    id: formData.get('id'),
-    notify: formData.get('notify') ?? undefined,
-    edit: formData.get('edit') ?? undefined,
-  })
-  if (!parsed.success) return { ok: false, error: t('invalidData') }
+  const parsed = tripUpdateSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(t('invalidData'))
 
   const { id, ...patch } = parsed.data
-  if (Object.keys(patch).length === 0) return { ok: true }
+  if (Object.keys(patch).length === 0) return
 
   if (patch.edit === true) {
     const [ownedTicket] = await db
@@ -91,7 +76,7 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
       .innerJoin(trips, eq(trips.id, tickets.tripId))
       .where(and(eq(tickets.tripId, id), eq(trips.userId, session.user.id)))
       .limit(1)
-    if (!ownedTicket) return { ok: false, error: t('editRequiresTicket') }
+    if (!ownedTicket) throw new Error(t('editRequiresTicket'))
   }
 
   const res = await db
@@ -100,7 +85,7 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
     .where(and(eq(trips.id, id), eq(trips.userId, session.user.id)))
     .returning({ id: trips.id })
 
-  if (res.length === 0) return { ok: false, error: t('tripNotFound') }
+  if (res.length === 0) throw new Error(t('tripNotFound'))
 
   await logAudit({
     type: 'trip.updated',
@@ -112,31 +97,25 @@ export async function updateTrip(formData: FormData): Promise<ActionResult> {
   log.info({ tripId: id, userId: session.user.id, changes: patch }, 'trip updated')
 
   revalidatePath('/')
-  return { ok: true }
 }
 
-export async function addOption(formData: FormData): Promise<ActionResult> {
+export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<void> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
 
-  const parsed = optionAddSchema.safeParse({
-    tripId: formData.get('tripId'),
-    eventUid: formData.get('eventUid'),
-    date: formData.get('date'),
-    stopBeforeAt: formData.get('stopBeforeAt') ?? undefined,
-  })
-  if (!parsed.success) return { ok: false, error: t('invalidData') }
+  const parsed = optionAddSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(t('invalidData'))
 
   const [trip] = await db
     .select({ id: trips.id, direction: trips.direction })
     .from(trips)
     .where(and(eq(trips.id, parsed.data.tripId), eq(trips.userId, session.user.id)))
     .limit(1)
-  if (!trip) return { ok: false, error: t('tripNotFound') }
+  if (!trip) throw new Error(t('tripNotFound'))
 
   const events = await listEvents(trip.direction, parsed.data.date)
   const event = events.find((e) => e.uid === parsed.data.eventUid)
-  if (!event) return { ok: false, error: t('eventNotFound') }
+  if (!event) throw new Error(t('eventNotFound'))
 
   const [duplicate] = await db
     .select({ id: tripOptions.id })
@@ -148,7 +127,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
       ),
     )
     .limit(1)
-  if (duplicate) return { ok: false, error: t('optionExists') }
+  if (duplicate) throw new Error(t('optionExists'))
 
   const [top] = await db
     .select({ priority: tripOptions.priority })
@@ -164,7 +143,7 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
       ? new Date(parsed.data.stopBeforeAt)
       : new Date(eventStart.getTime() - 60 * 60_000)
   if (stopBeforeAt.getTime() >= eventStart.getTime()) {
-    return { ok: false, error: t('invalidData') }
+    throw new Error(t('invalidData'))
   }
 
   const optionId = randomUUID()
@@ -197,17 +176,13 @@ export async function addOption(formData: FormData): Promise<ActionResult> {
   )
 
   revalidatePath('/')
-  return { ok: true }
 }
 
-export async function updateOption(formData: FormData): Promise<ActionResult> {
+export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Promise<void> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const parsed = optionUpdateSchema.safeParse({
-    id: formData.get('id'),
-    stopBeforeAt: formData.get('stopBeforeAt'),
-  })
-  if (!parsed.success) return { ok: false, error: t('invalidData') }
+  const parsed = optionUpdateSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(t('invalidData'))
 
   const [owned] = await db
     .select({
@@ -219,10 +194,10 @@ export async function updateOption(formData: FormData): Promise<ActionResult> {
     .innerJoin(trips, eq(trips.id, tripOptions.tripId))
     .where(and(eq(tripOptions.id, parsed.data.id), eq(trips.userId, session.user.id)))
     .limit(1)
-  if (!owned) return { ok: false, error: t('tripNotFound') }
+  if (!owned) throw new Error(t('tripNotFound'))
 
   if (parsed.data.stopBeforeAt >= owned.eventDtstart.getTime()) {
-    return { ok: false, error: t('invalidData') }
+    throw new Error(t('invalidData'))
   }
 
   await db
@@ -240,14 +215,17 @@ export async function updateOption(formData: FormData): Promise<ActionResult> {
   )
 
   revalidatePath('/')
-  return { ok: true }
 }
 
-export async function removeOption(formData: FormData): Promise<ActionResult> {
+const RemoveOptionDto = z.object({ id: z.string().min(1) })
+
+export async function removeOption(
+  dto: z.input<typeof RemoveOptionDto>,
+): Promise<void> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const id = String(formData.get('id') ?? '')
-  if (!id) return { ok: false, error: t('missingId') }
+  const parsed = RemoveOptionDto.safeParse(dto)
+  if (!parsed.success) throw new Error(t('missingId'))
 
   const [existing] = await db
     .select({
@@ -258,11 +236,11 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
     })
     .from(tripOptions)
     .innerJoin(trips, eq(trips.id, tripOptions.tripId))
-    .where(and(eq(tripOptions.id, id), eq(trips.userId, session.user.id)))
+    .where(and(eq(tripOptions.id, parsed.data.id), eq(trips.userId, session.user.id)))
     .limit(1)
-  if (!existing) return { ok: false, error: t('tripNotFound') }
+  if (!existing) throw new Error(t('tripNotFound'))
 
-  await db.delete(tripOptions).where(eq(tripOptions.id, id))
+  await db.delete(tripOptions).where(eq(tripOptions.id, parsed.data.id))
 
   await logAudit({
     type: 'option.removed',
@@ -273,7 +251,7 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
   })
   log.info(
     {
-      optionId: id,
+      optionId: parsed.data.id,
       tripId: existing.tripId,
       userId: session.user.id,
       priority: existing.priority,
@@ -282,17 +260,13 @@ export async function removeOption(formData: FormData): Promise<ActionResult> {
   )
 
   revalidatePath('/')
-  return { ok: true }
 }
 
-export async function moveOption(formData: FormData): Promise<ActionResult> {
+export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise<void> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const parsed = optionMoveSchema.safeParse({
-    id: formData.get('id'),
-    direction: formData.get('direction'),
-  })
-  if (!parsed.success) return { ok: false, error: t('invalidData') }
+  const parsed = optionMoveSchema.safeParse(dto)
+  if (!parsed.success) throw new Error(t('invalidData'))
 
   const [current] = await db
     .select({
@@ -305,7 +279,7 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
     .innerJoin(trips, eq(trips.id, tripOptions.tripId))
     .where(and(eq(tripOptions.id, parsed.data.id), eq(trips.userId, session.user.id)))
     .limit(1)
-  if (!current) return { ok: false, error: t('tripNotFound') }
+  if (!current) throw new Error(t('tripNotFound'))
 
   const neighborFilter =
     parsed.data.direction === 'up'
@@ -322,7 +296,7 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
     .where(and(eq(tripOptions.tripId, current.tripId), neighborFilter))
     .orderBy(neighborOrder)
     .limit(1)
-  if (!neighbor) return { ok: true }
+  if (!neighbor) return
 
   const [topRow] = await db
     .select({ priority: tripOptions.priority })
@@ -366,23 +340,24 @@ export async function moveOption(formData: FormData): Promise<ActionResult> {
   )
 
   revalidatePath('/')
-  return { ok: true }
 }
 
-export async function deleteTrip(formData: FormData): Promise<ActionResult> {
+const DeleteTripDto = z.object({ id: z.string().min(1) })
+
+export async function deleteTrip(dto: z.input<typeof DeleteTripDto>): Promise<void> {
   const session = await requireUser()
   const t = await getTranslations('Errors')
-  const id = String(formData.get('id') ?? '')
-  if (!id) return { ok: false, error: t('missingId') }
+  const parsed = DeleteTripDto.safeParse(dto)
+  if (!parsed.success) throw new Error(t('missingId'))
 
   const [existing] = await db
     .select({ id: trips.id, direction: trips.direction })
     .from(trips)
-    .where(and(eq(trips.id, id), eq(trips.userId, session.user.id)))
+    .where(and(eq(trips.id, parsed.data.id), eq(trips.userId, session.user.id)))
     .limit(1)
-  if (!existing) return { ok: false, error: t('tripNotFound') }
+  if (!existing) throw new Error(t('tripNotFound'))
 
-  await db.delete(trips).where(eq(trips.id, id))
+  await db.delete(trips).where(eq(trips.id, parsed.data.id))
 
   await logAudit({
     type: 'trip.deleted',
@@ -391,8 +366,7 @@ export async function deleteTrip(formData: FormData): Promise<ActionResult> {
     tripId: null,
     payload: { direction: existing.direction },
   })
-  log.info({ tripId: id, userId: session.user.id }, 'trip deleted')
+  log.info({ tripId: parsed.data.id, userId: session.user.id }, 'trip deleted')
 
   revalidatePath('/')
-  return { ok: true }
 }

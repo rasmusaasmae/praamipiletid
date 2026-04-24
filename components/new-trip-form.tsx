@@ -33,25 +33,19 @@ export function NewTripForm({ directions, units }: Props) {
 
   const form = useForm({
     defaultValues: {
-      direction: directions[0]?.code ?? 'HR',
+      direction: (directions[0]?.code ?? 'HR') as z.infer<typeof directionSchema>,
       measurementUnit: units[0]?.code ?? 'sv',
       notify: true,
       edit: false,
     },
     onSubmit: async ({ value }) => {
-      const fd = new FormData()
-      fd.set('direction', value.direction)
-      fd.set('measurementUnit', value.measurementUnit)
-      if (value.notify) fd.set('notify', 'true')
-      if (value.edit) fd.set('edit', 'true')
-
-      const res = await createTrip(fd)
-      if (!res.ok) {
-        toast.error(res.error)
-        return
+      try {
+        const { tripId } = await createTrip(value)
+        toast.success(t('created'))
+        router.push(`/trips/${tripId}/options`)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err))
       }
-      toast.success(t('created'))
-      router.push(`/trips/${res.tripId}/options`)
     },
   })
 

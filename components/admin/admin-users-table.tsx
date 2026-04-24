@@ -34,12 +34,7 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
     AdminDashboardData
   >({
     queryKey: adminDashboardQueryOptions.queryKey,
-    action: ({ userId, nextRole }) => {
-      const form = new FormData()
-      form.set('userId', userId)
-      form.set('role', nextRole)
-      return updateUserRole(form)
-    },
+    mutationFn: ({ userId, nextRole }) => updateUserRole({ userId, role: nextRole }),
     optimisticUpdate: (old, { userId, nextRole }) => ({
       ...old,
       users: old.users.map((u) => (u.id === userId ? { ...u, role: nextRole } : u)),

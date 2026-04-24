@@ -16,11 +16,12 @@ export function PollIntervalForm({ current }: { current: number }) {
   const form = useForm({
     defaultValues: { pollIntervalMs: current },
     onSubmit: async ({ value }) => {
-      const fd = new FormData()
-      fd.set('pollIntervalMs', String(value.pollIntervalMs))
-      const res = await updatePollInterval(fd)
-      if (res.ok) toast.success(t('saved'))
-      else toast.error(res.error)
+      try {
+        await updatePollInterval({ pollIntervalMs: value.pollIntervalMs })
+        toast.success(t('saved'))
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err))
+      }
     },
   })
 

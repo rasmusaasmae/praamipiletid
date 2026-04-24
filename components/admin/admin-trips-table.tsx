@@ -34,11 +34,7 @@ export function AdminTripsTable({ rows }: { rows: Row[] }) {
 
   const deleteMutation = useOptimisticMutation<string, AdminDashboardData>({
     queryKey: adminDashboardQueryOptions.queryKey,
-    action: (id) => {
-      const form = new FormData()
-      form.set('id', id)
-      return deleteAnyTrip(form)
-    },
+    mutationFn: (id) => deleteAnyTrip({ id }),
     optimisticUpdate: (old, id) => ({
       ...old,
       trips: old.trips.filter((r) => r.id !== id),

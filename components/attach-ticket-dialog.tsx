@@ -56,15 +56,17 @@ export function AttachTicketDialog({ tripId, disabled }: Props) {
     setListError(null)
     setSelected(null)
     void (async () => {
-      const res = await listAttachableTickets(tripId)
-      if (cancelled) return
-      if (res.ok) {
-        setTickets(res.tickets)
-      } else {
+      try {
+        const fetched = await listAttachableTickets({ tripId })
+        if (cancelled) return
+        setTickets(fetched)
+      } catch (err) {
+        if (cancelled) return
         setTickets([])
-        setListError(res.error)
+        setListError(err instanceof Error ? err.message : String(err))
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     })()
     return () => {
       cancelled = true
@@ -72,13 +74,7 @@ export function AttachTicketDialog({ tripId, disabled }: Props) {
   }, [open, tripId])
 
   const attachMutation = useMutation({
-    mutationFn: async (ticketCode: string) => {
-      const form = new FormData()
-      form.set('tripId', tripId)
-      form.set('ticketCode', ticketCode)
-      const res = await attachTicket(form)
-      if (!res.ok) throw new Error(res.error)
-    },
+    mutationFn: (ticketCode: string) => attachTicket({ tripId, ticketCode }),
     onSuccess: () => {
       toast.success(t('attached'))
       queryClient.invalidateQueries({ queryKey: tripsQueryOptions.queryKey })
