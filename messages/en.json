@@ -92,9 +92,7 @@
     "hoursAgo": "{h}h ago"
   },
   "Settings": {
-    "title": "Settings",
-    "notificationsTitle": "Notifications",
-    "notificationsDescription": "Ticket updates are sent to this email address."
+    "title": "Settings"
   },
   "Praamid": {
     "title": "praamid.ee",

@@ -7,10 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export type SettingsProps = {
   configured: boolean
   credentialMeta: PraamidCredentialMeta | null
-  notifyEmail: string
 }
 
-export function Settings({ configured, credentialMeta, notifyEmail }: SettingsProps) {
+export function Settings({ configured, credentialMeta }: SettingsProps) {
   const t = useTranslations('Settings')
 
   return (
@@ -22,16 +21,6 @@ export function Settings({ configured, credentialMeta, notifyEmail }: SettingsPr
       ) : (
         <PraamidNotConfigured />
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('notificationsTitle')}</CardTitle>
-          <CardDescription>{t('notificationsDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm font-mono">{notifyEmail}</p>
-        </CardContent>
-      </Card>
     </div>
   )
 }

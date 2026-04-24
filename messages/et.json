@@ -92,9 +92,7 @@
     "hoursAgo": "{h}h tagasi"
   },
   "Settings": {
-    "title": "Seaded",
-    "notificationsTitle": "Teavitused",
-    "notificationsDescription": "Piletite uuendused saadetakse sellele e-posti aadressile."
+    "title": "Seaded"
   },
   "Praamid": {
     "title": "praamid.ee",

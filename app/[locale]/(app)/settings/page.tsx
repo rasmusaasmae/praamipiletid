@@ -20,7 +20,6 @@ export default async function SettingsPage() {
     <HydrationBoundary state={dehydrate(queryClient)}>
       <Settings
         configured={configured}
-        notifyEmail={session.user.email}
         credentialMeta={
           status
             ? {
