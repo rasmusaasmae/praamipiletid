@@ -46,24 +46,24 @@ export function SubscribableTicketCard({ ticket }: Props) {
 
   return (
     <Card>
-      <CardContent className="flex items-center justify-between gap-3 py-4">
-        <div className="flex items-center gap-3">
-          <TicketIcon className="size-4 text-muted-foreground" />
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
+      <CardContent className="flex flex-col items-stretch gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <TicketIcon className="size-4 shrink-0 text-muted-foreground" />
+          <div className="flex min-w-0 flex-col">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="font-semibold">{tDir(ticket.direction as 'VK')}</span>
               <Badge variant="outline">{dateLabel}</Badge>
               <span className="text-sm tabular-nums">{timeLabel}</span>
             </div>
-            <span className="text-xs font-mono text-muted-foreground">
+            <span className="truncate text-xs font-mono text-muted-foreground">
               {ticket.ticketNumber}
             </span>
           </div>
         </div>
         <Button
-          size="sm"
           disabled={subscribeMutation.isPending}
           onClick={() => subscribeMutation.mutate()}
+          className="sm:self-center"
         >
           {subscribeMutation.isPending ? t('subscribing') : t('subscribe')}
         </Button>

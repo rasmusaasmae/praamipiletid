@@ -53,7 +53,7 @@ export function EventCard({
     <Card>
       <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-lg font-semibold">{formatTime(event.dtstart)}</span>
             <span className="text-sm text-muted-foreground">→ {formatTime(event.dtend)}</span>
             <Badge variant="outline">{SHIP_NAMES[event.ship.code] ?? event.ship.code}</Badge>

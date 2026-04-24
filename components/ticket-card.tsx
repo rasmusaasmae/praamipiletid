@@ -121,9 +121,9 @@ export function TicketCard({ data }: { data: TicketCardData }) {
   return (
     <TooltipProvider>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
+        <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="text-lg font-semibold">
                 {tDir(data.ticket.direction as 'VK')}
               </span>
@@ -135,11 +135,11 @@ export function TicketCard({ data }: { data: TicketCardData }) {
                 </Badge>
               ) : null}
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="font-mono">{data.ticket.ticketNumber}</span>
-              <span>·</span>
-              <span>{formatDate(data.ticket.eventDtstart)}</span>
-              <span>{formatTime(data.ticket.eventDtstart)}</span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
+              <span className="truncate font-mono">{data.ticket.ticketNumber}</span>
+              <span className="whitespace-nowrap">
+                {formatDate(data.ticket.eventDtstart)} {formatTime(data.ticket.eventDtstart)}
+              </span>
             </div>
           </div>
           <Button
@@ -167,39 +167,37 @@ export function TicketCard({ data }: { data: TicketCardData }) {
                     key={option.id}
                     className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center">
-                        <div className="flex flex-col">
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={() =>
-                              moveOptionMutation.mutate({ optionId: option.id, direction: 'up' })
-                            }
-                            aria-label={tOpt('moveUp')}
-                            className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-                          >
-                            <ArrowUp className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === sorted.length - 1}
-                            onClick={() =>
-                              moveOptionMutation.mutate({
-                                optionId: option.id,
-                                direction: 'down',
-                              })
-                            }
-                            aria-label={tOpt('moveDown')}
-                            className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
-                          >
-                            <ArrowDown className="size-3.5" />
-                          </button>
-                        </div>
-                        <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">
-                          {idx + 1}
-                        </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          disabled={idx === 0}
+                          onClick={() =>
+                            moveOptionMutation.mutate({ optionId: option.id, direction: 'up' })
+                          }
+                          aria-label={tOpt('moveUp')}
+                        >
+                          <ArrowUp />
+                        </Button>
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          disabled={idx === sorted.length - 1}
+                          onClick={() =>
+                            moveOptionMutation.mutate({
+                              optionId: option.id,
+                              direction: 'down',
+                            })
+                          }
+                          aria-label={tOpt('moveDown')}
+                        >
+                          <ArrowDown />
+                        </Button>
                       </div>
+                      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">
+                        {idx + 1}
+                      </span>
                       <div className="flex flex-col">
                         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
                           <CutoffEditor
