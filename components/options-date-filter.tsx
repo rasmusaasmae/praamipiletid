@@ -29,9 +29,7 @@ export function OptionsDateFilter({ bookingUid, currentDate }: Props) {
             const date = e.target.value
             if (!date) return
             const qs = new URLSearchParams({ date })
-            startTransition(() =>
-              router.push(`/tickets/${bookingUid}/options?${qs.toString()}`),
-            )
+            startTransition(() => router.push(`/tickets/${bookingUid}/options?${qs.toString()}`))
           }}
         />
       </div>

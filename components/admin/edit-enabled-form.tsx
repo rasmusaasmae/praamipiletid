@@ -20,11 +20,7 @@ export function EditEnabledForm({ enabled }: { enabled: boolean }) {
       disabled={toggleMutation.isPending}
       onClick={() => toggleMutation.mutate(!enabled)}
     >
-      {toggleMutation.isPending
-        ? 'Saving…'
-        : enabled
-          ? 'Disable globally'
-          : 'Enable globally'}
+      {toggleMutation.isPending ? 'Saving…' : enabled ? 'Disable globally' : 'Enable globally'}
     </Button>
   )
 }

@@ -64,11 +64,7 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                 <div className="text-xs text-muted-foreground">{u.email}</div>
               </TableCell>
               <TableCell>
-                {u.role === 'admin' ? (
-                  <Badge>admin</Badge>
-                ) : (
-                  <Badge variant="outline">user</Badge>
-                )}
+                {u.role === 'admin' ? <Badge>admin</Badge> : <Badge variant="outline">user</Badge>}
                 {u.banned ? (
                   <Badge variant="destructive" className="ml-1">
                     banned

@@ -4,17 +4,8 @@ import { useMemo } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { TicketCard } from '@/components/ticket-card'
 import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
-import {
-  PraamidAuthCard,
-  type PraamidCredentialMeta,
-} from '@/components/praamid-auth-card'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth-card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import type { LiveTicket } from '@/actions/tickets'
 import { refreshTickets } from '@/actions/tickets'

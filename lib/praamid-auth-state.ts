@@ -11,10 +11,7 @@ export type AuthStatePatch = {
 // Upsert the observable login state for a user. Read side goes through
 // `getMyPraamidAuthState()` in lib/queries; callers here just describe the
 // next state and we persist it.
-export async function setAuthState(
-  userId: string,
-  patch: AuthStatePatch,
-): Promise<void> {
+export async function setAuthState(userId: string, patch: AuthStatePatch): Promise<void> {
   const lastError = patch.lastError ?? null
   const now = new Date()
   await db

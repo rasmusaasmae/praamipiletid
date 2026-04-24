@@ -43,9 +43,7 @@ export default async function AddOptionPage({
       eventDtstart: tickets.eventDtstart,
     })
     .from(tickets)
-    .where(
-      and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, bookingUid)),
-    )
+    .where(and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, bookingUid)))
     .limit(1)
 
   if (!ticket) {
@@ -70,10 +68,8 @@ export default async function AddOptionPage({
     .orderBy(asc(ticketOptions.priority))
   const takenUids = new Set(existingOptions.map((o) => o.eventUid))
 
-  const fallbackDate =
-    existingOptions[0]?.eventDate ?? toIsoDate(ticket.eventDtstart) ?? todayIso()
-  const date =
-    query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : fallbackDate
+  const fallbackDate = existingOptions[0]?.eventDate ?? toIsoDate(ticket.eventDtstart) ?? todayIso()
+  const date = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : fallbackDate
 
   let events: Awaited<ReturnType<typeof listEvents>> = []
   let error: string | null = null

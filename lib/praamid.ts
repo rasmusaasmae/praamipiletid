@@ -66,7 +66,11 @@ export async function listCapacityUnits(): Promise<CapacityUnit[]> {
   return data.items
 }
 
-export async function listEvents(direction: string, date: string, timeShift = 300): Promise<PraamidEvent[]> {
+export async function listEvents(
+  direction: string,
+  date: string,
+  timeShift = 300,
+): Promise<PraamidEvent[]> {
   const url = `${BASE_URL}/events?direction=${encodeURIComponent(direction)}&departure-date=${encodeURIComponent(date)}&time-shift=${timeShift}`
   const data = await fetchJson<ApiList<PraamidEvent>>(url)
   return data.items

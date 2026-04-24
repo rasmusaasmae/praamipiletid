@@ -17,13 +17,7 @@ export type CodeName = {
 }
 
 export type TicketStatus = {
-  code:
-    | 'DRAFT'
-    | 'ACTIVE'
-    | 'BEING_EDITED'
-    | 'CANCELLED'
-    | 'EXPIRED'
-    | (string & {})
+  code: 'DRAFT' | 'ACTIVE' | 'BEING_EDITED' | 'CANCELLED' | 'EXPIRED' | (string & {})
   names: LocalizedName
 }
 
@@ -228,10 +222,7 @@ export async function getBookingBalance(
   token: string,
   bookingUid: string,
 ): Promise<BookingBalance> {
-  return authedFetch<BookingBalance>(
-    `/bookings/${encodeURIComponent(bookingUid)}/balance`,
-    token,
-  )
+  return authedFetch<BookingBalance>(`/bookings/${encodeURIComponent(bookingUid)}/balance`, token)
 }
 
 export async function getBookingExpiration(
@@ -256,15 +247,11 @@ export async function editTicket(
   oldTicketCode: string,
   body: EditTicketBody,
 ): Promise<void> {
-  const res = await authedRequest(
-    `/tickets/${encodeURIComponent(oldTicketCode)}`,
-    token,
-    {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    },
-  )
+  const res = await authedRequest(`/tickets/${encodeURIComponent(oldTicketCode)}`, token, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
   if (res.status !== 204) {
     throw new PraamidAuthError(
       res.status,
@@ -280,15 +267,11 @@ export async function commitZeroSum(
   token: string,
   bookingUid: string,
 ): Promise<CommitZeroSumResult> {
-  const res = await authedRequest(
-    `/bookings/${encodeURIComponent(bookingUid)}/invoices`,
-    token,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ zeroSum: true }),
-    },
-  )
+  const res = await authedRequest(`/bookings/${encodeURIComponent(bookingUid)}/invoices`, token, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ zeroSum: true }),
+  })
   if (res.status !== 201) {
     throw new PraamidAuthError(
       res.status,

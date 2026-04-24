@@ -10,7 +10,7 @@ services:
     volumes:
       - ferry_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ferry} -d ${POSTGRES_DB:-ferry}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-ferry} -d ${POSTGRES_DB:-ferry}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,9 +36,9 @@ services:
     # logins. Raise it instead of using ipc=host so we don't share host IPC.
     shm_size: 1gb
     labels:
-      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.enable: 'true'
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3

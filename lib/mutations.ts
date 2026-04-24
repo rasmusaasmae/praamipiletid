@@ -18,10 +18,7 @@ export function useOptimisticMutation<TVars, TData>(options: {
       await queryClient.cancelQueries({ queryKey: options.queryKey })
       const previous = queryClient.getQueryData<TData>(options.queryKey)
       if (previous !== undefined) {
-        queryClient.setQueryData<TData>(
-          options.queryKey,
-          options.optimisticUpdate(previous, vars),
-        )
+        queryClient.setQueryData<TData>(options.queryKey, options.optimisticUpdate(previous, vars))
       }
       return { previous }
     },

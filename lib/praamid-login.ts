@@ -6,8 +6,7 @@ import { setAuthState, settleAuthState } from '@/lib/praamid-auth-state'
 
 const log = logger.child({ scope: 'praamid-login' })
 
-const ENTRY_URL =
-  'https://www.praamid.ee/portal/integration/wp?action=login&redirectPath=/'
+const ENTRY_URL = 'https://www.praamid.ee/portal/integration/wp?action=login&redirectPath=/'
 
 const SESSION_TTL_MS = 3 * 60 * 1000 // 3 minutes total
 
@@ -110,10 +109,7 @@ async function driveLogin(session: Session, isikukood: string): Promise<void> {
   const smartIdBtn = page.locator('button:has-text("Smart-ID")').first()
   await smartIdBtn.waitFor({ state: 'visible', timeout: 20000 })
   if (session.cancelled) return
-  await Promise.all([
-    page.waitForLoadState('domcontentloaded').catch(() => {}),
-    smartIdBtn.click(),
-  ])
+  await Promise.all([page.waitForLoadState('domcontentloaded').catch(() => {}), smartIdBtn.click()])
 
   // Step 2: Smart-ID form — fill isikukood and submit.
   await page.waitForSelector('#sid-personal-code', { timeout: 15000 })
@@ -147,7 +143,9 @@ async function driveLogin(session: Session, isikukood: string): Promise<void> {
   await cleanupSession(session.userId)
 }
 
-async function waitForTokenExchange(page: Page): Promise<{ accessToken: string; refreshToken: string }> {
+async function waitForTokenExchange(
+  page: Page,
+): Promise<{ accessToken: string; refreshToken: string }> {
   const resp = await page.waitForResponse(
     (r) =>
       r.url().includes('/auth/realms/praamid-online/protocol/openid-connect/token') &&

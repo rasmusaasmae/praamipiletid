@@ -16,9 +16,7 @@ export function Admin() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Admin</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage system settings, users and tickets.
-        </p>
+        <p className="text-sm text-muted-foreground">Manage system settings, users and tickets.</p>
       </div>
 
       <Card>

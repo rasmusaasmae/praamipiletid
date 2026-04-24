@@ -224,10 +224,7 @@ export function startPoller() {
     })
     .finally(() => {
       loop().catch((err) => {
-        log.error(
-          { err: err instanceof Error ? err.message : String(err) },
-          'loop crashed',
-        )
+        log.error({ err: err instanceof Error ? err.message : String(err) }, 'loop crashed')
         running = false
       })
     })

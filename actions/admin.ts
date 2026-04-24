@@ -39,16 +39,11 @@ const UpdateUserRoleDto = z.object({
   role: userRoleSchema,
 })
 
-export async function updateUserRole(
-  dto: z.input<typeof UpdateUserRoleDto>,
-): Promise<void> {
+export async function updateUserRole(dto: z.input<typeof UpdateUserRoleDto>): Promise<void> {
   await requireAdmin()
   const parsed = UpdateUserRoleDto.safeParse(dto)
   if (!parsed.success) throw new Error('Invalid data')
-  await db
-    .update(user)
-    .set({ role: parsed.data.role })
-    .where(eq(user.id, parsed.data.userId))
+  await db.update(user).set({ role: parsed.data.role }).where(eq(user.id, parsed.data.userId))
   revalidatePath('/admin')
 }
 
@@ -57,9 +52,7 @@ const DeleteAnyTicketDto = z.object({
   bookingUid: z.string().min(1),
 })
 
-export async function deleteAnyTicket(
-  dto: z.input<typeof DeleteAnyTicketDto>,
-): Promise<void> {
+export async function deleteAnyTicket(dto: z.input<typeof DeleteAnyTicketDto>): Promise<void> {
   const session = await requireAdmin()
   const parsed = DeleteAnyTicketDto.safeParse(dto)
   if (!parsed.success) throw new Error('Missing id')
@@ -67,20 +60,14 @@ export async function deleteAnyTicket(
     .select({ ticketCode: tickets.ticketCode })
     .from(tickets)
     .where(
-      and(
-        eq(tickets.userId, parsed.data.userId),
-        eq(tickets.bookingUid, parsed.data.bookingUid),
-      ),
+      and(eq(tickets.userId, parsed.data.userId), eq(tickets.bookingUid, parsed.data.bookingUid)),
     )
     .limit(1)
   if (!target) throw new Error('Ticket not found')
   await db
     .delete(tickets)
     .where(
-      and(
-        eq(tickets.userId, parsed.data.userId),
-        eq(tickets.bookingUid, parsed.data.bookingUid),
-      ),
+      and(eq(tickets.userId, parsed.data.userId), eq(tickets.bookingUid, parsed.data.bookingUid)),
     )
   await logAudit({
     type: 'ticket.unsubscribed',

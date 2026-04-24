@@ -8,13 +8,7 @@ import { toast } from 'sonner'
 import { CheckCircle2, Loader2, Smartphone, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -27,17 +21,10 @@ import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  cancelPraamidLogin,
-  forgetPraamidCredential,
-  startPraamidLogin,
-} from '@/actions/praamid'
+import { cancelPraamidLogin, forgetPraamidCredential, startPraamidLogin } from '@/actions/praamid'
 import { isikukoodSchema } from '@/lib/schemas'
 import { useOptimisticMutation } from '@/lib/mutations'
-import {
-  praamidAuthStateQueryOptions,
-  type PraamidAuthStateView,
-} from '@/lib/query-options'
+import { praamidAuthStateQueryOptions, type PraamidAuthStateView } from '@/lib/query-options'
 import { cn } from '@/lib/utils'
 import type { PraamidAuthStatus } from '@/db/schema'
 
@@ -283,8 +270,8 @@ function SigninDialog({
         <DialogHeader>
           <DialogTitle>Authenticate with praamid.ee</DialogTitle>
           <DialogDescription>
-            We&apos;ll start a Smart-ID session with praamid.ee and store the resulting token so
-            we can keep your ticket fresh.
+            We&apos;ll start a Smart-ID session with praamid.ee and store the resulting token so we
+            can keep your ticket fresh.
           </DialogDescription>
         </DialogHeader>
 
@@ -325,8 +312,8 @@ function SigninDialog({
                     />
                     <FieldError field={field} />
                     <p className="mt-1 text-xs text-muted-foreground">
-                      We use this to start a Smart-ID session with praamid.ee. You&apos;ll need
-                      to approve the request on your phone.
+                      We use this to start a Smart-ID session with praamid.ee. You&apos;ll need to
+                      approve the request on your phone.
                     </p>
                   </div>
                 )}
@@ -353,9 +340,7 @@ function SigninDialog({
               form="praamid-isikukood-form"
               disabled={!canSubmit || isFormSubmitting || submitting}
             >
-              {isFormSubmitting || submitting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
+              {isFormSubmitting || submitting ? <Loader2 className="size-4 animate-spin" /> : null}
               Next
             </Button>
           ) : null}

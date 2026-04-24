@@ -249,7 +249,5 @@ export async function listCredentialsNeedingReauth(
       expiresAt: praamidCredentials.expiresAt,
     })
     .from(praamidCredentials)
-    .where(
-      and(gt(praamidCredentials.expiresAt, now), lt(praamidCredentials.expiresAt, cutoff)),
-    )
+    .where(and(gt(praamidCredentials.expiresAt, now), lt(praamidCredentials.expiresAt, cutoff)))
 }

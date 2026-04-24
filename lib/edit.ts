@@ -11,11 +11,7 @@ import {
   type Ticket as PraamidTicket,
 } from '@/lib/praamid-authed'
 import { type PraamidEvent } from '@/lib/praamid'
-import {
-  getCredential,
-  invalidateCredential,
-  markVerified,
-} from '@/lib/praamid-credentials'
+import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid-credentials'
 import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'

@@ -26,13 +26,7 @@ function formatTime(iso: string) {
   return `${h}:${m}`
 }
 
-export function EventCard({
-  event,
-  bookingUid,
-  date,
-  measurementUnit,
-  alreadyAdded,
-}: Props) {
+export function EventCard({ event, bookingUid, date, measurementUnit, alreadyAdded }: Props) {
   const queryClient = useQueryClient()
 
   const highlighted = measurementUnit

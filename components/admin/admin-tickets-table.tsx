@@ -30,9 +30,7 @@ export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
     mutationFn: ({ userId, bookingUid }) => deleteAnyTicket({ userId, bookingUid }),
     optimisticUpdate: (old, { userId, bookingUid }) => ({
       ...old,
-      tickets: old.tickets.filter(
-        (r) => !(r.userId === userId && r.bookingUid === bookingUid),
-      ),
+      tickets: old.tickets.filter((r) => !(r.userId === userId && r.bookingUid === bookingUid)),
     }),
     successMessage: 'Deleted',
   })
@@ -64,21 +62,15 @@ export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
               <TableRow key={`${r.userId}|${r.bookingUid}`}>
                 <TableCell className="text-xs">{r.userEmail}</TableCell>
                 <TableCell>
-                  <div className="font-medium">
-                    {DIRECTION_LABELS[r.direction] ?? r.direction}
-                  </div>
+                  <div className="font-medium">{DIRECTION_LABELS[r.direction] ?? r.direction}</div>
                   <div className="text-xs text-muted-foreground">
                     {formatDateTime(r.eventDtstart)}
                   </div>
-                  <div className="text-xs font-mono text-muted-foreground">
-                    {r.ticketCode}
-                  </div>
+                  <div className="text-xs font-mono text-muted-foreground">{r.ticketCode}</div>
                 </TableCell>
                 <TableCell>{CAPACITY_LABELS[r.measurementUnit] ?? r.measurementUnit}</TableCell>
                 <TableCell>{r.optionsCount}</TableCell>
-                <TableCell>
-                  {past ? <Badge variant="secondary">Past</Badge> : null}
-                </TableCell>
+                <TableCell>{past ? <Badge variant="secondary">Past</Badge> : null}</TableCell>
                 <TableCell className="text-right">
                   <Button
                     size="sm"

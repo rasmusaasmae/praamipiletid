@@ -19,9 +19,7 @@ export async function forgetPraamidCredential(): Promise<void> {
 
 const StartPraamidLoginDto = z.object({ isikukood: isikukoodSchema })
 
-export async function startPraamidLogin(
-  dto: z.input<typeof StartPraamidLoginDto>,
-): Promise<void> {
+export async function startPraamidLogin(dto: z.input<typeof StartPraamidLoginDto>): Promise<void> {
   const session = await requireUser()
   const parsed = StartPraamidLoginDto.safeParse(dto)
   if (!parsed.success) throw new Error('invalid_isikukood')

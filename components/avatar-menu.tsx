@@ -32,7 +32,12 @@ export function AvatarMenu({ user }: Props) {
       >
         {user.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.image} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
+          <img
+            src={user.image}
+            alt=""
+            className="size-full object-cover"
+            referrerPolicy="no-referrer"
+          />
         ) : (
           <UserIcon className="size-4" />
         )}

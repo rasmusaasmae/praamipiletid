@@ -6,16 +6,8 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
-import {
-  getCredential,
-  invalidateCredential,
-  markVerified,
-} from '@/lib/praamid-credentials'
-import {
-  listTickets,
-  PraamidAuthError,
-  type Ticket as PraamidTicket,
-} from '@/lib/praamid-authed'
+import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid-credentials'
+import { listTickets, PraamidAuthError, type Ticket as PraamidTicket } from '@/lib/praamid-authed'
 import { listEvents } from '@/lib/praamid'
 import { logAudit } from '@/lib/audit'
 import {
@@ -96,9 +88,7 @@ export async function refreshTickets(): Promise<LiveTicket[]> {
     .sort((a, b) => Date.parse(a.eventDtstart) - Date.parse(b.eventDtstart))
 }
 
-export async function subscribeTicket(
-  dto: z.input<typeof subscribeTicketSchema>,
-): Promise<void> {
+export async function subscribeTicket(dto: z.input<typeof subscribeTicketSchema>): Promise<void> {
   const session = await requireUser()
 
   const parsed = subscribeTicketSchema.safeParse(dto)
@@ -174,17 +164,13 @@ export async function unsubscribeTicket(
   const [existing] = await db
     .select({ ticketCode: tickets.ticketCode })
     .from(tickets)
-    .where(
-      and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)),
-    )
+    .where(and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)))
     .limit(1)
   if (!existing) throw new Error('Ticket not found')
 
   await db
     .delete(tickets)
-    .where(
-      and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)),
-    )
+    .where(and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)))
 
   await logAudit({
     type: 'ticket.unsubscribed',
@@ -196,10 +182,7 @@ export async function unsubscribeTicket(
       reason: 'user',
     },
   })
-  log.info(
-    { userId: session.user.id, bookingUid: parsed.data.bookingUid },
-    'ticket unsubscribed',
-  )
+  log.info({ userId: session.user.id, bookingUid: parsed.data.bookingUid }, 'ticket unsubscribed')
 
   revalidatePath('/')
 }
@@ -216,12 +199,7 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
       direction: tickets.direction,
     })
     .from(tickets)
-    .where(
-      and(
-        eq(tickets.userId, session.user.id),
-        eq(tickets.bookingUid, parsed.data.bookingUid),
-      ),
-    )
+    .where(and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)))
     .limit(1)
   if (!ticket) throw new Error('Ticket not found')
 
@@ -298,12 +276,7 @@ export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Pro
       eventUid: ticketOptions.eventUid,
     })
     .from(ticketOptions)
-    .where(
-      and(
-        eq(ticketOptions.id, parsed.data.id),
-        eq(ticketOptions.userId, session.user.id),
-      ),
-    )
+    .where(and(eq(ticketOptions.id, parsed.data.id), eq(ticketOptions.userId, session.user.id)))
     .limit(1)
   if (!owned) throw new Error('Alternative not found')
 
@@ -336,9 +309,7 @@ export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Pro
 
 const RemoveOptionDto = z.object({ id: z.string().min(1) })
 
-export async function removeOption(
-  dto: z.input<typeof RemoveOptionDto>,
-): Promise<void> {
+export async function removeOption(dto: z.input<typeof RemoveOptionDto>): Promise<void> {
   const session = await requireUser()
   const parsed = RemoveOptionDto.safeParse(dto)
   if (!parsed.success) throw new Error('Missing id')
@@ -351,12 +322,7 @@ export async function removeOption(
       priority: ticketOptions.priority,
     })
     .from(ticketOptions)
-    .where(
-      and(
-        eq(ticketOptions.id, parsed.data.id),
-        eq(ticketOptions.userId, session.user.id),
-      ),
-    )
+    .where(and(eq(ticketOptions.id, parsed.data.id), eq(ticketOptions.userId, session.user.id)))
     .limit(1)
   if (!existing) throw new Error('Alternative not found')
 
@@ -398,12 +364,7 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
       eventUid: ticketOptions.eventUid,
     })
     .from(ticketOptions)
-    .where(
-      and(
-        eq(ticketOptions.id, parsed.data.id),
-        eq(ticketOptions.userId, session.user.id),
-      ),
-    )
+    .where(and(eq(ticketOptions.id, parsed.data.id), eq(ticketOptions.userId, session.user.id)))
     .limit(1)
   if (!current) throw new Error('Alternative not found')
 
@@ -412,9 +373,7 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
       ? lt(ticketOptions.priority, current.priority)
       : gt(ticketOptions.priority, current.priority)
   const neighborOrder =
-    parsed.data.direction === 'up'
-      ? desc(ticketOptions.priority)
-      : asc(ticketOptions.priority)
+    parsed.data.direction === 'up' ? desc(ticketOptions.priority) : asc(ticketOptions.priority)
 
   const [neighbor] = await db
     .select({ id: ticketOptions.id, priority: ticketOptions.priority })

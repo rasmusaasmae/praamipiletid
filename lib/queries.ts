@@ -2,13 +2,7 @@
 
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
-import {
-  praamidAuthState,
-  ticketOptions,
-  tickets,
-  user,
-  type PraamidAuthStatus,
-} from '@/db/schema'
+import { praamidAuthState, ticketOptions, tickets, user, type PraamidAuthStatus } from '@/db/schema'
 import { requireAdmin, requireUser } from '@/lib/session'
 import { getAllSettings } from '@/lib/settings'
 import type {

@@ -17,18 +17,8 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
-  moveOption,
-  removeOption,
-  unsubscribeTicket,
-  updateOption,
-} from '@/actions/tickets'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { moveOption, removeOption, unsubscribeTicket, updateOption } from '@/actions/tickets'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid'
 import { ticketsQueryOptions, type TicketCardData } from '@/lib/query-options'
@@ -102,9 +92,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
         c.ticket.bookingUid === bookingUid
           ? {
               ...c,
-              options: c.options.map((o) =>
-                o.id === optionId ? { ...o, stopBeforeMinutes } : o,
-              ),
+              options: c.options.map((o) => (o.id === optionId ? { ...o, stopBeforeMinutes } : o)),
             }
           : c,
       ),
@@ -152,9 +140,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
 
         <CardContent className="flex flex-col gap-3">
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No alternatives on this ticket yet.
-            </p>
+            <p className="text-sm text-muted-foreground">No alternatives on this ticket yet.</p>
           ) : null}
           {sorted.length > 0 ? (
             <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
@@ -212,9 +198,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
                           />
                           {isCurrent ? <Badge variant="secondary">current</Badge> : null}
                         </span>
-                        {past ? (
-                          <span className="text-xs text-muted-foreground">Past</span>
-                        ) : null}
+                        {past ? <span className="text-xs text-muted-foreground">Past</span> : null}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">

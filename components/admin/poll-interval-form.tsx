@@ -35,10 +35,7 @@ export function PollIntervalForm({ current }: { current: number }) {
       }}
     >
       <div className="flex-1">
-        <form.Field
-          name="pollIntervalMs"
-          validators={{ onChange: pollIntervalNumberSchema }}
-        >
+        <form.Field name="pollIntervalMs" validators={{ onChange: pollIntervalNumberSchema }}>
           {(field) => (
             <>
               <Label htmlFor={field.name} className="mb-1 block">

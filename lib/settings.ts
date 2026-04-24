@@ -36,7 +36,8 @@ export async function getAllSettings() {
   return {
     pollIntervalMs: parseOrDefault(map.get('pollIntervalMs'), 'pollIntervalMs'),
     pollTimeShift: parseOrDefault(map.get('pollTimeShift'), 'pollTimeShift'),
-    editGloballyEnabled: parseOrDefault(map.get('editGloballyEnabled'), 'editGloballyEnabled') !== 0,
+    editGloballyEnabled:
+      parseOrDefault(map.get('editGloballyEnabled'), 'editGloballyEnabled') !== 0,
   }
 }
 
