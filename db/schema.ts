@@ -13,15 +13,6 @@ import { user } from './auth-schema'
 
 export * from './auth-schema'
 
-export const settings = pgTable('settings', {
-  key: text('key').primaryKey(),
-  value: text('value').notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-})
-
 // Per-user preferences that don't belong on the better-auth `user` row
 // (which better-auth itself manages). Kept as a separate table so future
 // preferences can land here without touching auth.
@@ -155,7 +146,6 @@ export const praamidAuthState = pgTable('praamid_auth_state', {
     .notNull(),
 })
 
-export type Setting = typeof settings.$inferSelect
 export type PraamidCredential = typeof praamidCredentials.$inferSelect
 export type NewPraamidCredential = typeof praamidCredentials.$inferInsert
 export type Ticket = typeof tickets.$inferSelect

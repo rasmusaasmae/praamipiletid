@@ -12,7 +12,6 @@ import {
 } from '@/lib/praamid-authed'
 import { type PraamidEvent } from '@/lib/praamid'
 import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid-credentials'
-import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 
@@ -81,11 +80,6 @@ export async function processSwapFor(input: SwapInput): Promise<SwapOutcome> {
 
 async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   const { userId, bookingUid, openedEventUids, eventsByUid } = input
-
-  const { editGloballyEnabled } = await getAllSettings()
-  if (!editGloballyEnabled) {
-    return { kind: 'gate_blocked', reason: 'edit_disabled' }
-  }
 
   const [ticket] = await db
     .select({

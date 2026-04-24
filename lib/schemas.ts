@@ -30,16 +30,4 @@ export const optionMoveSchema = z.object({
   direction: z.enum(['up', 'down']),
 })
 
-export const pollIntervalRange = { min: 5_000, max: 600_000 } as const
-export const pollIntervalNumberSchema = z
-  .number()
-  .int()
-  .min(pollIntervalRange.min)
-  .max(pollIntervalRange.max)
-export const pollIntervalSchema = z.coerce
-  .number()
-  .int()
-  .min(pollIntervalRange.min)
-  .max(pollIntervalRange.max)
-
 export const userRoleSchema = z.enum(['user', 'admin'])

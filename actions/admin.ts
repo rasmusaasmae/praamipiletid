@@ -6,33 +6,8 @@ import { z } from 'zod'
 import { db } from '@/db'
 import { tickets, user } from '@/db/schema'
 import { logAudit } from '@/lib/audit'
-import { pollIntervalNumberSchema, userRoleSchema } from '@/lib/schemas'
+import { userRoleSchema } from '@/lib/schemas'
 import { requireAdmin } from '@/lib/session'
-import { setSetting } from '@/lib/settings'
-
-const UpdatePollIntervalDto = z.object({ pollIntervalMs: pollIntervalNumberSchema })
-
-export async function updatePollInterval(
-  dto: z.input<typeof UpdatePollIntervalDto>,
-): Promise<void> {
-  await requireAdmin()
-  const parsed = UpdatePollIntervalDto.safeParse(dto)
-  if (!parsed.success) throw new Error('Value must be 5000..600000 ms')
-  await setSetting('pollIntervalMs', parsed.data.pollIntervalMs)
-  revalidatePath('/admin')
-}
-
-const SetEditGloballyEnabledDto = z.object({ enabled: z.boolean() })
-
-export async function setEditGloballyEnabled(
-  dto: z.input<typeof SetEditGloballyEnabledDto>,
-): Promise<void> {
-  await requireAdmin()
-  const parsed = SetEditGloballyEnabledDto.safeParse(dto)
-  if (!parsed.success) throw new Error('Invalid data')
-  await setSetting('editGloballyEnabled', parsed.data.enabled ? 1 : 0)
-  revalidatePath('/admin')
-}
 
 const UpdateUserRoleDto = z.object({
   userId: z.string().min(1),

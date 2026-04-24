@@ -56,8 +56,6 @@ export type AdminTicketRow = {
 }
 
 export type AdminDashboardData = {
-  pollIntervalMs: number
-  editGloballyEnabled: boolean
   users: AdminUserRow[]
   tickets: AdminTicketRow[]
 }

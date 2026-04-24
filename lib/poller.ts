@@ -4,12 +4,17 @@ import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { listEvents, type PraamidEvent } from '@/lib/praamid'
 import { sendEmail } from '@/lib/email'
-import { getAllSettings } from '@/lib/settings'
 import { logAudit } from '@/lib/audit'
 import { processSwapFor } from '@/lib/edit'
 import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'poller' })
+
+const POLL_INTERVAL_MS = Math.max(1000, Number(process.env.POLL_INTERVAL_MS ?? 15_000))
+// Praamid's events endpoint accepts a time-shift in seconds that biases
+// the schedule window we get back. 300s (5min) is the value the official
+// site uses; we follow.
+const POLL_TIME_SHIFT = 300
 
 let running = false
 
@@ -79,8 +84,6 @@ async function tick() {
   )
   if (due.length === 0) return
 
-  const { pollTimeShift } = await getAllSettings()
-
   const batches = new Map<string, JoinedOption[]>()
   for (const r of due) {
     const key = `${r.direction}|${r.eventDate}`
@@ -94,7 +97,7 @@ async function tick() {
 
   for (const [key, batch] of batches) {
     const [dir, date] = key.split('|') as [string, string]
-    const events = await loadBatchEvents(dir, date, pollTimeShift)
+    const events = await loadBatchEvents(dir, date, POLL_TIME_SHIFT)
     if (!events) continue
     for (const e of events) eventsByUid.set(e.uid, e)
     const batchEventByUid = new Map(events.map((e) => [e.uid, e]))
@@ -182,9 +185,8 @@ async function loop() {
     } catch (err) {
       log.error({ err: err instanceof Error ? err.message : String(err) }, 'tick failed')
     }
-    const { pollIntervalMs } = await getAllSettings()
     const elapsed = Date.now() - started
-    const delay = Math.max(1000, pollIntervalMs - elapsed)
+    const delay = Math.max(1000, POLL_INTERVAL_MS - elapsed)
     log.debug({ elapsedMs: elapsed, nextDelayMs: delay }, 'tick complete')
     await new Promise((r) => setTimeout(r, delay))
   }

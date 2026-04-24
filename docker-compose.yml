@@ -33,6 +33,7 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-15000}
       PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
       DATABASE_URL: postgres://${POSTGRES_USER:-ferry}:${POSTGRES_PASSWORD:-ferry}@postgres:5432/${POSTGRES_DB:-ferry}
     # Chromium crashes with the default 64MB /dev/shm when Playwright drives

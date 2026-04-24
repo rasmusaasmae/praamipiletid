@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { praamidAuthState, ticketOptions, tickets, user, type PraamidAuthStatus } from '@/db/schema'
 import { requireAdmin, requireUser } from '@/lib/session'
-import { getAllSettings } from '@/lib/settings'
 import type {
   AdminDashboardData,
   AdminTicketRow,
@@ -79,11 +78,10 @@ export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
   await requireAdmin()
 
-  const [users, allTickets, allOptions, settings] = await Promise.all([
+  const [users, allTickets, allOptions] = await Promise.all([
     db.select().from(user),
     db.select().from(tickets),
     db.select().from(ticketOptions),
-    getAllSettings(),
   ])
 
   const ticketCountByUser = new Map<string, number>()
@@ -125,8 +123,6 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
     .sort((a, b) => b.eventDtstart.getTime() - a.eventDtstart.getTime())
 
   return {
-    pollIntervalMs: settings.pollIntervalMs,
-    editGloballyEnabled: settings.editGloballyEnabled,
     users: userRows,
     tickets: ticketRows,
   }
