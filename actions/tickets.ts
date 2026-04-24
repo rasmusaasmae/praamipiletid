@@ -2,10 +2,12 @@
 
 import { randomUUID } from 'node:crypto'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
+import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
+import { auth } from '@/lib/auth'
 import {
   forgetCredential,
   getCredential,
@@ -23,10 +25,15 @@ import {
   subscribeTicketSchema,
   unsubscribeTicketSchema,
 } from '@/lib/schemas'
-import { requireUser } from '@/lib/session'
 import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'actions/tickets' })
+
+async function requireSession() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) throw new Error('unauthenticated')
+  return session
+}
 
 const DEFAULT_MEASUREMENT_UNIT = 'sv'
 const DEFAULT_STOP_BEFORE_MINUTES = 60
@@ -64,7 +71,7 @@ async function fetchPraamidTickets(userId: string): Promise<PraamidTicket[]> {
 // silently when praamid auth is missing/expired so the home page can render
 // without surfacing a server error; the auth card prompts to reconnect.
 export async function refreshTickets(): Promise<LiveTicket[]> {
-  const session = await requireUser()
+  const session = await requireSession()
   let raw: PraamidTicket[]
   try {
     raw = await fetchPraamidTickets(session.user.id)
@@ -95,7 +102,7 @@ export async function refreshTickets(): Promise<LiveTicket[]> {
 }
 
 export async function subscribeTicket(dto: z.input<typeof subscribeTicketSchema>): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
 
   const parsed = subscribeTicketSchema.safeParse(dto)
   if (!parsed.success) throw new Error('Invalid data')
@@ -152,7 +159,7 @@ export async function subscribeTicket(dto: z.input<typeof subscribeTicketSchema>
 export async function unsubscribeTicket(
   dto: z.input<typeof unsubscribeTicketSchema>,
 ): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
 
   const parsed = unsubscribeTicketSchema.safeParse(dto)
   if (!parsed.success) throw new Error('Missing id')
@@ -174,7 +181,7 @@ export async function unsubscribeTicket(
 }
 
 export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
 
   const parsed = optionAddSchema.safeParse(dto)
   if (!parsed.success) throw new Error('Invalid data')
@@ -241,7 +248,7 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
 }
 
 export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
   const parsed = optionUpdateSchema.safeParse(dto)
   if (!parsed.success) throw new Error('Invalid data')
 
@@ -276,7 +283,7 @@ export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Pro
 const RemoveOptionDto = z.object({ id: z.string().min(1) })
 
 export async function removeOption(dto: z.input<typeof RemoveOptionDto>): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
   const parsed = RemoveOptionDto.safeParse(dto)
   if (!parsed.success) throw new Error('Missing id')
 
@@ -308,7 +315,7 @@ export async function removeOption(dto: z.input<typeof RemoveOptionDto>): Promis
 }
 
 export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
   const parsed = optionMoveSchema.safeParse(dto)
   if (!parsed.success) throw new Error('Invalid data')
 
@@ -379,7 +386,7 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
 // Praamid auth flow actions ------------------------------------------------
 
 export async function forgetPraamidCredential(): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
   try {
     await forgetCredential(session.user.id)
     revalidatePath('/')
@@ -391,13 +398,13 @@ export async function forgetPraamidCredential(): Promise<void> {
 const StartPraamidLoginDto = z.object({ isikukood: isikukoodSchema })
 
 export async function startPraamidLogin(dto: z.input<typeof StartPraamidLoginDto>): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
   const parsed = StartPraamidLoginDto.safeParse(dto)
   if (!parsed.success) throw new Error('invalid_isikukood')
   await startLogin(session.user.id, parsed.data.isikukood)
 }
 
 export async function cancelPraamidLogin(): Promise<void> {
-  const session = await requireUser()
+  const session = await requireSession()
   await cancelLogin(session.user.id)
 }

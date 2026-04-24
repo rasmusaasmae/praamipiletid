@@ -1,8 +1,10 @@
+import { headers } from 'next/headers'
 import { NavBar } from '@/components/nav-bar'
-import { requireUser } from '@/lib/session'
+import { auth } from '@/lib/auth'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireUser()
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return null
   return (
     <div className="flex flex-1 flex-col">
       <NavBar

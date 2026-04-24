@@ -1,13 +1,20 @@
 'use server'
 
 import { eq } from 'drizzle-orm'
+import { headers } from 'next/headers'
 import { db } from '@/db'
 import { praamidAuthState, ticketOptions, tickets, type PraamidAuthStatus } from '@/db/schema'
-import { requireUser } from '@/lib/session'
+import { auth } from '@/lib/auth'
 import type { PraamidAuthStateView, TicketCardData } from './query-options'
 
+async function requireSession() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) throw new Error('unauthenticated')
+  return session
+}
+
 export async function getMyTicketCards(): Promise<TicketCardData[]> {
-  const session = await requireUser()
+  const session = await requireSession()
   const userId = session.user.id
 
   const [myTickets, myOptions] = await Promise.all([
@@ -57,7 +64,7 @@ export async function getMyTicketCards(): Promise<TicketCardData[]> {
 }
 
 export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
-  const session = await requireUser()
+  const session = await requireSession()
   const [row] = await db
     .select({ status: praamidAuthState.status, lastError: praamidAuthState.lastError })
     .from(praamidAuthState)

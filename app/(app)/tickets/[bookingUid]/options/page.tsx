@@ -1,10 +1,11 @@
 import { and, asc, eq } from 'drizzle-orm'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
+import { auth } from '@/lib/auth'
 import { listEvents } from '@/lib/praamid/api'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid/labels'
-import { requireUser } from '@/lib/session'
 import { EventCard } from '@/components/event-card'
 import { OptionsDateFilter } from '@/components/options-date-filter'
 import { Card, CardContent } from '@/components/ui/card'
@@ -32,7 +33,8 @@ export default async function AddOptionPage({
   params: RouteParams
   searchParams: SearchParams
 }) {
-  const session = await requireUser()
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return null
   const { bookingUid } = await params
   const query = await searchParams
 
