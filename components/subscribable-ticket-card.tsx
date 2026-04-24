@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { subscribeTicket } from '@/actions/tickets'
 import type { LiveTicket } from '@/actions/tickets'
 import { DIRECTION_LABELS } from '@/lib/praamid/labels'
-import { ticketsQueryOptions } from '@/lib/query-options'
+import { ticketsQueryOptions } from '@/lib/queries'
 
 type Props = {
   ticket: LiveTicket

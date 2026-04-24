@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cancelPraamidLogin, forgetPraamidCredential, startPraamidLogin } from '@/actions/tickets'
 import { isikukoodSchema } from '@/lib/schemas'
 import { useOptimisticMutation } from '@/lib/mutations'
-import { praamidAuthStateQueryOptions, type PraamidAuthStateView } from '@/lib/query-options'
+import { praamidAuthStateQueryOptions, type PraamidAuthStateView } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import type { PraamidAuthStatus } from '@/db/schema'
 

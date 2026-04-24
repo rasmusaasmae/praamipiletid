@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { addOption } from '@/actions/tickets'
 import type { PraamidEvent } from '@/lib/praamid/types'
 import { CAPACITY_LABELS, SHIP_NAMES } from '@/lib/praamid/labels'
-import { ticketsQueryOptions } from '@/lib/query-options'
+import { ticketsQueryOptions } from '@/lib/queries'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 

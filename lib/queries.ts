@@ -1,11 +1,26 @@
-'use server'
-
-import { eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
+import { queryOptions } from '@tanstack/react-query'
 import { db } from '@/db'
-import { praamidAuthState, ticketOptions, tickets, type PraamidAuthStatus } from '@/db/schema'
+import {
+  praamidAuthState,
+  ticketOptions,
+  tickets,
+  type PraamidAuthStatus,
+  type Ticket,
+  type TicketOption,
+} from '@/db/schema'
 import { auth } from '@/lib/auth'
-import type { PraamidAuthStateView, TicketCardData } from './query-options'
+
+export type TicketWithOptions = {
+  ticket: Ticket
+  options: TicketOption[]
+}
+
+export type PraamidAuthStateView = {
+  status: PraamidAuthStatus
+  lastError: string | null
+}
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -13,57 +28,37 @@ async function requireSession() {
   return session
 }
 
-export async function getMyTicketCards(): Promise<TicketCardData[]> {
+export async function getTicketsWithOptions(): Promise<TicketWithOptions[]> {
+  'use server'
   const session = await requireSession()
-  const userId = session.user.id
+  const rows = await db
+    .select()
+    .from(tickets)
+    .leftJoin(
+      ticketOptions,
+      and(
+        eq(ticketOptions.userId, tickets.userId),
+        eq(ticketOptions.bookingUid, tickets.bookingUid),
+      ),
+    )
+    .where(eq(tickets.userId, session.user.id))
+    .orderBy(asc(tickets.eventDtstart), asc(ticketOptions.priority))
 
-  const [myTickets, myOptions] = await Promise.all([
-    db.select().from(tickets).where(eq(tickets.userId, userId)),
-    db.select().from(ticketOptions).where(eq(ticketOptions.userId, userId)),
-  ])
-
-  const optionsByBooking = new Map<string, typeof myOptions>()
-  for (const o of myOptions) {
-    const list = optionsByBooking.get(o.bookingUid) ?? []
-    list.push(o)
-    optionsByBooking.set(o.bookingUid, list)
+  const byBooking = new Map<string, TicketWithOptions>()
+  for (const row of rows) {
+    const t = row.tickets
+    let entry = byBooking.get(t.bookingUid)
+    if (!entry) {
+      entry = { ticket: t, options: [] }
+      byBooking.set(t.bookingUid, entry)
+    }
+    if (row.ticket_options) entry.options.push(row.ticket_options)
   }
-
-  return myTickets
-    .map<TicketCardData>((ticket) => {
-      const opts = (optionsByBooking.get(ticket.bookingUid) ?? []).sort(
-        (a, b) => a.priority - b.priority,
-      )
-      return {
-        ticket: {
-          userId: ticket.userId,
-          bookingUid: ticket.bookingUid,
-          ticketId: ticket.ticketId,
-          ticketCode: ticket.ticketCode,
-          ticketNumber: ticket.ticketNumber,
-          direction: ticket.direction,
-          measurementUnit: ticket.measurementUnit,
-          eventUid: ticket.eventUid,
-          eventDtstart: ticket.eventDtstart,
-          ticketDate: ticket.ticketDate,
-          swapInProgress: ticket.swapInProgress,
-          capturedAt: ticket.capturedAt,
-        },
-        options: opts.map((o) => ({
-          id: o.id,
-          bookingUid: o.bookingUid,
-          priority: o.priority,
-          eventUid: o.eventUid,
-          eventDate: o.eventDate,
-          eventDtstart: o.eventDtstart,
-          stopBeforeMinutes: o.stopBeforeMinutes,
-        })),
-      }
-    })
-    .sort((a, b) => a.ticket.eventDtstart.getTime() - b.ticket.eventDtstart.getTime())
+  return Array.from(byBooking.values())
 }
 
 export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
+  'use server'
   const session = await requireSession()
   const [row] = await db
     .select({ status: praamidAuthState.status, lastError: praamidAuthState.lastError })
@@ -75,3 +70,13 @@ export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
     lastError: row?.lastError ?? null,
   }
 }
+
+export const ticketsQueryOptions = queryOptions({
+  queryKey: ['tickets'] as const,
+  queryFn: () => getTicketsWithOptions(),
+})
+
+export const praamidAuthStateQueryOptions = queryOptions({
+  queryKey: ['praamidAuthState'] as const,
+  queryFn: () => getMyPraamidAuthState(),
+})

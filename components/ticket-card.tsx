@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { moveOption, removeOption, unsubscribeTicket, updateOption } from '@/actions/tickets'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid/labels'
-import { ticketsQueryOptions, type TicketCardData } from '@/lib/query-options'
+import { ticketsQueryOptions, type TicketWithOptions } from '@/lib/queries'
 
 const DATE_TAG = 'en-GB'
 
@@ -30,17 +30,17 @@ const formatDate = (d: Date) =>
 const formatTime = (d: Date) =>
   d.toLocaleTimeString(DATE_TAG, { hour: '2-digit', minute: '2-digit' })
 
-export function TicketCard({ data }: { data: TicketCardData }) {
+export function TicketCard({ data }: { data: TicketWithOptions }) {
   const bookingUid = data.ticket.bookingUid
 
-  const unsubscribeMutation = useOptimisticMutation<void, TicketCardData[]>({
+  const unsubscribeMutation = useOptimisticMutation<void, TicketWithOptions[]>({
     queryKey: ticketsQueryOptions.queryKey,
     mutationFn: () => unsubscribeTicket({ bookingUid }),
     optimisticUpdate: (old) => old.filter((c) => c.ticket.bookingUid !== bookingUid),
     successMessage: 'Deleted',
   })
 
-  const removeOptionMutation = useOptimisticMutation<string, TicketCardData[]>({
+  const removeOptionMutation = useOptimisticMutation<string, TicketWithOptions[]>({
     queryKey: ticketsQueryOptions.queryKey,
     mutationFn: (optionId) => removeOption({ id: optionId }),
     optimisticUpdate: (old, optionId) =>
@@ -54,7 +54,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
 
   const moveOptionMutation = useOptimisticMutation<
     { optionId: string; direction: 'up' | 'down' },
-    TicketCardData[]
+    TicketWithOptions[]
   >({
     queryKey: ticketsQueryOptions.queryKey,
     mutationFn: ({ optionId, direction }) => moveOption({ id: optionId, direction }),
@@ -82,7 +82,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
 
   const updateOptionMutation = useOptimisticMutation<
     { optionId: string; stopBeforeMinutes: number },
-    TicketCardData[]
+    TicketWithOptions[]
   >({
     queryKey: ticketsQueryOptions.queryKey,
     mutationFn: ({ optionId, stopBeforeMinutes }) =>

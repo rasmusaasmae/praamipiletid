@@ -12,11 +12,11 @@ import { refreshTickets } from '@/actions/tickets'
 import {
   praamidAuthStateQueryOptions,
   ticketsQueryOptions,
-  type TicketCardData,
-} from '@/lib/query-options'
+  type TicketWithOptions,
+} from '@/lib/queries'
 
 type Row =
-  | { kind: 'subscribed'; bookingUid: string; eventDtstart: Date; data: TicketCardData }
+  | { kind: 'subscribed'; bookingUid: string; eventDtstart: Date; data: TicketWithOptions }
   | { kind: 'live'; bookingUid: string; eventDtstart: Date; data: LiveTicket }
 
 export function Home({
