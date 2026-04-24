@@ -14,10 +14,6 @@ export type AuditPayload = {
   'credential.verified': Record<string, never>
   'credential.expired': Record<string, never>
   'credential.forgotten': Record<string, never>
-  'notification.credential_expiring': {
-    expiresAt: string
-    hoursLeft: number
-  }
   'edit.attempted': {
     bookingUid: string
     fromEventUid: string

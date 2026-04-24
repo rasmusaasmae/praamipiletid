@@ -1,6 +1,6 @@
 import 'server-only'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
-import { and, eq, gt, lt } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { praamidCredentials } from '@/db/schema'
 import { setAuthState, settleAuthState } from '@/lib/praamid-auth-state'
@@ -231,23 +231,4 @@ export async function invalidateCredential(userId: string, reason: string): Prom
 export async function forgetCredential(userId: string): Promise<void> {
   await db.delete(praamidCredentials).where(eq(praamidCredentials.userId, userId))
   await setAuthState(userId, { status: 'unauthenticated' })
-}
-
-export type ReauthCandidate = {
-  userId: string
-  expiresAt: Date
-}
-
-export async function listCredentialsNeedingReauth(
-  hoursBefore: number,
-): Promise<ReauthCandidate[]> {
-  const now = new Date()
-  const cutoff = new Date(now.getTime() + hoursBefore * 60 * 60 * 1000)
-  return db
-    .select({
-      userId: praamidCredentials.userId,
-      expiresAt: praamidCredentials.expiresAt,
-    })
-    .from(praamidCredentials)
-    .where(and(gt(praamidCredentials.expiresAt, now), lt(praamidCredentials.expiresAt, cutoff)))
 }
