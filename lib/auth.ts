@@ -3,19 +3,19 @@ import { db } from '@/db'
 import { userSettings } from '@/db/schema'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { getEnv } from '@/lib/env'
 
-const env = getEnv()
+const appUrl = process.env.APP_URL
+if (!appUrl) throw new Error('APP_URL is not set')
 
 export const auth = betterAuth({
-  baseURL: env.APP_URL,
+  baseURL: appUrl,
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),
   socialProviders: {
     google: {
-      clientId: env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: env.GOOGLE_CLIENT_SECRET ?? '',
+      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
     },
   },
   databaseHooks: {

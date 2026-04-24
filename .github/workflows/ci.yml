@@ -97,10 +97,8 @@ jobs:
 
       - name: Build
         env:
-          # Placeholder values for the env vars lib/env.ts validates as
-          # strictly required. All other env vars are optional in the
-          # schema and resolved at use-time, so the build doesn't need
-          # them. Real values are supplied at runtime by the deployer.
+          # Placeholder env vars so `next build` can evaluate modules that
+          # validate env at import time. Real values are supplied at runtime.
           DATABASE_URL: postgres://ci:ci@localhost:5432/ci
           APP_URL: http://localhost:3000
           BETTER_AUTH_SECRET: ci-build-placeholder-at-least-32-chars-long

@@ -5,12 +5,11 @@ import { ticketOptions, tickets } from '@/db/schema'
 import { listEvents, type PraamidEvent } from '@/lib/praamid'
 import { sendEmail } from '@/lib/email'
 import { processSwapFor } from '@/lib/edit'
-import { getEnv } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'poller' })
 
-const POLL_INTERVAL_MS = getEnv().POLL_INTERVAL_MS
+const POLL_INTERVAL_MS = Math.max(1000, Number(process.env.POLL_INTERVAL_MS ?? 15_000))
 // Praamid's events endpoint accepts a time-shift in seconds that biases
 // the schedule window we get back. 300s (5min) is the value the official
 // site uses; we follow.

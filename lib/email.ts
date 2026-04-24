@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm'
 import nodemailer, { type Transporter } from 'nodemailer'
 import { db } from '@/db'
 import { user } from '@/db/schema'
-import { getEnv } from '@/lib/env'
 
 // Reads SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM at first
 // send. Recipient is resolved from `user.email` (better-auth) by userId.
@@ -14,18 +13,19 @@ let cached: { transporter: Transporter; from: string } | null = null
 
 function getTransport(): { transporter: Transporter; from: string } {
   if (cached) return cached
-  const env = getEnv()
-  if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS || !env.SMTP_FROM) {
-    throw new Error('email: SMTP_HOST / SMTP_USER / SMTP_PASS / SMTP_FROM must all be set')
-  }
+  const host = requireEnv('SMTP_HOST')
+  const port = Number(process.env.SMTP_PORT ?? 587)
+  const smtpUser = requireEnv('SMTP_USER')
+  const pass = requireEnv('SMTP_PASS')
+  const from = requireEnv('SMTP_FROM')
   const transporter = nodemailer.createTransport({
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_PORT === 465,
-    requireTLS: env.SMTP_PORT === 587,
-    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+    host,
+    port,
+    secure: port === 465,
+    requireTLS: port === 587,
+    auth: { user: smtpUser, pass },
   })
-  cached = { transporter, from: env.SMTP_FROM }
+  cached = { transporter, from }
   return cached
 }
 
@@ -51,4 +51,10 @@ export async function sendEmail({
     subject,
     text: body,
   })
+}
+
+function requireEnv(name: string): string {
+  const v = process.env[name]
+  if (!v) throw new Error(`email: ${name} is not set`)
+  return v
 }

@@ -2,10 +2,9 @@ import 'server-only'
 import { Writable } from 'node:stream'
 import pino from 'pino'
 import pretty from 'pino-pretty'
-import { getEnv } from '@/lib/env'
 
-const env = getEnv()
-const isDev = env.NODE_ENV !== 'production'
+const isDev = process.env.NODE_ENV !== 'production'
+const webhookUrl = process.env.DISCORD_WEBHOOK_URL
 
 // Discord embed colors by pino numeric level.
 const EMBED_COLOR: Record<number, number> = {
@@ -61,11 +60,11 @@ const streams: pino.StreamEntry[] = [
     ? { stream: pretty({ colorize: true, translateTime: 'HH:MM:ss.l', ignore: 'pid,hostname' }) }
     : { stream: process.stdout },
 ]
-if (env.DISCORD_WEBHOOK_URL) {
-  streams.push({ level: 'warn', stream: discordSink(env.DISCORD_WEBHOOK_URL) })
+if (webhookUrl) {
+  streams.push({ level: 'warn', stream: discordSink(webhookUrl) })
 }
 
 export const logger = pino(
-  { level: env.LOG_LEVEL ?? (isDev ? 'debug' : 'info') },
+  { level: process.env.LOG_LEVEL ?? (isDev ? 'debug' : 'info') },
   pino.multistream(streams),
 )
