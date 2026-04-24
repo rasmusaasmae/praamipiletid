@@ -24,14 +24,10 @@
     "isikukoodInvalid": "Isikukood peab olema täpselt 11 numbrit"
   },
   "Home": {
-    "availableTitle": "Sinu praamid.ee piletid",
-    "availableDescription": "Aktiivsed praamid.ee piletid, mida veel ei jälgita.",
-    "loading": "Laadin pileteid…",
-    "noAvailable": "Ühtegi teist aktiivset piletit praamid.ee-s pole.",
     "subscribe": "Jälgi",
     "subscribing": "Lisan…",
     "subscribed": "Jälgin",
-    "alreadySubscribed": "Jälgin"
+    "connectPraamid": "Ühenda praamid.ee, et näha oma pileteid"
   },
   "ThemeToggle": {
     "label": "Vaheta teemat",
@@ -88,7 +84,7 @@
   "Tickets": {
     "title": "Minu piletid",
     "description": "Jälgitavad piletid ja nende eelistatud alternatiivid.",
-    "empty": "Ühtegi piletit ei jälgi veel — vali allolevate hulgast.",
+    "empty": "Ühtegi aktiivset piletit praamid.ee-s pole.",
     "delete": "Kustuta",
     "saved": "Salvestatud",
     "deleted": "Kustutatud",

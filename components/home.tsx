@@ -1,12 +1,19 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { TicketCard } from '@/components/ticket-card'
 import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
 import { Card, CardContent } from '@/components/ui/card'
+import { Link } from '@/i18n/navigation'
+import type { LiveTicket } from '@/actions/tickets'
 import { refreshTickets } from '@/actions/tickets'
-import { ticketsQueryOptions } from '@/lib/query-options'
+import { ticketsQueryOptions, type TicketCardData } from '@/lib/query-options'
+
+type Row =
+  | { kind: 'subscribed'; bookingUid: string; eventDtstart: Date; data: TicketCardData }
+  | { kind: 'live'; bookingUid: string; eventDtstart: Date; data: LiveTicket }
 
 export function Home() {
   const tH = useTranslations('Home')
@@ -24,10 +31,24 @@ export function Home() {
     retry: false,
   })
 
-  const subscribedBookingUids = new Set(cards.map((c) => c.ticket.bookingUid))
-  const unsubscribed = (liveTickets.data ?? []).filter(
-    (lt) => !subscribedBookingUids.has(lt.bookingUid),
-  )
+  const rows = useMemo<Row[]>(() => {
+    const subscribed = new Set(cards.map((c) => c.ticket.bookingUid))
+    const live = (liveTickets.data ?? []).filter((lt) => !subscribed.has(lt.bookingUid))
+    return [
+      ...cards.map<Row>((c) => ({
+        kind: 'subscribed',
+        bookingUid: c.ticket.bookingUid,
+        eventDtstart: c.ticket.eventDtstart,
+        data: c,
+      })),
+      ...live.map<Row>((lt) => ({
+        kind: 'live',
+        bookingUid: lt.bookingUid,
+        eventDtstart: new Date(lt.eventDtstart),
+        data: lt,
+      })),
+    ].sort((a, b) => a.eventDtstart.getTime() - b.eventDtstart.getTime())
+  }, [cards, liveTickets.data])
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,48 +57,24 @@ export function Home() {
         <p className="text-sm text-muted-foreground">{tT('description')}</p>
       </div>
 
-      {cards.length === 0 ? (
+      {rows.length === 0 ? (
         <Card>
-          <CardContent className="py-6 text-muted-foreground">{tT('empty')}</CardContent>
+          <CardContent className="flex flex-col gap-2 py-6 text-sm text-muted-foreground">
+            <p>{tT('empty')}</p>
+            <Link href="/settings#praamid" className="underline hover:text-foreground">
+              {tH('connectPraamid')}
+            </Link>
+          </CardContent>
         </Card>
       ) : (
         <div className="flex flex-col gap-4">
-          {cards.map((card) => (
-            <TicketCard key={card.ticket.bookingUid} data={card} />
-          ))}
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-col gap-2">
-        <h3 className="text-lg font-semibold">{tH('availableTitle')}</h3>
-        <p className="text-sm text-muted-foreground">{tH('availableDescription')}</p>
-      </div>
-
-      {liveTickets.isLoading ? (
-        <Card>
-          <CardContent className="py-6 text-muted-foreground">{tH('loading')}</CardContent>
-        </Card>
-      ) : liveTickets.error ? (
-        <Card>
-          <CardContent className="py-6 text-destructive">
-            {liveTickets.error.message}
-          </CardContent>
-        </Card>
-      ) : unsubscribed.length === 0 ? (
-        <Card>
-          <CardContent className="py-6 text-muted-foreground">
-            {tH('noAvailable')}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {unsubscribed.map((ticket) => (
-            <SubscribableTicketCard
-              key={ticket.bookingUid}
-              ticket={ticket}
-              alreadySubscribed={false}
-            />
-          ))}
+          {rows.map((row) =>
+            row.kind === 'subscribed' ? (
+              <TicketCard key={row.bookingUid} data={row.data} />
+            ) : (
+              <SubscribableTicketCard key={row.bookingUid} ticket={row.data} />
+            ),
+          )}
         </div>
       )}
     </div>

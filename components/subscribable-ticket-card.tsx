@@ -13,10 +13,9 @@ import { ticketsQueryOptions } from '@/lib/query-options'
 
 type Props = {
   ticket: LiveTicket
-  alreadySubscribed: boolean
 }
 
-export function SubscribableTicketCard({ ticket, alreadySubscribed }: Props) {
+export function SubscribableTicketCard({ ticket }: Props) {
   const t = useTranslations('Home')
   const tDir = useTranslations('Directions')
   const locale = useLocale()
@@ -63,14 +62,10 @@ export function SubscribableTicketCard({ ticket, alreadySubscribed }: Props) {
         </div>
         <Button
           size="sm"
-          disabled={alreadySubscribed || subscribeMutation.isPending}
+          disabled={subscribeMutation.isPending}
           onClick={() => subscribeMutation.mutate()}
         >
-          {alreadySubscribed
-            ? t('alreadySubscribed')
-            : subscribeMutation.isPending
-              ? t('subscribing')
-              : t('subscribe')}
+          {subscribeMutation.isPending ? t('subscribing') : t('subscribe')}
         </Button>
       </CardContent>
     </Card>

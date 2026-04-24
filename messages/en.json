@@ -24,14 +24,10 @@
     "isikukoodInvalid": "ID code must be exactly 11 digits"
   },
   "Home": {
-    "availableTitle": "Your praamid.ee tickets",
-    "availableDescription": "Active tickets on praamid.ee that aren't being monitored yet.",
-    "loading": "Loading tickets…",
-    "noAvailable": "No other active tickets on praamid.ee.",
     "subscribe": "Monitor",
     "subscribing": "Adding…",
     "subscribed": "Now monitoring",
-    "alreadySubscribed": "Monitoring"
+    "connectPraamid": "Connect praamid.ee to see your tickets"
   },
   "ThemeToggle": {
     "label": "Toggle theme",
@@ -88,7 +84,7 @@
   "Tickets": {
     "title": "My tickets",
     "description": "Monitored tickets and their preferred alternatives.",
-    "empty": "Not monitoring any tickets yet — pick one below.",
+    "empty": "No active tickets on praamid.ee.",
     "delete": "Delete",
     "saved": "Saved",
     "deleted": "Deleted",

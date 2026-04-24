@@ -67,12 +67,22 @@ async function fetchPraamidTickets(
 }
 
 // Returns the user's active, future-dated tickets on praamid.ee. The home
-// page uses this to render "monitor" CTAs for tickets we don't yet cache.
-// Does not mutate DB.
+// page calls this every render; if praamid auth is missing/expired we
+// silently return [] rather than throwing — callers decide how to prompt
+// the user to (re-)authenticate via the settings page.
 export async function refreshTickets(): Promise<LiveTicket[]> {
   const session = await requireUser()
   const errT = await getTranslations('Errors')
-  const raw = await fetchPraamidTickets(session.user.id, errT)
+  let raw: PraamidTicket[]
+  try {
+    raw = await fetchPraamidTickets(session.user.id, errT)
+  } catch (err) {
+    log.debug(
+      { userId: session.user.id, err: err instanceof Error ? err.message : String(err) },
+      'refreshTickets skipped',
+    )
+    return []
+  }
   const now = Date.now()
   return raw
     .filter((t) => t.status.code === 'ACTIVE')
