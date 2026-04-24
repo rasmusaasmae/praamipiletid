@@ -1,6 +1,5 @@
 'use client'
 
-import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,18 +12,16 @@ import {
 } from '@/components/ui/table'
 import { deleteAnyTicket } from '@/actions/admin'
 import { useOptimisticMutation } from '@/lib/mutations'
+import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid'
 import {
   adminDashboardQueryOptions,
   type AdminDashboardData,
   type AdminTicketRow,
 } from '@/lib/query-options'
 
-export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
-  const t = useTranslations('Admin')
-  const tCap = useTranslations('Capacity')
-  const tDir = useTranslations('Directions')
-  const locale = useLocale()
+const DATE_TAG = 'en-GB'
 
+export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
   const deleteMutation = useOptimisticMutation<
     { userId: string; bookingUid: string },
     AdminDashboardData
@@ -37,15 +34,14 @@ export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
         (r) => !(r.userId === userId && r.bookingUid === bookingUid),
       ),
     }),
-    successMessage: t('deleted'),
+    successMessage: 'Deleted',
   })
 
-  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
   const formatDateTime = (d: Date) =>
-    `${d.toLocaleDateString(dateTag)} ${d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })}`
+    `${d.toLocaleDateString(DATE_TAG)} ${d.toLocaleTimeString(DATE_TAG, { hour: '2-digit', minute: '2-digit' })}`
 
   if (rows.length === 0) {
-    return <p className="text-muted-foreground">{t('ticketsEmpty')}</p>
+    return <p className="text-muted-foreground">No tickets.</p>
   }
 
   return (
@@ -53,12 +49,12 @@ export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columnUser')}</TableHead>
-            <TableHead>{t('columnTicket')}</TableHead>
-            <TableHead>{t('columnType')}</TableHead>
-            <TableHead>{t('columnOptions')}</TableHead>
-            <TableHead>{t('columnStatus')}</TableHead>
-            <TableHead className="text-right">{t('columnActions')}</TableHead>
+            <TableHead>User</TableHead>
+            <TableHead>Ticket</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Alternatives</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -68,16 +64,20 @@ export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
               <TableRow key={`${r.userId}|${r.bookingUid}`}>
                 <TableCell className="text-xs">{r.userEmail}</TableCell>
                 <TableCell>
-                  <div className="font-medium">{tDir(r.direction as 'VK')}</div>
+                  <div className="font-medium">
+                    {DIRECTION_LABELS[r.direction] ?? r.direction}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {formatDateTime(r.eventDtstart)}
                   </div>
-                  <div className="text-xs font-mono text-muted-foreground">{r.ticketCode}</div>
+                  <div className="text-xs font-mono text-muted-foreground">
+                    {r.ticketCode}
+                  </div>
                 </TableCell>
-                <TableCell>{tCap(r.measurementUnit as 'sv')}</TableCell>
+                <TableCell>{CAPACITY_LABELS[r.measurementUnit] ?? r.measurementUnit}</TableCell>
                 <TableCell>{r.optionsCount}</TableCell>
                 <TableCell>
-                  {past ? <Badge variant="secondary">{t('statusPast')}</Badge> : null}
+                  {past ? <Badge variant="secondary">Past</Badge> : null}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
@@ -87,7 +87,7 @@ export function AdminTicketsTable({ rows }: { rows: AdminTicketRow[] }) {
                       deleteMutation.mutate({ userId: r.userId, bookingUid: r.bookingUid })
                     }
                   >
-                    {t('delete')}
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>

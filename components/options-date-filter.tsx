@@ -1,10 +1,9 @@
 'use client'
 
 import { useTransition } from 'react'
-import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useRouter } from '@/i18n/navigation'
 
 type Props = {
   bookingUid: string
@@ -14,13 +13,12 @@ type Props = {
 export function OptionsDateFilter({ bookingUid, currentDate }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const t = useTranslations('OptionsFilter')
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[200px]">
       <div>
         <Label htmlFor="date" className="mb-1 block">
-          {t('date')}
+          Date
         </Label>
         <Input
           id="date"

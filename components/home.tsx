@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
-import { useTranslations } from 'next-intl'
 import { TicketCard } from '@/components/ticket-card'
 import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
 import {
@@ -16,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import Link from 'next/link'
 import type { LiveTicket } from '@/actions/tickets'
 import { refreshTickets } from '@/actions/tickets'
 import {
@@ -35,8 +35,6 @@ export function Home({
   configured: boolean
   credentialMeta: PraamidCredentialMeta | null
 }) {
-  const tT = useTranslations('Tickets')
-
   const { data: cards } = useSuspenseQuery({
     ...ticketsQueryOptions,
     refetchInterval: 60_000,
@@ -81,8 +79,10 @@ export function Home({
       )}
 
       <div>
-        <h2 className="text-2xl font-semibold">{tT('title')}</h2>
-        <p className="text-sm text-muted-foreground">{tT('description')}</p>
+        <h2 className="text-2xl font-semibold">My tickets</h2>
+        <p className="text-sm text-muted-foreground">
+          Monitored tickets and their preferred alternatives.
+        </p>
       </div>
 
       {rows.length > 0 ? (
@@ -95,10 +95,19 @@ export function Home({
             ),
           )}
         </div>
+      ) : !isAuthed ? (
+        <Card>
+          <CardContent className="flex flex-col gap-2 py-6 text-sm text-muted-foreground">
+            <p>You&apos;re not connected to praamid.ee yet.</p>
+            <Link href="/#praamid" className="underline hover:text-foreground">
+              Connect praamid.ee
+            </Link>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
-            {tT('empty')}
+            No active tickets on praamid.ee.
           </CardContent>
         </Card>
       )}
@@ -107,15 +116,18 @@ export function Home({
 }
 
 function PraamidNotConfiguredCard() {
-  const tP = useTranslations('Praamid')
   return (
     <Card id="praamid" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>{tP('title')}</CardTitle>
-        <CardDescription>{tP('description')}</CardDescription>
+        <CardTitle>praamid.ee</CardTitle>
+        <CardDescription>
+          We replay your praamid.ee session to auto-update tickets when a better slot opens.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-destructive">{tP('notConfigured')}</p>
+        <p className="text-sm text-destructive">
+          Credential encryption key is not configured on the server.
+        </p>
       </CardContent>
     </Card>
   )

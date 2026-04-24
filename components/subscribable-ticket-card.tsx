@@ -1,7 +1,6 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Ticket as TicketIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -9,26 +8,25 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { subscribeTicket } from '@/actions/tickets'
 import type { LiveTicket } from '@/actions/tickets'
+import { DIRECTION_LABELS } from '@/lib/praamid'
 import { ticketsQueryOptions } from '@/lib/query-options'
 
 type Props = {
   ticket: LiveTicket
 }
 
+const DATE_TAG = 'en-GB'
+
 export function SubscribableTicketCard({ ticket }: Props) {
-  const t = useTranslations('Home')
-  const tDir = useTranslations('Directions')
-  const locale = useLocale()
   const queryClient = useQueryClient()
 
-  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
   const start = new Date(ticket.eventDtstart)
-  const dateLabel = start.toLocaleDateString(dateTag, {
+  const dateLabel = start.toLocaleDateString(DATE_TAG, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
   })
-  const timeLabel = start.toLocaleTimeString(dateTag, {
+  const timeLabel = start.toLocaleTimeString(DATE_TAG, {
     hour: '2-digit',
     minute: '2-digit',
   })
@@ -37,7 +35,7 @@ export function SubscribableTicketCard({ ticket }: Props) {
     mutationFn: () =>
       subscribeTicket({ bookingUid: ticket.bookingUid, ticketCode: ticket.ticketCode }),
     onSuccess: () => {
-      toast.success(t('subscribed'))
+      toast.success('Now monitoring')
       queryClient.invalidateQueries({ queryKey: ticketsQueryOptions.queryKey })
       queryClient.invalidateQueries({ queryKey: ['praamidTickets'] })
     },
@@ -51,7 +49,9 @@ export function SubscribableTicketCard({ ticket }: Props) {
           <TicketIcon className="size-4 shrink-0 text-muted-foreground" />
           <div className="flex min-w-0 flex-col">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="font-semibold">{tDir(ticket.direction as 'VK')}</span>
+              <span className="font-semibold">
+                {DIRECTION_LABELS[ticket.direction] ?? ticket.direction}
+              </span>
               <Badge variant="outline">{dateLabel}</Badge>
               <span className="text-sm tabular-nums">{timeLabel}</span>
             </div>
@@ -65,7 +65,7 @@ export function SubscribableTicketCard({ ticket }: Props) {
           onClick={() => subscribeMutation.mutate()}
           className="sm:self-center"
         >
-          {subscribeMutation.isPending ? t('subscribing') : t('subscribe')}
+          {subscribeMutation.isPending ? 'Adding…' : 'Monitor'}
         </Button>
       </CardContent>
     </Card>

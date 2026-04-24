@@ -2,12 +2,11 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { addOption } from '@/actions/tickets'
-import { SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
+import { CAPACITY_LABELS, SHIP_NAMES, type PraamidEvent } from '@/lib/praamid'
 import { ticketsQueryOptions } from '@/lib/query-options'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
@@ -34,8 +33,6 @@ export function EventCard({
   measurementUnit,
   alreadyAdded,
 }: Props) {
-  const t = useTranslations('EventCard')
-  const tCap = useTranslations('Capacity')
   const queryClient = useQueryClient()
 
   const highlighted = measurementUnit
@@ -43,7 +40,7 @@ export function EventCard({
   const addMutation = useMutation({
     mutationFn: () => addOption({ bookingUid, eventUid: event.uid, date }),
     onSuccess: () => {
-      toast.success(t('optionAdded'))
+      toast.success('Alternative added')
       queryClient.invalidateQueries({ queryKey: ticketsQueryOptions.queryKey })
     },
     onError: (err) => toast.error(err.message),
@@ -72,7 +69,8 @@ export function EventCard({
                       : 'rounded-md bg-secondary px-2 py-0.5'
                   }
                 >
-                  {tCap(code)}: <span className="font-medium text-foreground">{v}</span>
+                  {CAPACITY_LABELS[code] ?? code}:{' '}
+                  <span className="font-medium text-foreground">{v}</span>
                 </span>
               )
             })}
@@ -82,11 +80,7 @@ export function EventCard({
           disabled={addMutation.isPending || alreadyAdded}
           onClick={() => addMutation.mutate()}
         >
-          {alreadyAdded
-            ? t('alreadyAdded')
-            : addMutation.isPending
-              ? t('saving')
-              : t('addOption')}
+          {alreadyAdded ? 'Already added' : addMutation.isPending ? 'Saving…' : 'Add'}
         </Button>
       </CardContent>
     </Card>

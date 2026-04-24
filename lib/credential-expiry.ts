@@ -42,8 +42,8 @@ async function tick() {
     try {
       await getNotifier().send({
         userId: c.userId,
-        title: 'praamid sessioon aegumas',
-        message: `Sinu praamid.ee sessioon aegub ${hoursLeft}h pärast — salvesta uus.`,
+        title: 'praamid.ee session expiring',
+        message: `Your praamid.ee session expires in ${hoursLeft}h — re-authenticate to keep auto-swap working.`,
       })
       await logAudit({
         type: 'notification.credential_expiring',

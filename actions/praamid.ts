@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { requireUser } from '@/lib/session'
 import { forgetCredential } from '@/lib/praamid-credentials'
@@ -10,12 +9,11 @@ import { isikukoodSchema } from '@/lib/schemas'
 
 export async function forgetPraamidCredential(): Promise<void> {
   const session = await requireUser()
-  const t = await getTranslations('Errors')
   try {
     await forgetCredential(session.user.id)
     revalidatePath('/')
   } catch {
-    throw new Error(t('invalidData'))
+    throw new Error('Invalid data')
   }
 }
 

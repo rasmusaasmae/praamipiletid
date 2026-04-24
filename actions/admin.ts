@@ -2,7 +2,6 @@
 
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
 import { tickets, user } from '@/db/schema'
@@ -17,9 +16,8 @@ export async function updatePollInterval(
   dto: z.input<typeof UpdatePollIntervalDto>,
 ): Promise<void> {
   await requireAdmin()
-  const t = await getTranslations('Errors')
   const parsed = UpdatePollIntervalDto.safeParse(dto)
-  if (!parsed.success) throw new Error(t('pollIntervalRange'))
+  if (!parsed.success) throw new Error('Value must be 5000..600000 ms')
   await setSetting('pollIntervalMs', parsed.data.pollIntervalMs)
   revalidatePath('/admin')
 }
@@ -30,9 +28,8 @@ export async function setEditGloballyEnabled(
   dto: z.input<typeof SetEditGloballyEnabledDto>,
 ): Promise<void> {
   await requireAdmin()
-  const t = await getTranslations('Errors')
   const parsed = SetEditGloballyEnabledDto.safeParse(dto)
-  if (!parsed.success) throw new Error(t('invalidData'))
+  if (!parsed.success) throw new Error('Invalid data')
   await setSetting('editGloballyEnabled', parsed.data.enabled ? 1 : 0)
   revalidatePath('/admin')
 }
@@ -46,9 +43,8 @@ export async function updateUserRole(
   dto: z.input<typeof UpdateUserRoleDto>,
 ): Promise<void> {
   await requireAdmin()
-  const t = await getTranslations('Errors')
   const parsed = UpdateUserRoleDto.safeParse(dto)
-  if (!parsed.success) throw new Error(t('invalidData'))
+  if (!parsed.success) throw new Error('Invalid data')
   await db
     .update(user)
     .set({ role: parsed.data.role })
@@ -65,9 +61,8 @@ export async function deleteAnyTicket(
   dto: z.input<typeof DeleteAnyTicketDto>,
 ): Promise<void> {
   const session = await requireAdmin()
-  const t = await getTranslations('Errors')
   const parsed = DeleteAnyTicketDto.safeParse(dto)
-  if (!parsed.success) throw new Error(t('missingId'))
+  if (!parsed.success) throw new Error('Missing id')
   const [target] = await db
     .select({ ticketCode: tickets.ticketCode })
     .from(tickets)
@@ -78,7 +73,7 @@ export async function deleteAnyTicket(
       ),
     )
     .limit(1)
-  if (!target) throw new Error(t('ticketNotFound'))
+  if (!target) throw new Error('Ticket not found')
   await db
     .delete(tickets)
     .where(

@@ -1,7 +1,6 @@
 'use client'
 
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { useTranslations } from 'next-intl'
 import { AdminTicketsTable } from '@/components/admin/admin-tickets-table'
 import { AdminUsersTable } from '@/components/admin/admin-users-table'
 import { PollIntervalForm } from '@/components/admin/poll-interval-form'
@@ -11,20 +10,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { adminDashboardQueryOptions } from '@/lib/query-options'
 
 export function Admin() {
-  const t = useTranslations('Admin')
   const { data } = useSuspenseQuery(adminDashboardQueryOptions)
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground">{t('description')}</p>
+        <h1 className="text-2xl font-semibold">Admin</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage system settings, users and tickets.
+        </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('pollTitle')}</CardTitle>
-          <CardDescription>{t('pollDescription')}</CardDescription>
+          <CardTitle>Poll interval</CardTitle>
+          <CardDescription>
+            How often we check the praamipiletid.ee API. 5000–600000 ms.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <PollIntervalForm current={data.pollIntervalMs} />
@@ -34,14 +36,16 @@ export function Admin() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <CardTitle>{t('editTitle')}</CardTitle>
+            <CardTitle>Auto-swap (global)</CardTitle>
             {data.editGloballyEnabled ? (
-              <Badge variant="secondary">{t('editBadgeEnabled')}</Badge>
+              <Badge variant="secondary">Enabled</Badge>
             ) : (
-              <Badge variant="outline">{t('editBadgeDisabled')}</Badge>
+              <Badge variant="outline">Disabled</Badge>
             )}
           </div>
-          <CardDescription>{t('editDescription')}</CardDescription>
+          <CardDescription>
+            Globally enable or disable automatic ticket swaps across all users.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <EditEnabledForm enabled={data.editGloballyEnabled} />
@@ -50,7 +54,7 @@ export function Admin() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('users')}</CardTitle>
+          <CardTitle>Users</CardTitle>
         </CardHeader>
         <CardContent>
           <AdminUsersTable users={data.users} />
@@ -59,7 +63,7 @@ export function Admin() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('tickets')}</CardTitle>
+          <CardTitle>Tickets</CardTitle>
         </CardHeader>
         <CardContent>
           <AdminTicketsTable rows={data.tickets} />

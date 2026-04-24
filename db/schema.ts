@@ -1,7 +1,5 @@
-import { sql } from 'drizzle-orm'
 import {
   boolean,
-  check,
   foreignKey,
   index,
   integer,
@@ -24,34 +22,19 @@ export const settings = pgTable('settings', {
     .notNull(),
 })
 
-export const SUPPORTED_LOCALES = ['et', 'en'] as const
-export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
-export const DEFAULT_LOCALE: SupportedLocale = 'et'
-
 // Per-user preferences that don't belong on the better-auth `user` row
-// (which is kept tight to columns better-auth itself manages). The locale
-// column is what server code uses when rendering on behalf of the user,
-// e.g. composing notification messages.
-export const userSettings = pgTable(
-  'user_settings',
-  {
-    userId: text('user_id')
-      .primaryKey()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    locale: text('locale').default(DEFAULT_LOCALE).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    check(
-      'user_settings_locale_check',
-      sql.raw(`${table.locale.name} IN (${SUPPORTED_LOCALES.map((l) => `'${l}'`).join(', ')})`),
-    ),
-  ],
-)
+// (which better-auth itself manages). Kept as a separate table so future
+// preferences can land here without touching auth.
+export const userSettings = pgTable('user_settings', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
 
 // Cache of the user's praamid.ee tickets that they have opted into
 // monitoring. PK is (userId, bookingUid): bookingUid is praamid's stable

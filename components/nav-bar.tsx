@@ -1,14 +1,12 @@
-import { getTranslations } from 'next-intl/server'
 import { Ship } from 'lucide-react'
-import { Link } from '@/i18n/navigation'
+import Link from 'next/link'
 import { AvatarMenu } from '@/components/avatar-menu'
 
 type Props = {
   user: { email: string; image: string | null; role: string }
 }
 
-export async function NavBar({ user }: Props) {
-  const t = await getTranslations('NavBar')
+export function NavBar({ user }: Props) {
   const isAdmin = user.role === 'admin'
   return (
     <header className="border-b border-border">
@@ -16,15 +14,15 @@ export async function NavBar({ user }: Props) {
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <Ship className="size-5" aria-hidden />
-            {t('brand')}
+            Ferry Tickets
           </Link>
           {isAdmin ? (
             <nav className="flex items-center gap-2 text-sm text-muted-foreground sm:gap-3">
               <Link href="/" className="hover:text-foreground">
-                {t('home')}
+                Home
               </Link>
               <Link href="/admin" className="hover:text-foreground">
-                {t('admin')}
+                Admin
               </Link>
             </nav>
           ) : null}

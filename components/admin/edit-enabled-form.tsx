@@ -1,19 +1,16 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { setEditGloballyEnabled } from '@/actions/admin'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { adminDashboardQueryOptions, type AdminDashboardData } from '@/lib/query-options'
 
 export function EditEnabledForm({ enabled }: { enabled: boolean }) {
-  const t = useTranslations('Admin')
-
   const toggleMutation = useOptimisticMutation<boolean, AdminDashboardData>({
     queryKey: adminDashboardQueryOptions.queryKey,
     mutationFn: (next) => setEditGloballyEnabled({ enabled: next }),
     optimisticUpdate: (old, next) => ({ ...old, editGloballyEnabled: next }),
-    successMessage: t('saved'),
+    successMessage: 'Saved',
   })
 
   return (
@@ -23,7 +20,11 @@ export function EditEnabledForm({ enabled }: { enabled: boolean }) {
       disabled={toggleMutation.isPending}
       onClick={() => toggleMutation.mutate(!enabled)}
     >
-      {toggleMutation.isPending ? t('saving') : enabled ? t('editDisable') : t('editEnable')}
+      {toggleMutation.isPending
+        ? 'Saving…'
+        : enabled
+          ? 'Disable globally'
+          : 'Enable globally'}
     </Button>
   )
 }

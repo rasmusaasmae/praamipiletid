@@ -3,7 +3,6 @@
 import { randomUUID } from 'node:crypto'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { getTranslations } from 'next-intl/server'
 import { z } from 'zod'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
@@ -44,14 +43,11 @@ export type LiveTicket = {
   direction: string
 }
 
-async function fetchPraamidTickets(
-  userId: string,
-  errT: Awaited<ReturnType<typeof getTranslations<'Errors'>>>,
-): Promise<PraamidTicket[]> {
+async function fetchPraamidTickets(userId: string): Promise<PraamidTicket[]> {
   const credential = await getCredential(userId)
-  if (!credential) throw new Error(errT('noCredential'))
+  if (!credential) throw new Error('No praamid.ee session captured yet')
   if (credential.expiresAt.getTime() <= Date.now()) {
-    throw new Error(errT('credentialExpired'))
+    throw new Error('praamid.ee session expired')
   }
   try {
     const rawTickets = await listTickets(credential.token)
@@ -60,22 +56,20 @@ async function fetchPraamidTickets(
   } catch (err) {
     if (err instanceof PraamidAuthError && (err.status === 401 || err.status === 403)) {
       await invalidateCredential(userId, `listTickets ${err.status}`)
-      throw new Error(errT('credentialExpired'))
+      throw new Error('praamid.ee session expired')
     }
-    throw new Error(errT('praamidError'))
+    throw new Error('praamid.ee request failed')
   }
 }
 
-// Returns the user's active, future-dated tickets on praamid.ee. The home
-// page calls this every render; if praamid auth is missing/expired we
-// silently return [] rather than throwing — callers decide how to prompt
-// the user to (re-)authenticate via the settings page.
+// Returns the user's active, future-dated tickets on praamid.ee. Returns []
+// silently when praamid auth is missing/expired so the home page can render
+// without surfacing a server error; the auth card prompts to reconnect.
 export async function refreshTickets(): Promise<LiveTicket[]> {
   const session = await requireUser()
-  const errT = await getTranslations('Errors')
   let raw: PraamidTicket[]
   try {
-    raw = await fetchPraamidTickets(session.user.id, errT)
+    raw = await fetchPraamidTickets(session.user.id)
   } catch (err) {
     log.debug(
       { userId: session.user.id, err: err instanceof Error ? err.message : String(err) },
@@ -106,20 +100,19 @@ export async function subscribeTicket(
   dto: z.input<typeof subscribeTicketSchema>,
 ): Promise<void> {
   const session = await requireUser()
-  const errT = await getTranslations('Errors')
 
   const parsed = subscribeTicketSchema.safeParse(dto)
-  if (!parsed.success) throw new Error(errT('invalidData'))
+  if (!parsed.success) throw new Error('Invalid data')
 
-  const fetched = await fetchPraamidTickets(session.user.id, errT)
+  const fetched = await fetchPraamidTickets(session.user.id)
   const raw = fetched.find(
     (t) => t.bookingUid === parsed.data.bookingUid && t.ticketCode === parsed.data.ticketCode,
   )
-  if (!raw) throw new Error(errT('ticketNotFound'))
+  if (!raw) throw new Error('Ticket not found')
 
   const eventDtstart = new Date(raw.event.dtstart)
   if (Number.isNaN(eventDtstart.getTime())) {
-    throw new Error(errT('invalidData'))
+    throw new Error('Invalid data')
   }
 
   const now = new Date()
@@ -174,10 +167,9 @@ export async function unsubscribeTicket(
   dto: z.input<typeof unsubscribeTicketSchema>,
 ): Promise<void> {
   const session = await requireUser()
-  const errT = await getTranslations('Errors')
 
   const parsed = unsubscribeTicketSchema.safeParse(dto)
-  if (!parsed.success) throw new Error(errT('missingId'))
+  if (!parsed.success) throw new Error('Missing id')
 
   const [existing] = await db
     .select({ ticketCode: tickets.ticketCode })
@@ -186,7 +178,7 @@ export async function unsubscribeTicket(
       and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, parsed.data.bookingUid)),
     )
     .limit(1)
-  if (!existing) throw new Error(errT('ticketNotFound'))
+  if (!existing) throw new Error('Ticket not found')
 
   await db
     .delete(tickets)
@@ -214,10 +206,9 @@ export async function unsubscribeTicket(
 
 export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<void> {
   const session = await requireUser()
-  const errT = await getTranslations('Errors')
 
   const parsed = optionAddSchema.safeParse(dto)
-  if (!parsed.success) throw new Error(errT('invalidData'))
+  if (!parsed.success) throw new Error('Invalid data')
 
   const [ticket] = await db
     .select({
@@ -232,11 +223,11 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
       ),
     )
     .limit(1)
-  if (!ticket) throw new Error(errT('ticketNotFound'))
+  if (!ticket) throw new Error('Ticket not found')
 
   const events = await listEvents(ticket.direction, parsed.data.date)
   const event = events.find((e) => e.uid === parsed.data.eventUid)
-  if (!event) throw new Error(errT('eventNotFound'))
+  if (!event) throw new Error('Event not found')
 
   const [duplicate] = await db
     .select({ id: ticketOptions.id })
@@ -248,7 +239,7 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
       ),
     )
     .limit(1)
-  if (duplicate) throw new Error(errT('optionExists'))
+  if (duplicate) throw new Error('Already an alternative for this ticket')
 
   const [top] = await db
     .select({ priority: ticketOptions.priority })
@@ -297,9 +288,8 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
 
 export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Promise<void> {
   const session = await requireUser()
-  const errT = await getTranslations('Errors')
   const parsed = optionUpdateSchema.safeParse(dto)
-  if (!parsed.success) throw new Error(errT('invalidData'))
+  if (!parsed.success) throw new Error('Invalid data')
 
   const [owned] = await db
     .select({
@@ -315,7 +305,7 @@ export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Pro
       ),
     )
     .limit(1)
-  if (!owned) throw new Error(errT('optionNotFound'))
+  if (!owned) throw new Error('Alternative not found')
 
   await db
     .update(ticketOptions)
@@ -350,9 +340,8 @@ export async function removeOption(
   dto: z.input<typeof RemoveOptionDto>,
 ): Promise<void> {
   const session = await requireUser()
-  const errT = await getTranslations('Errors')
   const parsed = RemoveOptionDto.safeParse(dto)
-  if (!parsed.success) throw new Error(errT('missingId'))
+  if (!parsed.success) throw new Error('Missing id')
 
   const [existing] = await db
     .select({
@@ -369,7 +358,7 @@ export async function removeOption(
       ),
     )
     .limit(1)
-  if (!existing) throw new Error(errT('optionNotFound'))
+  if (!existing) throw new Error('Alternative not found')
 
   await db.delete(ticketOptions).where(eq(ticketOptions.id, parsed.data.id))
 
@@ -398,9 +387,8 @@ export async function removeOption(
 
 export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise<void> {
   const session = await requireUser()
-  const errT = await getTranslations('Errors')
   const parsed = optionMoveSchema.safeParse(dto)
-  if (!parsed.success) throw new Error(errT('invalidData'))
+  if (!parsed.success) throw new Error('Invalid data')
 
   const [current] = await db
     .select({
@@ -417,7 +405,7 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
       ),
     )
     .limit(1)
-  if (!current) throw new Error(errT('optionNotFound'))
+  if (!current) throw new Error('Alternative not found')
 
   const neighborFilter =
     parsed.data.direction === 'up'

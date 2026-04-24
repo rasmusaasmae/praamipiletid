@@ -2,7 +2,6 @@
 
 import { useForm, useStore } from '@tanstack/react-form'
 import { toast } from 'sonner'
-import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
@@ -11,14 +10,12 @@ import { updatePollInterval } from '@/actions/admin'
 import { pollIntervalNumberSchema, pollIntervalRange } from '@/lib/schemas'
 
 export function PollIntervalForm({ current }: { current: number }) {
-  const t = useTranslations('Admin')
-
   const form = useForm({
     defaultValues: { pollIntervalMs: current },
     onSubmit: async ({ value }) => {
       try {
         await updatePollInterval({ pollIntervalMs: value.pollIntervalMs })
-        toast.success(t('saved'))
+        toast.success('Saved')
       } catch (err) {
         toast.error(err instanceof Error ? err.message : String(err))
       }
@@ -45,7 +42,7 @@ export function PollIntervalForm({ current }: { current: number }) {
           {(field) => (
             <>
               <Label htmlFor={field.name} className="mb-1 block">
-                {t('pollLabel')}
+                Interval (ms)
               </Label>
               <Input
                 id={field.name}
@@ -64,7 +61,7 @@ export function PollIntervalForm({ current }: { current: number }) {
         </form.Field>
       </div>
       <Button type="submit" disabled={!canSubmit || isSubmitting || value === current}>
-        {isSubmitting ? t('saving') : t('save')}
+        {isSubmitting ? 'Saving…' : 'Save'}
       </Button>
     </form>
   )

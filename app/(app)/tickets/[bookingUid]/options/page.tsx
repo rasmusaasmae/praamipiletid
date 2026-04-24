@@ -1,10 +1,9 @@
 import { and, asc, eq } from 'drizzle-orm'
-import { getTranslations } from 'next-intl/server'
+import Link from 'next/link'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
-import { listEvents } from '@/lib/praamid'
+import { CAPACITY_LABELS, DIRECTION_LABELS, listEvents } from '@/lib/praamid'
 import { requireUser } from '@/lib/session'
-import { Link } from '@/i18n/navigation'
 import { EventCard } from '@/components/event-card'
 import { OptionsDateFilter } from '@/components/options-date-filter'
 import { Card, CardContent } from '@/components/ui/card'
@@ -22,7 +21,7 @@ function toIsoDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-type RouteParams = Promise<{ bookingUid: string; locale: string }>
+type RouteParams = Promise<{ bookingUid: string }>
 type SearchParams = Promise<Record<string, string | undefined>>
 
 export default async function AddOptionPage({
@@ -35,9 +34,6 @@ export default async function AddOptionPage({
   const session = await requireUser()
   const { bookingUid } = await params
   const query = await searchParams
-  const t = await getTranslations('AddOption')
-  const tDir = await getTranslations('Directions')
-  const tCap = await getTranslations('Capacity')
 
   const [ticket] = await db
     .select({
@@ -56,9 +52,9 @@ export default async function AddOptionPage({
     return (
       <Card>
         <CardContent className="flex flex-col items-start gap-3 py-6">
-          <p className="text-sm text-destructive">{t('ticketNotFound')}</p>
+          <p className="text-sm text-destructive">Ticket not found.</p>
           <Link href="/" className={buttonVariants({ variant: 'secondary' })}>
-            {t('backHome')}
+            Back to tickets
           </Link>
         </CardContent>
       </Card>
@@ -84,18 +80,19 @@ export default async function AddOptionPage({
   try {
     events = await listEvents(direction, date)
   } catch (err) {
-    error = err instanceof Error ? err.message : t('loadError')
+    error = err instanceof Error ? err.message : 'Failed to load ferry schedule'
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <Link href="/" className="text-sm text-muted-foreground hover:underline">
-          ← {t('backHome')}
+          ← Back to tickets
         </Link>
-        <h1 className="text-2xl font-semibold">{t('title')}</h1>
+        <h1 className="text-2xl font-semibold">Add alternative</h1>
         <p className="text-sm text-muted-foreground">
-          {tDir(direction)} · {tCap(ticket.measurementUnit as 'sv')}
+          {DIRECTION_LABELS[direction] ?? direction} ·{' '}
+          {CAPACITY_LABELS[ticket.measurementUnit] ?? ticket.measurementUnit}
         </p>
       </div>
 
@@ -107,7 +104,9 @@ export default async function AddOptionPage({
         </Card>
       ) : events.length === 0 ? (
         <Card>
-          <CardContent className="py-6 text-muted-foreground">{t('empty')}</CardContent>
+          <CardContent className="py-6 text-muted-foreground">
+            No events found for this date.
+          </CardContent>
         </Card>
       ) : (
         <div className="flex flex-col gap-3">

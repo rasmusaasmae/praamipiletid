@@ -138,8 +138,8 @@ async function tick() {
         try {
           await getNotifier().send({
             userId,
-            title: 'Pilet uuendatud',
-            message: `Uus pilet ${outcome.newTicketNumber} (arve ${outcome.invoiceNumber})`,
+            title: 'Ticket updated',
+            message: `New ticket ${outcome.newTicketNumber} (invoice ${outcome.invoiceNumber})`,
           })
         } catch (err) {
           log.error(

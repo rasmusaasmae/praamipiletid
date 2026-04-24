@@ -85,12 +85,19 @@ export const SHIP_NAMES: Record<string, string> = {
   HI: 'Hiiumaa',
 }
 
-export const CAPACITY_LABELS: Record<string, { et: string; en: string }> = {
-  sv: { et: 'Väiksed sõidukid', en: 'Small vehicles' },
-  bv: { et: 'Suured sõidukid', en: 'Big vehicles' },
-  pcs: { et: 'Reisijad', en: 'Passengers' },
-  mc: { et: 'Mootorrattad', en: 'Motorcycles' },
-  bc: { et: 'Jalgrattad', en: 'Bicycles' },
-  inv: { et: 'Invaliidi sõiduk', en: 'Disabled vehicle' },
-  dc: { et: 'Ohtlik veos', en: 'Dangerous cargo' },
+export const CAPACITY_LABELS: Record<string, string> = {
+  sv: 'Small vehicles',
+  bv: 'Large vehicles',
+  pcs: 'Passengers',
+  mc: 'Motorcycles',
+  bc: 'Bicycles',
+  inv: 'Disabled vehicle',
+  dc: 'Dangerous cargo',
+}
+
+export const DIRECTION_LABELS: Record<string, string> = {
+  VK: 'Virtsu → Kuivastu',
+  KV: 'Kuivastu → Virtsu',
+  RH: 'Rohuküla → Heltermaa',
+  HR: 'Heltermaa → Rohuküla',
 }

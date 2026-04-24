@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
 import { ArrowDown, ArrowUp, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useForm, useStore } from '@tanstack/react-form'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -23,7 +23,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Link } from '@/i18n/navigation'
 import {
   moveOption,
   removeOption,
@@ -31,28 +30,24 @@ import {
   updateOption,
 } from '@/actions/tickets'
 import { useOptimisticMutation } from '@/lib/mutations'
+import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid'
 import { ticketsQueryOptions, type TicketCardData } from '@/lib/query-options'
 
+const DATE_TAG = 'en-GB'
+
+const formatDate = (d: Date) =>
+  d.toLocaleDateString(DATE_TAG, { weekday: 'short', day: 'numeric', month: 'short' })
+const formatTime = (d: Date) =>
+  d.toLocaleTimeString(DATE_TAG, { hour: '2-digit', minute: '2-digit' })
+
 export function TicketCard({ data }: { data: TicketCardData }) {
-  const t = useTranslations('Tickets')
-  const tOpt = useTranslations('Options')
-  const tCap = useTranslations('Capacity')
-  const tDir = useTranslations('Directions')
-  const locale = useLocale()
-
-  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString(dateTag, { weekday: 'short', day: 'numeric', month: 'short' })
-  const formatTime = (d: Date) =>
-    d.toLocaleTimeString(dateTag, { hour: '2-digit', minute: '2-digit' })
-
   const bookingUid = data.ticket.bookingUid
 
   const unsubscribeMutation = useOptimisticMutation<void, TicketCardData[]>({
     queryKey: ticketsQueryOptions.queryKey,
     mutationFn: () => unsubscribeTicket({ bookingUid }),
     optimisticUpdate: (old) => old.filter((c) => c.ticket.bookingUid !== bookingUid),
-    successMessage: t('deleted'),
+    successMessage: 'Deleted',
   })
 
   const removeOptionMutation = useOptimisticMutation<string, TicketCardData[]>({
@@ -64,7 +59,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
           ? { ...c, options: c.options.filter((o) => o.id !== optionId) }
           : c,
       ),
-    successMessage: tOpt('removed'),
+    successMessage: 'Alternative removed',
   })
 
   const moveOptionMutation = useOptimisticMutation<
@@ -92,7 +87,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
           }),
         }
       }),
-    successMessage: tOpt('moved'),
+    successMessage: 'Moved',
   })
 
   const updateOptionMutation = useOptimisticMutation<
@@ -113,7 +108,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
             }
           : c,
       ),
-    successMessage: t('saved'),
+    successMessage: 'Saved',
   })
 
   const sorted = [...data.options].sort((a, b) => a.priority - b.priority)
@@ -125,13 +120,15 @@ export function TicketCard({ data }: { data: TicketCardData }) {
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="text-lg font-semibold">
-                {tDir(data.ticket.direction as 'VK')}
+                {DIRECTION_LABELS[data.ticket.direction] ?? data.ticket.direction}
               </span>
-              <Badge variant="outline">{tCap(data.ticket.measurementUnit as 'sv')}</Badge>
+              <Badge variant="outline">
+                {CAPACITY_LABELS[data.ticket.measurementUnit] ?? data.ticket.measurementUnit}
+              </Badge>
               {data.ticket.swapInProgress ? (
                 <Badge variant="secondary" className="gap-1">
                   <Loader2 className="size-3 animate-spin" />
-                  {t('swapping')}
+                  swapping
                 </Badge>
               ) : null}
             </div>
@@ -146,8 +143,8 @@ export function TicketCard({ data }: { data: TicketCardData }) {
             size="icon"
             variant="ghost"
             onClick={() => unsubscribeMutation.mutate()}
-            aria-label={t('delete')}
-            title={t('delete')}
+            aria-label="Delete"
+            title="Delete"
           >
             <Trash2 className="size-4" />
           </Button>
@@ -155,7 +152,9 @@ export function TicketCard({ data }: { data: TicketCardData }) {
 
         <CardContent className="flex flex-col gap-3">
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{tOpt('empty')}</p>
+            <p className="text-sm text-muted-foreground">
+              No alternatives on this ticket yet.
+            </p>
           ) : null}
           {sorted.length > 0 ? (
             <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
@@ -176,7 +175,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
                           onClick={() =>
                             moveOptionMutation.mutate({ optionId: option.id, direction: 'up' })
                           }
-                          aria-label={tOpt('moveUp')}
+                          aria-label="Move up"
                         >
                           <ArrowUp />
                         </Button>
@@ -190,7 +189,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
                               direction: 'down',
                             })
                           }
-                          aria-label={tOpt('moveDown')}
+                          aria-label="Move down"
                         >
                           <ArrowDown />
                         </Button>
@@ -211,14 +210,10 @@ export function TicketCard({ data }: { data: TicketCardData }) {
                             }
                             titleText={`${formatDate(option.eventDtstart)} · ${formatTime(option.eventDtstart)}`}
                           />
-                          {isCurrent ? (
-                            <Badge variant="secondary">{tOpt('current')}</Badge>
-                          ) : null}
+                          {isCurrent ? <Badge variant="secondary">current</Badge> : null}
                         </span>
                         {past ? (
-                          <span className="text-xs text-muted-foreground">
-                            {tOpt('past')}
-                          </span>
+                          <span className="text-xs text-muted-foreground">Past</span>
                         ) : null}
                       </div>
                     </div>
@@ -227,7 +222,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
                         size="icon"
                         variant="ghost"
                         onClick={() => removeOptionMutation.mutate(option.id)}
-                        aria-label={tOpt('remove')}
+                        aria-label="Remove alternative"
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -243,7 +238,7 @@ export function TicketCard({ data }: { data: TicketCardData }) {
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             <Plus className="size-4" />
-            {tOpt('addOption')}
+            Add alternative
           </Link>
         </CardContent>
       </Card>
@@ -262,8 +257,6 @@ function CutoffEditor({
   onSave: (minutes: number) => void
   titleText: string
 }) {
-  const tOpt = useTranslations('Options')
-
   const [open, setOpen] = useState(false)
 
   const form = useForm({
@@ -271,7 +264,7 @@ function CutoffEditor({
     validators: {
       onChange: ({ value }) => {
         if (!Number.isFinite(value.minutes) || value.minutes < 0) {
-          return tOpt('cutoffMustBePositive')
+          return 'Must be a non-negative number'
         }
         return undefined
       },
@@ -290,8 +283,6 @@ function CutoffEditor({
     setOpen(next)
   }
 
-  const minutesLabel = tOpt('cutoffMinutesSummary', { minutes: stopBeforeMinutes })
-
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <Tooltip>
@@ -306,19 +297,23 @@ function CutoffEditor({
                 >
                   <span>{titleText}</span>
                   <span className="text-xs font-normal text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground">
-                    {minutesLabel}
+                    stop {stopBeforeMinutes} min before
                   </span>
                 </button>
               }
             />
           }
         />
-        <TooltipContent>{tOpt('cutoffTooltip')}</TooltipContent>
+        <TooltipContent>
+          We stop auto-swapping this alternative this many minutes before its departure.
+        </TooltipContent>
       </Tooltip>
       <PopoverContent align="start" className="w-auto">
         <PopoverHeader>
-          <PopoverTitle>{tOpt('cutoffEditTitle')}</PopoverTitle>
-          <PopoverDescription>{tOpt('cutoffTooltip')}</PopoverDescription>
+          <PopoverTitle>Stop swapping</PopoverTitle>
+          <PopoverDescription>
+            We stop auto-swapping this alternative this many minutes before its departure.
+          </PopoverDescription>
         </PopoverHeader>
         <form
           onSubmit={(e) => {
@@ -331,7 +326,7 @@ function CutoffEditor({
             {(field) => (
               <div className="flex flex-col gap-1">
                 <Label htmlFor="cutoff-minutes" className="text-xs">
-                  {tOpt('cutoffMinutesLabel')}
+                  Minutes before departure
                 </Label>
                 <Input
                   id="cutoff-minutes"
@@ -355,10 +350,10 @@ function CutoffEditor({
           ) : null}
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" type="button" onClick={() => setOpen(false)}>
-              {tOpt('cutoffCancel')}
+              Cancel
             </Button>
             <Button size="sm" type="submit" disabled={!canSubmit}>
-              {tOpt('cutoffSave')}
+              Save
             </Button>
           </div>
         </form>

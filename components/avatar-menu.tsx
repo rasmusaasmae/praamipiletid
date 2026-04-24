@@ -1,10 +1,8 @@
 'use client'
 
-import { useParams } from 'next/navigation'
-import { useTransition } from 'react'
 import { MoonIcon, SunIcon, MonitorIcon, LogOutIcon, UserIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useLocale, useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import {
   DropdownMenu,
@@ -17,13 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { usePathname, useRouter } from '@/i18n/navigation'
-import { routing } from '@/i18n/routing'
-
-const LOCALE_LABELS: Record<(typeof routing.locales)[number], string> = {
-  et: 'Eesti',
-  en: 'English',
-}
 
 type Props = {
   user: { email: string; image: string | null }
@@ -31,25 +22,7 @@ type Props = {
 
 export function AvatarMenu({ user }: Props) {
   const { theme, setTheme } = useTheme()
-  const locale = useLocale()
   const router = useRouter()
-  const pathname = usePathname()
-  const params = useParams()
-  const [, startTransition] = useTransition()
-  const tTheme = useTranslations('ThemeToggle')
-  const tLocale = useTranslations('LocaleToggle')
-  const tSignOut = useTranslations('SignOut')
-
-  const setLocale = (next: string) => {
-    if (next === locale) return
-    startTransition(() => {
-      router.replace(
-        // @ts-expect-error — params are compatible with the current route's typed params
-        { pathname, params },
-        { locale: next as (typeof routing.locales)[number] },
-      )
-    })
-  }
 
   return (
     <DropdownMenu>
@@ -68,31 +41,20 @@ export function AvatarMenu({ user }: Props) {
         <div className="truncate px-1.5 py-1 text-sm font-medium">{user.email}</div>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel>{tTheme('label')}</DropdownMenuLabel>
+          <DropdownMenuLabel>Toggle theme</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={theme ?? 'system'} onValueChange={setTheme}>
             <DropdownMenuRadioItem value="light">
               <SunIcon />
-              {tTheme('light')}
+              Light
             </DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="dark">
               <MoonIcon />
-              {tTheme('dark')}
+              Dark
             </DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="system">
               <MonitorIcon />
-              {tTheme('system')}
+              System
             </DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>{tLocale('label')}</DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={locale} onValueChange={setLocale}>
-            {routing.locales.map((l) => (
-              <DropdownMenuRadioItem key={l} value={l}>
-                {LOCALE_LABELS[l]}
-              </DropdownMenuRadioItem>
-            ))}
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
@@ -105,7 +67,7 @@ export function AvatarMenu({ user }: Props) {
           }}
         >
           <LogOutIcon />
-          {tSignOut('button')}
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

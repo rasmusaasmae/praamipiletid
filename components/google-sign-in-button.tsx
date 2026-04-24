@@ -1,14 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { authClient } from '@/lib/auth-client'
 
 export function GoogleSignInButton() {
   const [loading, setLoading] = useState(false)
-  const t = useTranslations('SignIn')
-  const locale = useLocale()
   return (
     <Button
       className="w-full"
@@ -17,11 +14,11 @@ export function GoogleSignInButton() {
         setLoading(true)
         await authClient.signIn.social({
           provider: 'google',
-          callbackURL: `/${locale}`,
+          callbackURL: '/',
         })
       }}
     >
-      {loading ? t('redirecting') : t('google')}
+      {loading ? 'Redirecting…' : 'Sign in with Google'}
     </Button>
   )
 }

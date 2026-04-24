@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useForm, useStore } from '@tanstack/react-form'
 import { toast } from 'sonner'
-import { useFormatter, useNow, useTranslations } from 'next-intl'
 import { CheckCircle2, Loader2, Smartphone, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -58,20 +57,41 @@ const STEP_ORDER: Status[] = [
   'authenticated',
 ]
 
+const STATUS_LABEL: Record<Status, string> = {
+  unauthenticated: 'Unauthenticated',
+  loading: 'Loading',
+  awaiting_confirmation: 'Awaiting confirmation',
+  authenticated: 'Authenticated',
+}
+
+const STEP_LABEL: Record<Status, string> = {
+  unauthenticated: 'Enter ID Code',
+  loading: 'Opening praamid.ee',
+  awaiting_confirmation: 'Confirm',
+  authenticated: 'Authenticated',
+}
+
+const DATE_TAG = 'en-GB'
+
+function formatRelativeFuture(to: Date, now: Date): string {
+  const diffMs = to.getTime() - now.getTime()
+  const sign = diffMs >= 0 ? 'in' : 'ago'
+  const abs = Math.abs(diffMs)
+  const mins = Math.round(abs / 60_000)
+  if (mins < 60) return sign === 'in' ? `in ${mins} min` : `${mins} min ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 48) return sign === 'in' ? `in ${hours} h` : `${hours} h ago`
+  const days = Math.round(hours / 24)
+  return sign === 'in' ? `in ${days} days` : `${days} days ago`
+}
+
 export function PraamidAuthCard({
   credentialMeta,
 }: {
   credentialMeta: PraamidCredentialMeta | null
 }) {
-  const tP = useTranslations('Praamid')
-  const format = useFormatter()
-  const now = useNow({ updateInterval: 60_000 })
   const router = useRouter()
 
-  // The login flow writes transitions (loading → awaiting_confirmation →
-  // authenticated) from a background request. Poll once per second while
-  // the flow is active so the card picks up each transition without a
-  // realtime channel.
   const { data: authState } = useSuspenseQuery({
     ...praamidAuthStateQueryOptions,
     refetchInterval: (query) => {
@@ -82,11 +102,12 @@ export function PraamidAuthCard({
   const status = authState.status
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
-  // When the status transitions into 'authenticated': ask the RSC to
-  // re-fetch credentialMeta (which comes from the server-only credentials
-  // table, not the observable auth-state query), and close the dialog on
-  // a short delay so the user sees the success step.
   const prevStatus = useRef<Status>(status)
   useEffect(() => {
     const justAuthed = prevStatus.current !== 'authenticated' && status === 'authenticated'
@@ -106,10 +127,13 @@ export function PraamidAuthCard({
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <CardTitle>{tP('title')}</CardTitle>
+            <CardTitle>praamid.ee</CardTitle>
             <StatusBadge status={status} />
           </div>
-          <CardDescription>{tP('description')}</CardDescription>
+          <CardDescription>
+            We replay your praamid.ee session to auto-update tickets when a better slot opens.
+            Session tokens last up to 7 days — you&apos;ll need to re-authenticate after that.
+          </CardDescription>
         </div>
         {isAuthenticated ? <ForgetButton /> : null}
       </CardHeader>
@@ -120,14 +144,12 @@ export function PraamidAuthCard({
             <TooltipTrigger
               render={
                 <p className="w-fit text-sm text-muted-foreground">
-                  {tP('statusExpires', {
-                    expiresAt: format.relativeTime(credentialMeta.expiresAt, now),
-                  })}
+                  Expires {formatRelativeFuture(credentialMeta.expiresAt, now)}
                 </p>
               }
             />
             <TooltipContent>
-              {format.dateTime(credentialMeta.expiresAt, {
+              {credentialMeta.expiresAt.toLocaleString(DATE_TAG, {
                 dateStyle: 'long',
                 timeStyle: 'short',
               })}
@@ -140,10 +162,10 @@ export function PraamidAuthCard({
             {isActive ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                {tP(`authStatus.${status}`)}
+                {STATUS_LABEL[status]}
               </>
             ) : (
-              tP('signIn')
+              'Authenticate'
             )}
           </Button>
         )}
@@ -155,23 +177,21 @@ export function PraamidAuthCard({
 }
 
 function StatusBadge({ status }: { status: Status }) {
-  const tP = useTranslations('Praamid')
   const variant =
     status === 'authenticated'
       ? 'success'
       : status === 'loading' || status === 'awaiting_confirmation'
         ? 'secondary'
         : 'outline'
-  return <Badge variant={variant}>{tP(`authStatus.${status}`)}</Badge>
+  return <Badge variant={variant}>{STATUS_LABEL[status]}</Badge>
 }
 
 function ForgetButton() {
-  const t = useTranslations('Praamid')
   const forgetMutation = useOptimisticMutation<void, PraamidAuthStateView>({
     queryKey: praamidAuthStateQueryOptions.queryKey,
     mutationFn: () => forgetPraamidCredential(),
     optimisticUpdate: () => ({ status: 'unauthenticated', lastError: null }),
-    successMessage: t('forgotten'),
+    successMessage: 'Session deleted',
   })
   return (
     <Tooltip>
@@ -182,9 +202,9 @@ function ForgetButton() {
             variant="ghost"
             size="icon"
             disabled={forgetMutation.isPending}
-            aria-label={t('forget')}
+            aria-label="Delete session"
             onClick={() => {
-              if (!confirm(t('forgetConfirm'))) return
+              if (!confirm('Delete the stored praamid session?')) return
               forgetMutation.mutate()
             }}
           >
@@ -192,7 +212,7 @@ function ForgetButton() {
           </Button>
         }
       />
-      <TooltipContent>{t('forget')}</TooltipContent>
+      <TooltipContent>Delete session</TooltipContent>
     </Tooltip>
   )
 }
@@ -206,7 +226,6 @@ function SigninDialog({
   onOpenChange: (v: boolean) => void
   status: Status
 }) {
-  const tP = useTranslations('Praamid')
   const queryClient = useQueryClient()
 
   const [submitting, setSubmitting] = useState(false)
@@ -223,23 +242,18 @@ function SigninDialog({
       try {
         await startPraamidLogin({ isikukood: value.isikukood })
         setSubmitting(true)
-        // Pull the first 'loading' status in immediately; refetchInterval
-        // takes over once the query sees an in-flight status.
         queryClient.invalidateQueries({
           queryKey: praamidAuthStateQueryOptions.queryKey,
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : 'start_failed'
-        toast.error(tP('captureFailed', { error: message }))
+        toast.error(`Capture failed: ${message}`)
       }
     },
   })
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
   const isFormSubmitting = useStore(form.store, (s) => s.isSubmitting)
 
-  // The card only opens this dialog when the user is *not* authenticated,
-  // so the step is driven directly by live status. `submitting` bridges
-  // the brief window between form POST and the server writing 'loading'.
   const step: Status =
     status === 'authenticated'
       ? 'authenticated'
@@ -257,7 +271,7 @@ function SigninDialog({
     try {
       await cancelPraamidLogin()
     } catch {
-      // ignore cancellation errors — we're closing the dialog anyway
+      // ignore
     }
     queryClient.invalidateQueries({ queryKey: praamidAuthStateQueryOptions.queryKey })
     onOpenChange(false)
@@ -267,8 +281,11 @@ function SigninDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{tP('dialogTitle')}</DialogTitle>
-          <DialogDescription>{tP('dialogDescription')}</DialogDescription>
+          <DialogTitle>Authenticate with praamid.ee</DialogTitle>
+          <DialogDescription>
+            We&apos;ll start a Smart-ID session with praamid.ee and store the resulting token so
+            we can keep your ticket fresh.
+          </DialogDescription>
         </DialogHeader>
 
         <Stepper current={step} />
@@ -287,7 +304,7 @@ function SigninDialog({
                 {(field) => (
                   <div>
                     <Label htmlFor={field.name} className="mb-1 block">
-                      {tP('isikukoodLabel')}
+                      Estonian ID code
                     </Label>
                     <Input
                       id={field.name}
@@ -303,11 +320,14 @@ function SigninDialog({
                       pattern="\d{11}"
                       maxLength={11}
                       required
-                      placeholder={tP('isikukoodPlaceholder')}
+                      placeholder="11 digits"
                       autoFocus
                     />
                     <FieldError field={field} />
-                    <p className="mt-1 text-xs text-muted-foreground">{tP('isikukoodHint')}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      We use this to start a Smart-ID session with praamid.ee. You&apos;ll need
+                      to approve the request on your phone.
+                    </p>
                   </div>
                 )}
               </form.Field>
@@ -324,7 +344,7 @@ function SigninDialog({
         <DialogFooter>
           {step !== 'authenticated' ? (
             <Button type="button" variant="outline" onClick={onCancel}>
-              {tP('cancel')}
+              Cancel
             </Button>
           ) : null}
           {step === 'unauthenticated' ? (
@@ -336,7 +356,7 @@ function SigninDialog({
               {isFormSubmitting || submitting ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : null}
-              {tP('next')}
+              Next
             </Button>
           ) : null}
         </DialogFooter>
@@ -346,14 +366,7 @@ function SigninDialog({
 }
 
 function Stepper({ current }: { current: Status }) {
-  const tP = useTranslations('Praamid')
   const currentIdx = STEP_ORDER.indexOf(current)
-  const labels: Record<Status, string> = {
-    unauthenticated: tP('step1Title'),
-    loading: tP('step2Title'),
-    awaiting_confirmation: tP('step3Title'),
-    authenticated: tP('step4Title'),
-  }
   return (
     <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
       {STEP_ORDER.map((s, idx) => {
@@ -377,7 +390,7 @@ function Stepper({ current }: { current: Status }) {
                 active ? 'font-medium text-foreground' : 'text-muted-foreground',
               )}
             >
-              {labels[s]}
+              {STEP_LABEL[s]}
             </span>
             {idx < STEP_ORDER.length - 1 ? (
               <span className="h-px w-4 shrink-0 bg-border" aria-hidden />
@@ -390,34 +403,35 @@ function Stepper({ current }: { current: Status }) {
 }
 
 function LoadingPanel() {
-  const tP = useTranslations('Praamid')
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm">
       <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      <p className="font-medium">{tP('loadingTitle')}</p>
-      <p className="text-muted-foreground">{tP('loadingHint')}</p>
+      <p className="font-medium">Opening praamid.ee…</p>
+      <p className="text-muted-foreground">
+        We&apos;re starting a Smart-ID session — this takes a few seconds.
+      </p>
     </div>
   )
 }
 
 function AwaitingPanel() {
-  const tP = useTranslations('Praamid')
   return (
     <div className="flex flex-col items-center gap-3 py-6 text-center">
       <Smartphone className="size-6 text-muted-foreground" />
-      <p className="text-sm font-medium">{tP('awaitingTitle')}</p>
-      <p className="text-xs text-muted-foreground">{tP('awaitingHint')}</p>
+      <p className="text-sm font-medium">Approve on your phone</p>
+      <p className="text-xs text-muted-foreground">
+        Open the Smart-ID app and approve the request.
+      </p>
     </div>
   )
 }
 
 function SuccessPanel() {
-  const tP = useTranslations('Praamid')
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm">
       <CheckCircle2 className="size-7 text-success" />
-      <p className="font-medium">{tP('successTitle')}</p>
-      <p className="text-muted-foreground">{tP('successHint')}</p>
+      <p className="font-medium">You&apos;re authenticated</p>
+      <p className="text-muted-foreground">Session saved. You can close this window.</p>
     </div>
   )
 }

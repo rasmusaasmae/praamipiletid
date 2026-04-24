@@ -1,6 +1,5 @@
 'use client'
 
-import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,6 +14,8 @@ import { updateUserRole } from '@/actions/admin'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { adminDashboardQueryOptions, type AdminDashboardData } from '@/lib/query-options'
 
+const DATE_TAG = 'en-GB'
+
 type UserRow = {
   id: string
   name: string
@@ -26,9 +27,6 @@ type UserRow = {
 }
 
 export function AdminUsersTable({ users }: { users: UserRow[] }) {
-  const t = useTranslations('Admin')
-  const locale = useLocale()
-
   const toggleRoleMutation = useOptimisticMutation<
     { userId: string; nextRole: 'admin' | 'user' },
     AdminDashboardData
@@ -39,25 +37,23 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
       ...old,
       users: old.users.map((u) => (u.id === userId ? { ...u, role: nextRole } : u)),
     }),
-    successMessage: t('roleChanged'),
+    successMessage: 'Role changed',
   })
 
   if (users.length === 0) {
-    return <p className="text-muted-foreground">{t('usersEmpty')}</p>
+    return <p className="text-muted-foreground">No users.</p>
   }
-
-  const dateTag = locale === 'et' ? 'et-EE' : 'en-GB'
 
   return (
     <div className="rounded-lg border border-border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columnUser')}</TableHead>
-            <TableHead>{t('columnRole')}</TableHead>
-            <TableHead>{t('columnSubCount')}</TableHead>
-            <TableHead>{t('columnCreated')}</TableHead>
-            <TableHead className="text-right">{t('columnActions')}</TableHead>
+            <TableHead>User</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Tickets</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -69,18 +65,18 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
               </TableCell>
               <TableCell>
                 {u.role === 'admin' ? (
-                  <Badge>{t('admin')}</Badge>
+                  <Badge>admin</Badge>
                 ) : (
-                  <Badge variant="outline">{t('user')}</Badge>
+                  <Badge variant="outline">user</Badge>
                 )}
                 {u.banned ? (
                   <Badge variant="destructive" className="ml-1">
-                    {t('banned')}
+                    banned
                   </Badge>
                 ) : null}
               </TableCell>
               <TableCell>{u.subCount}</TableCell>
-              <TableCell>{u.createdAt.toLocaleDateString(dateTag)}</TableCell>
+              <TableCell>{u.createdAt.toLocaleDateString(DATE_TAG)}</TableCell>
               <TableCell className="text-right">
                 <Button
                   size="sm"
@@ -92,7 +88,7 @@ export function AdminUsersTable({ users }: { users: UserRow[] }) {
                     })
                   }
                 >
-                  {u.role === 'admin' ? t('roleToUser') : t('roleToAdmin')}
+                  {u.role === 'admin' ? 'Make regular user' : 'Make admin'}
                 </Button>
               </TableCell>
             </TableRow>
