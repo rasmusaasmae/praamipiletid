@@ -18,7 +18,9 @@
 !.env.example
 
 # editor
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 .claude/
 
 # typescript
