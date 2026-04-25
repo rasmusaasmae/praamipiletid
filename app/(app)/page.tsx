@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query'
 import { Home } from '@/components/home'
 import { getQueryClient } from '@/lib/get-query-client'
-import { praamidAuthStateQueryOptions, ticketsQueryOptions } from '@/lib/queries'
+import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
 import { refreshTickets } from '@/actions/tickets'
 import { auth } from '@/lib/auth'
 import { getCredentialStatus } from '@/lib/praamid/credentials'
@@ -14,9 +14,15 @@ export default async function HomePage() {
   const status = configured ? await getCredentialStatus(session.user.id) : null
 
   const queryClient = getQueryClient()
-  void queryClient.prefetchQuery(ticketsQueryOptions)
+  void queryClient.prefetchQuery({
+    queryKey: ['tickets'],
+    queryFn: () => getTicketsWithOptions(),
+  })
   if (configured) {
-    void queryClient.prefetchQuery(praamidAuthStateQueryOptions)
+    void queryClient.prefetchQuery({
+      queryKey: ['praamidAuthState'],
+      queryFn: () => getMyPraamidAuthState(),
+    })
     void queryClient.prefetchQuery({
       queryKey: ['praamidTickets'],
       queryFn: () => refreshTickets(),

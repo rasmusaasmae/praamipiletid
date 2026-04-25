@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cancelPraamidLogin, forgetPraamidCredential, startPraamidLogin } from '@/actions/tickets'
 import { isikukoodSchema } from '@/lib/schemas'
 import { useOptimisticMutation } from '@/lib/mutations'
-import { praamidAuthStateQueryOptions, type PraamidAuthStateView } from '@/lib/queries'
+import { getMyPraamidAuthState, type PraamidAuthStateView } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 import type { PraamidAuthStatus } from '@/db/schema'
 
@@ -80,7 +80,8 @@ export function PraamidAuthCard({
   const router = useRouter()
 
   const { data: authState } = useSuspenseQuery({
-    ...praamidAuthStateQueryOptions,
+    queryKey: ['praamidAuthState'],
+    queryFn: () => getMyPraamidAuthState(),
     refetchInterval: (query) => {
       const s = query.state.data?.status
       return s === 'loading' || s === 'awaiting_confirmation' ? 1000 : false
@@ -175,7 +176,7 @@ function StatusBadge({ status }: { status: Status }) {
 
 function ForgetButton() {
   const forgetMutation = useOptimisticMutation<void, PraamidAuthStateView>({
-    queryKey: praamidAuthStateQueryOptions.queryKey,
+    queryKey: ['praamidAuthState'],
     mutationFn: () => forgetPraamidCredential(),
     optimisticUpdate: () => ({ status: 'unauthenticated', lastError: null }),
     successMessage: 'Session deleted',
@@ -230,7 +231,7 @@ function SigninDialog({
         await startPraamidLogin({ isikukood: value.isikukood })
         setSubmitting(true)
         queryClient.invalidateQueries({
-          queryKey: praamidAuthStateQueryOptions.queryKey,
+          queryKey: ['praamidAuthState'],
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : 'start_failed'
@@ -260,7 +261,7 @@ function SigninDialog({
     } catch {
       // ignore
     }
-    queryClient.invalidateQueries({ queryKey: praamidAuthStateQueryOptions.queryKey })
+    queryClient.invalidateQueries({ queryKey: ['praamidAuthState'] })
     onOpenChange(false)
   }
 

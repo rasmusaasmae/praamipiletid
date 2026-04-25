@@ -1,6 +1,7 @@
+'use server'
+
 import { and, asc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
-import { queryOptions } from '@tanstack/react-query'
 import { db } from '@/db'
 import {
   praamidAuthState,
@@ -29,7 +30,6 @@ async function requireSession() {
 }
 
 export async function getTicketsWithOptions(): Promise<TicketWithOptions[]> {
-  'use server'
   const session = await requireSession()
   const rows = await db
     .select()
@@ -58,7 +58,6 @@ export async function getTicketsWithOptions(): Promise<TicketWithOptions[]> {
 }
 
 export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
-  'use server'
   const session = await requireSession()
   const [row] = await db
     .select({ status: praamidAuthState.status, lastError: praamidAuthState.lastError })
@@ -70,13 +69,3 @@ export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
     lastError: row?.lastError ?? null,
   }
 }
-
-export const ticketsQueryOptions = queryOptions({
-  queryKey: ['tickets'] as const,
-  queryFn: () => getTicketsWithOptions(),
-})
-
-export const praamidAuthStateQueryOptions = queryOptions({
-  queryKey: ['praamidAuthState'] as const,
-  queryFn: () => getMyPraamidAuthState(),
-})

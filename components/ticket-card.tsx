@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { moveOption, removeOption, unsubscribeTicket, updateOption } from '@/actions/tickets'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid/labels'
-import { ticketsQueryOptions, type TicketWithOptions } from '@/lib/queries'
+import type { TicketWithOptions } from '@/lib/queries'
 
 const DATE_TAG = 'en-GB'
 
@@ -34,14 +34,14 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
   const bookingUid = data.ticket.bookingUid
 
   const unsubscribeMutation = useOptimisticMutation<void, TicketWithOptions[]>({
-    queryKey: ticketsQueryOptions.queryKey,
+    queryKey: ['tickets'],
     mutationFn: () => unsubscribeTicket({ bookingUid }),
     optimisticUpdate: (old) => old.filter((c) => c.ticket.bookingUid !== bookingUid),
     successMessage: 'Deleted',
   })
 
   const removeOptionMutation = useOptimisticMutation<string, TicketWithOptions[]>({
-    queryKey: ticketsQueryOptions.queryKey,
+    queryKey: ['tickets'],
     mutationFn: (optionId) => removeOption({ id: optionId }),
     optimisticUpdate: (old, optionId) =>
       old.map((c) =>
@@ -56,7 +56,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
     { optionId: string; direction: 'up' | 'down' },
     TicketWithOptions[]
   >({
-    queryKey: ticketsQueryOptions.queryKey,
+    queryKey: ['tickets'],
     mutationFn: ({ optionId, direction }) => moveOption({ id: optionId, direction }),
     optimisticUpdate: (old, { optionId, direction }) =>
       old.map((c) => {
@@ -84,7 +84,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
     { optionId: string; stopBeforeMinutes: number },
     TicketWithOptions[]
   >({
-    queryKey: ticketsQueryOptions.queryKey,
+    queryKey: ['tickets'],
     mutationFn: ({ optionId, stopBeforeMinutes }) =>
       updateOption({ id: optionId, stopBeforeMinutes }),
     optimisticUpdate: (old, { optionId, stopBeforeMinutes }) =>

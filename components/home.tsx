@@ -9,11 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import type { LiveTicket } from '@/actions/tickets'
 import { refreshTickets } from '@/actions/tickets'
-import {
-  praamidAuthStateQueryOptions,
-  ticketsQueryOptions,
-  type TicketWithOptions,
-} from '@/lib/queries'
+import { getMyPraamidAuthState, getTicketsWithOptions, type TicketWithOptions } from '@/lib/queries'
 
 type Row =
   | { kind: 'subscribed'; bookingUid: string; eventDtstart: Date; data: TicketWithOptions }
@@ -27,11 +23,15 @@ export function Home({
   credentialMeta: PraamidCredentialMeta | null
 }) {
   const { data: cards } = useSuspenseQuery({
-    ...ticketsQueryOptions,
+    queryKey: ['tickets'],
+    queryFn: () => getTicketsWithOptions(),
     refetchInterval: 60_000,
   })
 
-  const authState = useQuery(praamidAuthStateQueryOptions)
+  const authState = useQuery({
+    queryKey: ['praamidAuthState'],
+    queryFn: () => getMyPraamidAuthState(),
+  })
   const isAuthed = authState.data?.status === 'authenticated'
 
   const liveTickets = useQuery({

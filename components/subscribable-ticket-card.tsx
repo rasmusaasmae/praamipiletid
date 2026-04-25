@@ -9,7 +9,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { subscribeTicket } from '@/actions/tickets'
 import type { LiveTicket } from '@/actions/tickets'
 import { DIRECTION_LABELS } from '@/lib/praamid/labels'
-import { ticketsQueryOptions } from '@/lib/queries'
 
 type Props = {
   ticket: LiveTicket
@@ -36,7 +35,7 @@ export function SubscribableTicketCard({ ticket }: Props) {
       subscribeTicket({ bookingUid: ticket.bookingUid, ticketCode: ticket.ticketCode }),
     onSuccess: () => {
       toast.success('Now monitoring')
-      queryClient.invalidateQueries({ queryKey: ticketsQueryOptions.queryKey })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
       queryClient.invalidateQueries({ queryKey: ['praamidTickets'] })
     },
     onError: (err) => toast.error(err.message),

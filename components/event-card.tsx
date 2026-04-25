@@ -8,7 +8,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { addOption } from '@/actions/tickets'
 import type { PraamidEvent } from '@/lib/praamid/types'
 import { CAPACITY_LABELS, SHIP_NAMES } from '@/lib/praamid/labels'
-import { ticketsQueryOptions } from '@/lib/queries'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
@@ -36,7 +35,7 @@ export function EventCard({ event, bookingUid, date, measurementUnit, alreadyAdd
     mutationFn: () => addOption({ bookingUid, eventUid: event.uid, date }),
     onSuccess: () => {
       toast.success('Alternative added')
-      queryClient.invalidateQueries({ queryKey: ticketsQueryOptions.queryKey })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
     },
     onError: (err) => toast.error(err.message),
   })
