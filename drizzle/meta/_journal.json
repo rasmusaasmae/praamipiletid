@@ -36,6 +36,13 @@
       "when": 1777072015724,
       "tag": "0004_drop_admin_and_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777103930602,
+      "tag": "0005_drop_user_settings_table",
+      "breakpoints": true
     }
   ]
 }

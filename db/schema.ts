@@ -14,20 +14,6 @@ import { user } from './auth-schema'
 
 export * from './auth-schema'
 
-// Per-user preferences that don't belong on the better-auth `user` row
-// (which better-auth itself manages). Kept as a separate table so future
-// preferences can land here without touching auth.
-export const userSettings = pgTable('user_settings', {
-  userId: text('user_id')
-    .primaryKey()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-})
-
 // Cache of the user's praamid.ee tickets that they have opted into
 // monitoring. PK is (userId, bookingUid): bookingUid is praamid's stable
 // booking handle and survives a swap (the ticket inside the booking

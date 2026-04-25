@@ -3,7 +3,6 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { nextCookies } from 'better-auth/next-js'
 
 import { db } from '@/db'
-import { userSettings } from '@/db/schema'
 
 import 'server-only'
 
@@ -19,15 +18,6 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-    },
-  },
-  databaseHooks: {
-    user: {
-      create: {
-        after: async (created) => {
-          await db.insert(userSettings).values({ userId: created.id })
-        },
-      },
     },
   },
   plugins: [nextCookies()],
