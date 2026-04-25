@@ -303,7 +303,7 @@ function CutoffEditor({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            form.handleSubmit()
+            void form.handleSubmit()
           }}
           className="flex flex-col gap-2"
         >

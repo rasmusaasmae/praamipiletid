@@ -36,7 +36,7 @@ export function EventCard({ event, bookingUid, date, measurementUnit, alreadyAdd
     mutationFn: () => addOption({ bookingUid, eventUid: event.uid, date }),
     onSuccess: () => {
       toast.success('Alternative added')
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      void queryClient.invalidateQueries({ queryKey: ['tickets'] })
     },
     onError: (err) => toast.error(err.message),
   })

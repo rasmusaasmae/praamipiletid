@@ -72,14 +72,13 @@ async function authedRequest(
   base: string = BASE_URL,
 ): Promise<Response> {
   const url = `${base}${path}`
+  const headers = new Headers(init.headers)
+  headers.set('accept', 'application/json')
+  headers.set('authorization', `Bearer ${token}`)
   const res = await fetch(url, {
     ...init,
     cache: 'no-store',
-    headers: {
-      accept: 'application/json',
-      authorization: `Bearer ${token}`,
-      ...init.headers,
-    },
+    headers,
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')

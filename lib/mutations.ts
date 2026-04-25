@@ -32,7 +32,7 @@ export function useOptimisticMutation<TVars, TData>(options: {
       if (options.successMessage) toast.success(options.successMessage)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: options.queryKey })
+      void queryClient.invalidateQueries({ queryKey: options.queryKey })
     },
   })
 }

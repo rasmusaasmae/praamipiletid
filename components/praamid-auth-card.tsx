@@ -231,7 +231,7 @@ function SigninDialog({
       try {
         await startPraamidLogin({ isikukood: value.isikukood })
         setSubmitting(true)
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: ['praamidAuthState'],
         })
       } catch (err) {
@@ -262,7 +262,7 @@ function SigninDialog({
     } catch {
       // ignore
     }
-    queryClient.invalidateQueries({ queryKey: ['praamidAuthState'] })
+    void queryClient.invalidateQueries({ queryKey: ['praamidAuthState'] })
     onOpenChange(false)
   }
 
@@ -285,7 +285,7 @@ function SigninDialog({
               id="praamid-isikukood-form"
               onSubmit={(e) => {
                 e.preventDefault()
-                form.handleSubmit()
+                void form.handleSubmit()
               }}
               className="flex flex-col gap-3"
             >

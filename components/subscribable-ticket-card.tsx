@@ -36,8 +36,8 @@ export function SubscribableTicketCard({ ticket }: Props) {
       subscribeTicket({ bookingUid: ticket.bookingUid, ticketCode: ticket.ticketCode }),
     onSuccess: () => {
       toast.success('Now monitoring')
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      queryClient.invalidateQueries({ queryKey: ['praamidTickets'] })
+      void queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      void queryClient.invalidateQueries({ queryKey: ['praamidTickets'] })
     },
     onError: (err) => toast.error(err.message),
   })
