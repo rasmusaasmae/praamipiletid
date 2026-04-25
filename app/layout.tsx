@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Praamipiletid',
-  description: 'Estonian ferry ticket availability notifier',
+  title: 'Ferry tickets',
+  description: 'Automatically swap tickets when a spot opens up.',
   icons: { icon: '/ferry.svg' },
 }
 
