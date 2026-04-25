@@ -1,4 +1,5 @@
 import { headers } from 'next/headers'
+
 import { NavBar } from '@/components/nav-bar'
 import { auth } from '@/lib/auth'
 

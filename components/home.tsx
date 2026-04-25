@@ -1,14 +1,15 @@
 'use client'
 
-import { useMemo } from 'react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
-import { TicketCard } from '@/components/ticket-card'
-import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
-import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth-card'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
+import { useMemo } from 'react'
+
 import type { LiveTicket } from '@/actions/tickets'
 import { refreshTickets } from '@/actions/tickets'
+import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth-card'
+import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
+import { TicketCard } from '@/components/ticket-card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getMyPraamidAuthState, getTicketsWithOptions, type TicketWithOptions } from '@/lib/queries'
 
 type Row =
@@ -71,7 +72,7 @@ export function Home({
 
       <div>
         <h2 className="text-2xl font-semibold">My tickets</h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Monitored tickets and their preferred alternatives.
         </p>
       </div>
@@ -88,16 +89,16 @@ export function Home({
         </div>
       ) : !isAuthed ? (
         <Card>
-          <CardContent className="flex flex-col gap-2 py-6 text-sm text-muted-foreground">
+          <CardContent className="text-muted-foreground flex flex-col gap-2 py-6 text-sm">
             <p>You&apos;re not connected to praamid.ee yet.</p>
-            <Link href="/#praamid" className="underline hover:text-foreground">
+            <Link href="/#praamid" className="hover:text-foreground underline">
               Connect praamid.ee
             </Link>
           </CardContent>
         </Card>
       ) : (
         <Card>
-          <CardContent className="py-6 text-sm text-muted-foreground">
+          <CardContent className="text-muted-foreground py-6 text-sm">
             No active tickets on praamid.ee.
           </CardContent>
         </Card>
@@ -116,7 +117,7 @@ function PraamidNotConfiguredCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-destructive">
+        <p className="text-destructive text-sm">
           Credential encryption key is not configured on the server.
         </p>
       </CardContent>

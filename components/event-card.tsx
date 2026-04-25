@@ -2,12 +2,13 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+
+import { addOption } from '@/actions/tickets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { addOption } from '@/actions/tickets'
-import type { PraamidEvent } from '@/lib/praamid/types'
 import { CAPACITY_LABELS, SHIP_NAMES } from '@/lib/praamid/labels'
+import type { PraamidEvent } from '@/lib/praamid/types'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
@@ -46,7 +47,7 @@ export function EventCard({ event, bookingUid, date, measurementUnit, alreadyAdd
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-lg font-semibold">{formatTime(event.dtstart)}</span>
-            <span className="text-sm text-muted-foreground">→ {formatTime(event.dtend)}</span>
+            <span className="text-muted-foreground text-sm">→ {formatTime(event.dtend)}</span>
             <Badge variant="outline">{SHIP_NAMES[event.ship.code] ?? event.ship.code}</Badge>
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
@@ -59,12 +60,12 @@ export function EventCard({ event, bookingUid, date, measurementUnit, alreadyAdd
                   key={code}
                   className={
                     isWatched
-                      ? 'rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary'
-                      : 'rounded-md bg-secondary px-2 py-0.5'
+                      ? 'bg-primary/10 text-primary rounded-md px-2 py-0.5 font-medium'
+                      : 'bg-secondary rounded-md px-2 py-0.5'
                   }
                 >
                   {CAPACITY_LABELS[code] ?? code}:{' '}
-                  <span className="font-medium text-foreground">{v}</span>
+                  <span className="text-foreground font-medium">{v}</span>
                 </span>
               )
             })}

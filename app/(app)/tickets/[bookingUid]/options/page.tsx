@@ -1,15 +1,16 @@
 import { and, asc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import Link from 'next/link'
+
+import { EventCard } from '@/components/event-card'
+import { OptionsDateFilter } from '@/components/options-date-filter'
+import { buttonVariants } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { auth } from '@/lib/auth'
 import { listEvents } from '@/lib/praamid/api'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid/labels'
-import { EventCard } from '@/components/event-card'
-import { OptionsDateFilter } from '@/components/options-date-filter'
-import { Card, CardContent } from '@/components/ui/card'
-import { buttonVariants } from '@/components/ui/button'
 
 const DIRECTION_CODES = ['VK', 'KV', 'RH', 'HR'] as const
 type DirectionCode = (typeof DIRECTION_CODES)[number]
@@ -53,7 +54,7 @@ export default async function AddOptionPage({
     return (
       <Card>
         <CardContent className="flex flex-col items-start gap-3 py-6">
-          <p className="text-sm text-destructive">Ticket not found.</p>
+          <p className="text-destructive text-sm">Ticket not found.</p>
           <Link href="/" className={buttonVariants({ variant: 'secondary' })}>
             Back to tickets
           </Link>
@@ -85,11 +86,11 @@ export default async function AddOptionPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Link href="/" className="text-sm text-muted-foreground hover:underline">
+        <Link href="/" className="text-muted-foreground text-sm hover:underline">
           ← Back to tickets
         </Link>
         <h1 className="text-2xl font-semibold">Add alternative</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {DIRECTION_LABELS[direction] ?? direction} ·{' '}
           {CAPACITY_LABELS[ticket.measurementUnit] ?? ticket.measurementUnit}
         </p>
@@ -99,11 +100,11 @@ export default async function AddOptionPage({
 
       {error ? (
         <Card>
-          <CardContent className="py-6 text-destructive">{error}</CardContent>
+          <CardContent className="text-destructive py-6">{error}</CardContent>
         </Card>
       ) : events.length === 0 ? (
         <Card>
-          <CardContent className="py-6 text-muted-foreground">
+          <CardContent className="text-muted-foreground py-6">
             No events found for this date.
           </CardContent>
         </Card>

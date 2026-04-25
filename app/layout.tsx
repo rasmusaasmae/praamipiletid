@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
+
 import { Providers } from '@/components/providers'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
+
 import './globals.css'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={cn('h-full antialiased', geistSans.variable, geistMono.variable)}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="bg-background text-foreground flex min-h-full flex-col">
         <Providers>
           <ThemeProvider
             attribute="class"

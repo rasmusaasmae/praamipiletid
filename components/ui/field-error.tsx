@@ -15,7 +15,7 @@ export function FieldError({ field, className }: Props) {
     .join(', ')
   if (!message) return null
   return (
-    <p className={className ?? 'text-destructive text-sm mt-1'} role="alert">
+    <p className={className ?? 'text-destructive mt-1 text-sm'} role="alert">
       {message}
     </p>
   )

@@ -1,11 +1,12 @@
-import { headers } from 'next/headers'
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query'
-import { Home } from '@/components/home'
-import { getQueryClient } from '@/lib/get-query-client'
-import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
+import { headers } from 'next/headers'
+
 import { refreshTickets } from '@/actions/tickets'
+import { Home } from '@/components/home'
 import { auth } from '@/lib/auth'
+import { getQueryClient } from '@/lib/get-query-client'
 import { getCredentialStatus } from '@/lib/praamid/credentials'
+import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
 
 export default async function HomePage() {
   const session = await auth.api.getSession({ headers: await headers() })

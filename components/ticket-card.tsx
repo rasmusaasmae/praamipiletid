@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { ArrowDown, ArrowUp, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useForm, useStore } from '@tanstack/react-form'
+import { ArrowDown, ArrowUp, Loader2, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
+
+import { moveOption, removeOption, unsubscribeTicket, updateOption } from '@/actions/tickets'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -18,7 +20,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { moveOption, removeOption, unsubscribeTicket, updateOption } from '@/actions/tickets'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid/labels'
 import type { TicketWithOptions } from '@/lib/queries'
@@ -120,7 +121,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
                 </Badge>
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
               <span className="truncate font-mono">{data.ticket.ticketNumber}</span>
               <span className="whitespace-nowrap">
                 {formatDate(data.ticket.eventDtstart)} {formatTime(data.ticket.eventDtstart)}
@@ -140,10 +141,10 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
 
         <CardContent className="flex flex-col gap-3">
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No alternatives on this ticket yet.</p>
+            <p className="text-muted-foreground text-sm">No alternatives on this ticket yet.</p>
           ) : null}
           {sorted.length > 0 ? (
-            <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+            <ul className="divide-border border-border flex flex-col divide-y rounded-md border">
               {sorted.map((option, idx) => {
                 const past = option.eventDtstart.getTime() < Date.now()
                 const isCurrent = data.ticket.eventUid === option.eventUid
@@ -180,7 +181,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
                           <ArrowDown />
                         </Button>
                       </div>
-                      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">
+                      <span className="bg-muted inline-flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium tabular-nums">
                         {idx + 1}
                       </span>
                       <div className="flex flex-col">
@@ -198,7 +199,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
                           />
                           {isCurrent ? <Badge variant="secondary">current</Badge> : null}
                         </span>
-                        {past ? <span className="text-xs text-muted-foreground">Past</span> : null}
+                        {past ? <span className="text-muted-foreground text-xs">Past</span> : null}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -280,7 +281,7 @@ function CutoffEditor({
                   className="inline-flex items-baseline gap-1 rounded text-left disabled:pointer-events-none disabled:opacity-50"
                 >
                   <span>{titleText}</span>
-                  <span className="text-xs font-normal text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground">
+                  <span className="text-muted-foreground hover:text-foreground text-xs font-normal underline decoration-dotted underline-offset-2">
                     stop {stopBeforeMinutes} min before
                   </span>
                 </button>
@@ -325,7 +326,7 @@ function CutoffEditor({
             )}
           </form.Field>
           {formErrors.length > 0 ? (
-            <p className="text-xs text-destructive" role="alert">
+            <p className="text-destructive text-xs" role="alert">
               {formErrors
                 .map((err) => (typeof err === 'string' ? err : ''))
                 .filter(Boolean)

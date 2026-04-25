@@ -1,5 +1,6 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+
 import { GoogleSignInButton } from '@/components/google-sign-in-button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { auth } from '@/lib/auth'

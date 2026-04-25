@@ -1,23 +1,25 @@
 'use server'
 
 import { randomUUID } from 'node:crypto'
+
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
-import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { z } from 'zod'
+
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { auth } from '@/lib/auth'
+import { logger } from '@/lib/logger'
+import { listEvents, listTickets, PraamidAuthError } from '@/lib/praamid/api'
 import {
   forgetCredential,
   getCredential,
   invalidateCredential,
   markVerified,
 } from '@/lib/praamid/credentials'
-import { listEvents, listTickets, PraamidAuthError } from '@/lib/praamid/api'
 import { cancelLogin, startLogin } from '@/lib/praamid/login'
 import type { Ticket as PraamidTicket } from '@/lib/praamid/types'
-import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'actions/tickets' })
 

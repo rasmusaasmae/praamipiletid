@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useForm, useStore } from '@tanstack/react-form'
-import { toast } from 'sonner'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { CheckCircle2, Loader2, Smartphone, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { z } from 'zod'
+
+import { cancelPraamidLogin, forgetPraamidCredential, startPraamidLogin } from '@/actions/tickets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,12 +24,10 @@ import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { z } from 'zod'
-import { cancelPraamidLogin, forgetPraamidCredential, startPraamidLogin } from '@/actions/tickets'
+import type { PraamidAuthStatus } from '@/db/schema'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { getMyPraamidAuthState, type PraamidAuthStateView } from '@/lib/queries'
 import { cn } from '@/lib/utils'
-import type { PraamidAuthStatus } from '@/db/schema'
 
 export type PraamidCredentialMeta = {
   capturedAt: Date
@@ -131,7 +132,7 @@ export function PraamidAuthCard({
           <Tooltip>
             <TooltipTrigger
               render={
-                <p className="w-fit text-sm text-muted-foreground">
+                <p className="text-muted-foreground w-fit text-sm">
                   Expires {formatRelativeFuture(credentialMeta.expiresAt, now)}
                 </p>
               }
@@ -317,7 +318,7 @@ function SigninDialog({
                       autoFocus
                     />
                     <FieldError field={field} />
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="text-muted-foreground mt-1 text-xs">
                       We use this to start a Smart-ID session with praamid.ee. You&apos;ll need to
                       approve the request on your phone.
                     </p>
@@ -384,7 +385,7 @@ function Stepper({ current }: { current: Status }) {
               {STEP_LABEL[s]}
             </span>
             {idx < STEP_ORDER.length - 1 ? (
-              <span className="h-px w-4 shrink-0 bg-border" aria-hidden />
+              <span className="bg-border h-px w-4 shrink-0" aria-hidden />
             ) : null}
           </li>
         )
@@ -396,7 +397,7 @@ function Stepper({ current }: { current: Status }) {
 function LoadingPanel() {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm">
-      <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <Loader2 className="text-muted-foreground size-6 animate-spin" />
       <p className="font-medium">Opening praamid.ee…</p>
       <p className="text-muted-foreground">
         We&apos;re starting a Smart-ID session — this takes a few seconds.
@@ -408,9 +409,9 @@ function LoadingPanel() {
 function AwaitingPanel() {
   return (
     <div className="flex flex-col items-center gap-3 py-6 text-center">
-      <Smartphone className="size-6 text-muted-foreground" />
+      <Smartphone className="text-muted-foreground size-6" />
       <p className="text-sm font-medium">Approve on your phone</p>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         Open the Smart-ID app and approve the request.
       </p>
     </div>
@@ -420,7 +421,7 @@ function AwaitingPanel() {
 function SuccessPanel() {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm">
-      <CheckCircle2 className="size-7 text-success" />
+      <CheckCircle2 className="text-success size-7" />
       <p className="font-medium">You&apos;re authenticated</p>
       <p className="text-muted-foreground">Session saved. You can close this window.</p>
     </div>

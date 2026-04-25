@@ -1,7 +1,9 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
+
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
+import { logger } from '@/lib/logger'
 import {
   commitZeroSum,
   editTicket,
@@ -9,9 +11,8 @@ import {
   getBookingBalance,
   PraamidAuthError,
 } from '@/lib/praamid/api'
-import type { PraamidEvent, Ticket as PraamidTicket } from '@/lib/praamid/types'
 import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
-import { logger } from '@/lib/logger'
+import type { PraamidEvent, Ticket as PraamidTicket } from '@/lib/praamid/types'
 
 const log = logger.child({ scope: 'edit' })
 

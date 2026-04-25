@@ -1,12 +1,13 @@
 import 'server-only'
 import { and, eq, gt } from 'drizzle-orm'
+
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
+import { processSwapFor } from '@/lib/edit'
+import { sendEmail } from '@/lib/email'
+import { logger } from '@/lib/logger'
 import { listEvents } from '@/lib/praamid/api'
 import type { PraamidEvent } from '@/lib/praamid/types'
-import { sendEmail } from '@/lib/email'
-import { processSwapFor } from '@/lib/edit'
-import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'poller' })
 

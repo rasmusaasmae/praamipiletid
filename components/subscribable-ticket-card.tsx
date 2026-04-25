@@ -1,13 +1,14 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { Ticket as TicketIcon } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { subscribeTicket } from '@/actions/tickets'
+import type { LiveTicket } from '@/actions/tickets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { subscribeTicket } from '@/actions/tickets'
-import type { LiveTicket } from '@/actions/tickets'
 import { DIRECTION_LABELS } from '@/lib/praamid/labels'
 
 type Props = {
@@ -45,7 +46,7 @@ export function SubscribableTicketCard({ ticket }: Props) {
     <Card>
       <CardContent className="flex flex-col items-stretch gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <TicketIcon className="size-4 shrink-0 text-muted-foreground" />
+          <TicketIcon className="text-muted-foreground size-4 shrink-0" />
           <div className="flex min-w-0 flex-col">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="font-semibold">
@@ -54,7 +55,7 @@ export function SubscribableTicketCard({ ticket }: Props) {
               <Badge variant="outline">{dateLabel}</Badge>
               <span className="text-sm tabular-nums">{timeLabel}</span>
             </div>
-            <span className="truncate text-xs font-mono text-muted-foreground">
+            <span className="text-muted-foreground truncate font-mono text-xs">
               {ticket.ticketNumber}
             </span>
           </div>

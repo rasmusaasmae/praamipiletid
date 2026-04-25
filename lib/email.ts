@@ -1,6 +1,7 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
 import nodemailer, { type Transporter } from 'nodemailer'
+
 import { db } from '@/db'
 import { user } from '@/db/schema'
 

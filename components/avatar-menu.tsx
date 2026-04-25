@@ -3,7 +3,7 @@
 import { MoonIcon, SunIcon, MonitorIcon, LogOutIcon, UserIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
-import { authClient } from '@/lib/auth-client'
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { authClient } from '@/lib/auth-client'
 
 type Props = {
   user: { email: string; image: string | null }
@@ -27,7 +28,7 @@ export function AvatarMenu({ user }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-muted-foreground outline-none hover:bg-muted/70 focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="border-border bg-muted text-muted-foreground hover:bg-muted/70 focus-visible:ring-ring/50 flex size-8 items-center justify-center overflow-hidden rounded-full border outline-none focus-visible:ring-3"
         aria-label={user.email}
       >
         {user.image ? (

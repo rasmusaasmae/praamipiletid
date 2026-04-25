@@ -1,8 +1,9 @@
 import 'server-only'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
+
 import { logger } from '@/lib/logger'
-import { saveCredential } from '@/lib/praamid/credentials'
 import { setAuthState, settleAuthState } from '@/lib/praamid/auth-state'
+import { saveCredential } from '@/lib/praamid/credentials'
 
 const log = logger.child({ scope: 'praamid-login' })
 
