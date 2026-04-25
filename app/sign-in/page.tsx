@@ -12,7 +12,7 @@ export default async function SignInPage() {
     <main className="flex flex-1 items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Ferry Tickets</CardTitle>
+          <CardTitle>Ferry tickets</CardTitle>
           <CardDescription>Automatically swap tickets when a spot opens up.</CardDescription>
         </CardHeader>
         <CardContent>
