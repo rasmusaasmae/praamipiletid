@@ -17,14 +17,6 @@ import {
 import { listEvents, listTickets, PraamidAuthError } from '@/lib/praamid/api'
 import { cancelLogin, startLogin } from '@/lib/praamid/login'
 import type { Ticket as PraamidTicket } from '@/lib/praamid/types'
-import {
-  isikukoodSchema,
-  optionAddSchema,
-  optionMoveSchema,
-  optionUpdateSchema,
-  subscribeTicketSchema,
-  unsubscribeTicketSchema,
-} from '@/lib/schemas'
 import { logger } from '@/lib/logger'
 
 const log = logger.child({ scope: 'actions/tickets' })
@@ -101,6 +93,11 @@ export async function refreshTickets(): Promise<LiveTicket[]> {
     .sort((a, b) => Date.parse(a.eventDtstart) - Date.parse(b.eventDtstart))
 }
 
+const subscribeTicketSchema = z.object({
+  bookingUid: z.string().min(1),
+  ticketCode: z.string().min(1),
+})
+
 export async function subscribeTicket(dto: z.input<typeof subscribeTicketSchema>): Promise<void> {
   const session = await requireSession()
 
@@ -156,6 +153,10 @@ export async function subscribeTicket(dto: z.input<typeof subscribeTicketSchema>
   revalidatePath('/')
 }
 
+const unsubscribeTicketSchema = z.object({
+  bookingUid: z.string().min(1),
+})
+
 export async function unsubscribeTicket(
   dto: z.input<typeof unsubscribeTicketSchema>,
 ): Promise<void> {
@@ -179,6 +180,13 @@ export async function unsubscribeTicket(
 
   revalidatePath('/')
 }
+
+const optionAddSchema = z.object({
+  bookingUid: z.string().min(1),
+  eventUid: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  stopBeforeMinutes: z.coerce.number().int().min(0).optional(),
+})
 
 export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<void> {
   const session = await requireSession()
@@ -247,6 +255,11 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
   revalidatePath('/')
 }
 
+const optionUpdateSchema = z.object({
+  id: z.string().min(1),
+  stopBeforeMinutes: z.coerce.number().int().min(0),
+})
+
 export async function updateOption(dto: z.input<typeof optionUpdateSchema>): Promise<void> {
   const session = await requireSession()
   const parsed = optionUpdateSchema.safeParse(dto)
@@ -313,6 +326,11 @@ export async function removeOption(dto: z.input<typeof RemoveOptionDto>): Promis
 
   revalidatePath('/')
 }
+
+const optionMoveSchema = z.object({
+  id: z.string().min(1),
+  direction: z.enum(['up', 'down']),
+})
 
 export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise<void> {
   const session = await requireSession()
@@ -395,7 +413,9 @@ export async function forgetPraamidCredential(): Promise<void> {
   }
 }
 
-const StartPraamidLoginDto = z.object({ isikukood: isikukoodSchema })
+const StartPraamidLoginDto = z.object({
+  isikukood: z.string().regex(/^\d{11}$/, 'isikukoodInvalid'),
+})
 
 export async function startPraamidLogin(dto: z.input<typeof StartPraamidLoginDto>): Promise<void> {
   const session = await requireSession()

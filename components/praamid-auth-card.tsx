@@ -21,8 +21,8 @@ import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { z } from 'zod'
 import { cancelPraamidLogin, forgetPraamidCredential, startPraamidLogin } from '@/actions/tickets'
-import { isikukoodSchema } from '@/lib/schemas'
 import { useOptimisticMutation } from '@/lib/mutations'
 import { getMyPraamidAuthState, type PraamidAuthStateView } from '@/lib/queries'
 import { cn } from '@/lib/utils'
@@ -288,7 +288,12 @@ function SigninDialog({
               }}
               className="flex flex-col gap-3"
             >
-              <form.Field name="isikukood" validators={{ onChange: isikukoodSchema }}>
+              <form.Field
+                name="isikukood"
+                validators={{
+                  onChange: z.string().regex(/^\d{11}$/, 'isikukoodInvalid'),
+                }}
+              >
                 {(field) => (
                   <div>
                     <Label htmlFor={field.name} className="mb-1 block">
