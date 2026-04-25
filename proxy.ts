@@ -9,8 +9,9 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next()
 }
 
-// Match every path except: sign-in, the auth handler, the health check,
-// Next.js internals, and any file with an extension (favicons, /ferry.svg).
+// Match every path except: sign-in, anything under /api (auth handler,
+// health), Next.js internals, and any file with an extension (favicons,
+// /ferry.svg).
 export const config = {
-  matcher: ['/((?!sign-in|api|_next|health|.*\\..*).*)'],
+  matcher: ['/((?!sign-in|api|_next|.*\\..*).*)'],
 }
