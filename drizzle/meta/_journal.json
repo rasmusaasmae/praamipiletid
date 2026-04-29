@@ -57,6 +57,13 @@
       "when": 1777492347933,
       "tag": "0007_create_per_ticket_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777498403067,
+      "tag": "0008_drop_swap_in_progress",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useForm, useStore } from '@tanstack/react-form'
-import { ArrowDown, ArrowUp, Loader2, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -107,12 +107,6 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
               <Badge variant="outline">
                 {CAPACITY_LABELS[data.ticket.measurementUnit] ?? data.ticket.measurementUnit}
               </Badge>
-              {data.ticket.swapInProgress ? (
-                <Badge variant="secondary" className="gap-1">
-                  <Loader2 className="size-3 animate-spin" />
-                  swapping
-                </Badge>
-              ) : null}
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
               <span className="truncate font-mono">{data.ticket.ticketNumber}</span>

@@ -125,7 +125,6 @@ async function tick() {
     const userId = openedRows[0]!.userId
     const openedEventUids = new Set(openedRows.map((r) => r.eventUid))
 
-    await db.update(tickets).set({ swapInProgress: true }).where(eq(tickets.id, ticketId))
     log.info({ ticketId, userId }, 'swap started')
     try {
       const outcome = await processSwapFor({
@@ -160,9 +159,6 @@ async function tick() {
         'processSwapFor threw',
       )
     } finally {
-      // The ticket id may no longer exist after a successful swap (sync
-      // dropped it and inserted the successor). The UPDATE just no-ops.
-      await db.update(tickets).set({ swapInProgress: false }).where(eq(tickets.id, ticketId))
       log.info({ ticketId, userId }, 'swap finished')
     }
   }
@@ -206,34 +202,12 @@ async function loop() {
   }
 }
 
-async function recoverStuckSwaps() {
-  // Worker owns swap_in_progress. If we're starting, nothing is in flight —
-  // clear any leftovers from a prior crash.
-  const stuck = await db
-    .update(tickets)
-    .set({ swapInProgress: false })
-    .where(eq(tickets.swapInProgress, true))
-    .returning({ id: tickets.id, userId: tickets.userId })
-  if (stuck.length > 0) {
-    log.warn({ count: stuck.length, rows: stuck }, 'cleared stuck swap_in_progress on worker boot')
-  }
-}
-
 export function startPoller() {
   if (running) return
   running = true
   log.info('starting')
-  recoverStuckSwaps()
-    .catch((err) => {
-      log.error(
-        { err: err instanceof Error ? err.message : String(err) },
-        'recoverStuckSwaps failed',
-      )
-    })
-    .finally(() => {
-      loop().catch((err) => {
-        log.error({ err: err instanceof Error ? err.message : String(err) }, 'loop crashed')
-        running = false
-      })
-    })
+  loop().catch((err) => {
+    log.error({ err: err instanceof Error ? err.message : String(err) }, 'loop crashed')
+    running = false
+  })
 }

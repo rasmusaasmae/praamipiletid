@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 import { user } from './auth-schema'
 
@@ -27,7 +27,6 @@ export const tickets = pgTable(
     eventDtstart: timestamp('event_dtstart', { withTimezone: true, mode: 'date' }).notNull(),
     ticketDate: text('ticket_date').notNull(),
     parentTicketId: integer('parent_ticket_id'),
-    swapInProgress: boolean('swap_in_progress').default(false).notNull(),
     capturedAt: timestamp('captured_at', { withTimezone: true, mode: 'date' }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
       .defaultNow()
