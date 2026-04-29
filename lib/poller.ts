@@ -1,27 +1,30 @@
 import 'server-only'
-import { and, eq, gt } from 'drizzle-orm'
+import { eq, gt } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { ticketOptions, tickets } from '@/db/schema'
+import { praamidCredentials, ticketOptions, tickets } from '@/db/schema'
 import { processSwapFor } from '@/lib/edit'
 import { sendEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
 import { listEvents } from '@/lib/praamid/api'
 import type { PraamidEvent } from '@/lib/praamid/types'
+import { syncTicketsForUser } from '@/lib/sync-tickets'
 
 const log = logger.child({ scope: 'poller' })
 
 const POLL_INTERVAL_MS = Math.max(1000, Number(process.env.POLL_INTERVAL_MS ?? 15_000))
+const MIRROR_SYNC_INTERVAL_MS = 10 * 60 * 1000
 // Praamid's events endpoint accepts a time-shift in seconds that biases
 // the schedule window we get back. 300s (5min) is the value the official
 // site uses; we follow.
 const POLL_TIME_SHIFT = 300
 
 let running = false
+let lastMirrorSyncAt = 0
 
 type JoinedOption = {
   optionId: string
-  bookingUid: string
+  ticketId: number
   userId: string
   direction: string
   measurementUnit: string
@@ -54,8 +57,8 @@ async function tick() {
   const rows = await db
     .select({
       optionId: ticketOptions.id,
-      bookingUid: ticketOptions.bookingUid,
-      userId: ticketOptions.userId,
+      ticketId: tickets.id,
+      userId: tickets.userId,
       direction: tickets.direction,
       measurementUnit: tickets.measurementUnit,
       priority: ticketOptions.priority,
@@ -66,13 +69,7 @@ async function tick() {
       currentTicketEventUid: tickets.eventUid,
     })
     .from(ticketOptions)
-    .innerJoin(
-      tickets,
-      and(
-        eq(tickets.userId, ticketOptions.userId),
-        eq(tickets.bookingUid, ticketOptions.bookingUid),
-      ),
-    )
+    .innerJoin(tickets, eq(tickets.id, ticketOptions.ticketId))
     .where(gt(ticketOptions.eventDtstart, now))
 
   const due: JoinedOption[] = rows.filter(
@@ -89,7 +86,7 @@ async function tick() {
   }
 
   const eventsByUid = new Map<string, PraamidEvent>()
-  const openedRowsByBooking = new Map<string, JoinedOption[]>()
+  const openedRowsByTicket = new Map<number, JoinedOption[]>()
 
   for (const [key, batch] of batches) {
     const [dir, date] = key.split('|') as [string, string]
@@ -104,27 +101,24 @@ async function tick() {
       if (row.eventUid === row.currentTicketEventUid) continue
       const capacity = event.capacities?.[row.measurementUnit] ?? 0
       if (capacity < 1) continue
-      const list = openedRowsByBooking.get(row.bookingUid) ?? []
+      const list = openedRowsByTicket.get(row.ticketId) ?? []
       list.push(row)
-      openedRowsByBooking.set(row.bookingUid, list)
+      openedRowsByTicket.set(row.ticketId, list)
     }
   }
 
-  if (openedRowsByBooking.size === 0) return
+  if (openedRowsByTicket.size === 0) return
 
-  for (const [bookingUid, openedRows] of openedRowsByBooking) {
+  for (const [ticketId, openedRows] of openedRowsByTicket) {
     const userId = openedRows[0]!.userId
     const openedEventUids = new Set(openedRows.map((r) => r.eventUid))
 
-    await db
-      .update(tickets)
-      .set({ swapInProgress: true })
-      .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
-    log.info({ bookingUid, userId }, 'swap started')
+    await db.update(tickets).set({ swapInProgress: true }).where(eq(tickets.id, ticketId))
+    log.info({ ticketId, userId }, 'swap started')
     try {
       const outcome = await processSwapFor({
         userId,
-        bookingUid,
+        ticketId,
         openedEventUids,
         eventsByUid,
       })
@@ -138,7 +132,7 @@ async function tick() {
         } catch (err) {
           log.error(
             {
-              bookingUid,
+              ticketId,
               err: err instanceof Error ? err.message : String(err),
             },
             'swap notify failed',
@@ -148,17 +142,34 @@ async function tick() {
     } catch (err) {
       log.error(
         {
-          bookingUid,
+          ticketId,
           err: err instanceof Error ? err.message : String(err),
         },
         'processSwapFor threw',
       )
     } finally {
-      await db
-        .update(tickets)
-        .set({ swapInProgress: false })
-        .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
-      log.info({ bookingUid, userId }, 'swap finished')
+      // The ticket id may no longer exist after a successful swap (sync
+      // dropped it and inserted the successor). The UPDATE just no-ops.
+      await db.update(tickets).set({ swapInProgress: false }).where(eq(tickets.id, ticketId))
+      log.info({ ticketId, userId }, 'swap finished')
+    }
+  }
+}
+
+async function mirrorSyncTick() {
+  if (Date.now() - lastMirrorSyncAt < MIRROR_SYNC_INTERVAL_MS) return
+  lastMirrorSyncAt = Date.now()
+
+  const userIds = await db.select({ userId: praamidCredentials.userId }).from(praamidCredentials)
+
+  for (const { userId } of userIds) {
+    try {
+      await syncTicketsForUser(userId)
+    } catch (err) {
+      log.error(
+        { userId, err: err instanceof Error ? err.message : String(err) },
+        'mirror sync failed',
+      )
     }
   }
 }
@@ -170,6 +181,11 @@ async function loop() {
       await tick()
     } catch (err) {
       log.error({ err: err instanceof Error ? err.message : String(err) }, 'tick failed')
+    }
+    try {
+      await mirrorSyncTick()
+    } catch (err) {
+      log.error({ err: err instanceof Error ? err.message : String(err) }, 'mirrorSyncTick failed')
     }
     const elapsed = Date.now() - started
     const delay = Math.max(1000, POLL_INTERVAL_MS - elapsed)
@@ -185,7 +201,7 @@ async function recoverStuckSwaps() {
     .update(tickets)
     .set({ swapInProgress: false })
     .where(eq(tickets.swapInProgress, true))
-    .returning({ userId: tickets.userId, bookingUid: tickets.bookingUid })
+    .returning({ id: tickets.id, userId: tickets.userId })
   if (stuck.length > 0) {
     log.warn({ count: stuck.length, rows: stuck }, 'cleared stuck swap_in_progress on worker boot')
   }

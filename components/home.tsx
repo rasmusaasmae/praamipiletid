@@ -2,19 +2,11 @@
 
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useMemo } from 'react'
 
-import type { LiveTicket } from '@/actions/tickets'
-import { refreshTickets } from '@/actions/tickets'
 import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth-card'
-import { SubscribableTicketCard } from '@/components/subscribable-ticket-card'
 import { TicketCard } from '@/components/ticket-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getMyPraamidAuthState, getTicketsWithOptions, type TicketWithOptions } from '@/lib/queries'
-
-type Row =
-  | { kind: 'subscribed'; bookingUid: string; eventDtstart: Date; data: TicketWithOptions }
-  | { kind: 'live'; bookingUid: string; eventDtstart: Date; data: LiveTicket }
+import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
 
 export function Home({
   configured,
@@ -35,33 +27,6 @@ export function Home({
   })
   const isAuthed = authState.data?.status === 'authenticated'
 
-  const liveTickets = useQuery({
-    queryKey: ['praamidTickets'],
-    queryFn: () => refreshTickets(),
-    staleTime: 60_000,
-    retry: false,
-    enabled: configured && isAuthed,
-  })
-
-  const rows = useMemo<Row[]>(() => {
-    const subscribed = new Set(cards.map((c) => c.ticket.bookingUid))
-    const live = (liveTickets.data ?? []).filter((lt) => !subscribed.has(lt.bookingUid))
-    return [
-      ...cards.map<Row>((c) => ({
-        kind: 'subscribed',
-        bookingUid: c.ticket.bookingUid,
-        eventDtstart: c.ticket.eventDtstart,
-        data: c,
-      })),
-      ...live.map<Row>((lt) => ({
-        kind: 'live',
-        bookingUid: lt.bookingUid,
-        eventDtstart: new Date(lt.eventDtstart),
-        data: lt,
-      })),
-    ].sort((a, b) => a.eventDtstart.getTime() - b.eventDtstart.getTime())
-  }, [cards, liveTickets.data])
-
   return (
     <div className="flex flex-col gap-6">
       {configured ? (
@@ -77,15 +42,11 @@ export function Home({
         </p>
       </div>
 
-      {rows.length > 0 ? (
+      {cards.length > 0 ? (
         <div className="flex flex-col gap-4">
-          {rows.map((row) =>
-            row.kind === 'subscribed' ? (
-              <TicketCard key={row.bookingUid} data={row.data} />
-            ) : (
-              <SubscribableTicketCard key={row.bookingUid} ticket={row.data} />
-            ),
-          )}
+          {cards.map((c) => (
+            <TicketCard key={c.ticket.id} data={c} />
+          ))}
         </div>
       ) : !isAuthed ? (
         <Card>

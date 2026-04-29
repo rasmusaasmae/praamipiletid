@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
@@ -13,14 +13,16 @@ import {
 } from '@/lib/praamid/api'
 import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
 import type { PraamidEvent, Ticket as PraamidTicket } from '@/lib/praamid/types'
+import { syncTicketsForUser } from '@/lib/sync-tickets'
 
 const log = logger.child({ scope: 'edit' })
 
 const CREDENTIAL_BUFFER_MS = 15 * 60 * 1000
 const BOOKING_BACKOFF_MS = 10 * 60 * 1000
 
-// Process-local backoff. Resets on app restart — acceptable for v1.
-const lastAttemptAt = new Map<string, number>()
+// Process-local backoff keyed by ticketId. Resets on app restart —
+// acceptable for v1.
+const lastAttemptAt = new Map<number, number>()
 
 type FailStage = 'put' | 'balance' | 'commit' | 'auth' | 'idempotency' | 'internal'
 
@@ -39,36 +41,33 @@ export type SwapOutcome =
 
 export type SwapInput = {
   userId: string
-  bookingUid: string
+  ticketId: number
   openedEventUids: Set<string>
   eventsByUid: Map<string, PraamidEvent>
 }
 
 export async function processSwapFor(input: SwapInput): Promise<SwapOutcome> {
-  log.debug({ bookingUid: input.bookingUid }, 'start')
+  log.debug({ ticketId: input.ticketId }, 'start')
   const outcome = await runSwap(input)
   if (outcome.kind === 'succeeded') {
     log.info(
       {
-        bookingUid: input.bookingUid,
+        ticketId: input.ticketId,
         newTicketNumber: outcome.newTicketNumber,
         invoiceNumber: outcome.invoiceNumber,
       },
       'succeeded',
     )
   } else if (outcome.kind === 'failed') {
-    log.error(
-      { bookingUid: input.bookingUid, stage: outcome.stage, reason: outcome.reason },
-      'failed',
-    )
+    log.error({ ticketId: input.ticketId, stage: outcome.stage, reason: outcome.reason }, 'failed')
   } else if (outcome.kind === 'rolled_back') {
-    log.warn({ bookingUid: input.bookingUid, reason: outcome.reason }, 'rolled_back')
+    log.warn({ ticketId: input.ticketId, reason: outcome.reason }, 'rolled_back')
   } else if (outcome.kind === 'idempotency_paused') {
-    log.warn({ bookingUid: input.bookingUid, reason: outcome.reason }, 'idempotency_paused')
+    log.warn({ ticketId: input.ticketId, reason: outcome.reason }, 'idempotency_paused')
   } else {
     log.debug(
       {
-        bookingUid: input.bookingUid,
+        ticketId: input.ticketId,
         ...('reason' in outcome ? { reason: outcome.reason } : {}),
       },
       outcome.kind,
@@ -78,10 +77,11 @@ export async function processSwapFor(input: SwapInput): Promise<SwapOutcome> {
 }
 
 async function runSwap(input: SwapInput): Promise<SwapOutcome> {
-  const { userId, bookingUid, openedEventUids, eventsByUid } = input
+  const { userId, ticketId, openedEventUids, eventsByUid } = input
 
   const [ticket] = await db
     .select({
+      id: tickets.id,
       ticketCode: tickets.ticketCode,
       ticketNumber: tickets.ticketNumber,
       bookingUid: tickets.bookingUid,
@@ -89,7 +89,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
       direction: tickets.direction,
     })
     .from(tickets)
-    .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
+    .where(eq(tickets.id, ticketId))
     .limit(1)
   if (!ticket) return { kind: 'gate_blocked', reason: 'ticket_missing' }
 
@@ -99,7 +99,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     return { kind: 'gate_blocked', reason: 'credential_expiring' }
   }
 
-  const last = lastAttemptAt.get(bookingUid) ?? 0
+  const last = lastAttemptAt.get(ticketId) ?? 0
   if (Date.now() - last < BOOKING_BACKOFF_MS) {
     return { kind: 'gate_blocked', reason: 'backoff' }
   }
@@ -114,7 +114,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
       stopBeforeMinutes: ticketOptions.stopBeforeMinutes,
     })
     .from(ticketOptions)
-    .where(eq(ticketOptions.bookingUid, bookingUid))
+    .where(eq(ticketOptions.ticketId, ticketId))
 
   const now = Date.now()
   const currentOption = options.find((o) => o.eventUid === ticket.eventUid)
@@ -130,7 +130,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   if (!target) {
     log.debug(
       {
-        bookingUid,
+        ticketId,
         currentPriority: Number.isFinite(currentPriority) ? currentPriority : null,
         consideredCount: options.length,
       },
@@ -146,7 +146,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
 
   log.info(
     {
-      bookingUid,
+      ticketId,
       fromEventUid: ticket.eventUid,
       toEventUid: target.eventUid,
       toPriority: target.priority,
@@ -154,7 +154,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     },
     'attempting',
   )
-  lastAttemptAt.set(bookingUid, Date.now())
+  lastAttemptAt.set(ticketId, Date.now())
 
   const fail = (
     stage: FailStage,
@@ -163,6 +163,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     _errorMessage?: string,
   ): SwapOutcome => ({ kind: 'failed', stage, reason })
 
+  const bookingUid = ticket.bookingUid
   let booking
   try {
     booking = await getBooking(credential.token, bookingUid)
@@ -238,28 +239,12 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   )
   if (!newTicket) return fail('internal', 'new_ticket_not_found')
 
-  const bookingUidChanged = newTicket.bookingUid !== bookingUid
-  if (bookingUidChanged) {
-    log.warn(
-      { bookingUid, newBookingUid: newTicket.bookingUid },
-      'bookingUid rotated on swap — options will orphan',
-    )
-  }
+  // Fold the swap into the local mirror: the new ticket gets inserted,
+  // ticket_options migrate via parentTicketId-rewire, the just-used option
+  // (and anything worse) gets pruned, the old ticket id is dropped.
+  await syncTicketsForUser(userId)
 
-  await db
-    .update(tickets)
-    .set({
-      ticketId: newTicket.id,
-      ticketCode: newTicket.ticketCode,
-      ticketNumber: newTicket.ticketNumber,
-      eventUid: newTicket.event.uid,
-      ticketDate: newTicket.ticketDate,
-      eventDtstart: new Date(newTicket.event.dtstart),
-      capturedAt: new Date(),
-    })
-    .where(and(eq(tickets.userId, userId), eq(tickets.bookingUid, bookingUid)))
-
-  lastAttemptAt.delete(bookingUid)
+  lastAttemptAt.delete(ticketId)
 
   return {
     kind: 'succeeded',

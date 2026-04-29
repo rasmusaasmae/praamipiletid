@@ -43,6 +43,20 @@
       "when": 1777103930602,
       "tag": "0005_drop_user_settings_table",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777492343914,
+      "tag": "0006_drop_legacy_tickets",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777492347933,
+      "tag": "0007_create_per_ticket_schema",
+      "breakpoints": true
     }
   ]
 }

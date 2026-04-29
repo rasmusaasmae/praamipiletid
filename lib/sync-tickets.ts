@@ -1,0 +1,148 @@
+import 'server-only'
+import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
+
+import { db } from '@/db'
+import { ticketOptions, tickets } from '@/db/schema'
+import { logger } from '@/lib/logger'
+import { listTickets, PraamidAuthError } from '@/lib/praamid/api'
+import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
+import type { Ticket as PraamidTicket } from '@/lib/praamid/types'
+
+const log = logger.child({ scope: 'sync-tickets' })
+
+const DEFAULT_MEASUREMENT_UNIT = 'sv'
+
+const lastSyncAt = new Map<string, number>()
+
+export async function maybeSyncTickets(userId: string, opts: { maxAgeMs: number }): Promise<void> {
+  const last = lastSyncAt.get(userId) ?? 0
+  if (Date.now() - last < opts.maxAgeMs) return
+  await syncTicketsForUser(userId)
+}
+
+export async function syncTicketsForUser(userId: string): Promise<void> {
+  const credential = await getCredential(userId).catch(() => null)
+  if (!credential) return
+  if (credential.expiresAt.getTime() <= Date.now()) return
+
+  let raw: PraamidTicket[]
+  try {
+    raw = await listTickets(credential.token)
+    await markVerified(userId)
+  } catch (err) {
+    if (err instanceof PraamidAuthError && (err.status === 401 || err.status === 403)) {
+      await invalidateCredential(userId, `listTickets ${err.status}`)
+    }
+    log.debug(
+      { userId, err: err instanceof Error ? err.message : String(err) },
+      'listTickets failed',
+    )
+    return
+  }
+
+  const now = Date.now()
+  const active = raw
+    .filter((t) => t.status.code === 'ACTIVE')
+    .filter((t) => {
+      const ts = Date.parse(t.event.dtstart)
+      return !Number.isNaN(ts) && ts > now
+    })
+
+  const capturedAt = new Date()
+
+  await db.transaction(async (tx) => {
+    // Serialize concurrent syncs for the same user (page-load + background).
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`)
+
+    for (const t of active) {
+      const eventDtstart = new Date(t.event.dtstart)
+      await tx
+        .insert(tickets)
+        .values({
+          id: t.id,
+          userId,
+          bookingUid: t.bookingUid,
+          bookingReferenceNumber: t.bookingReferenceNumber,
+          sequenceNumber: t.sequenceNumber,
+          ticketCode: t.ticketCode,
+          ticketNumber: t.ticketNumber,
+          direction: t.direction.code,
+          measurementUnit: DEFAULT_MEASUREMENT_UNIT,
+          eventUid: t.event.uid,
+          eventDtstart,
+          ticketDate: t.ticketDate,
+          parentTicketId: t.parentTicketId ?? null,
+          capturedAt,
+        })
+        .onConflictDoUpdate({
+          target: tickets.id,
+          set: {
+            userId,
+            bookingUid: t.bookingUid,
+            bookingReferenceNumber: t.bookingReferenceNumber,
+            sequenceNumber: t.sequenceNumber,
+            ticketCode: t.ticketCode,
+            ticketNumber: t.ticketNumber,
+            direction: t.direction.code,
+            eventUid: t.event.uid,
+            eventDtstart,
+            ticketDate: t.ticketDate,
+            parentTicketId: t.parentTicketId ?? null,
+            capturedAt,
+          },
+        })
+    }
+
+    // Migrate options from each ticket's predecessor to itself. Order
+    // doesn't matter — at most one parent->child step per sync because
+    // parentTicketId is set when the ticket is born.
+    for (const t of active) {
+      if (t.parentTicketId == null) continue
+      await tx
+        .update(ticketOptions)
+        .set({ ticketId: t.id })
+        .where(eq(ticketOptions.ticketId, t.parentTicketId))
+    }
+
+    const fetchedIds = active.map((t) => t.id)
+    if (fetchedIds.length > 0) {
+      await tx
+        .delete(tickets)
+        .where(and(eq(tickets.userId, userId), notInArray(tickets.id, fetchedIds)))
+    } else {
+      await tx.delete(tickets).where(eq(tickets.userId, userId))
+    }
+
+    // For each remaining ticket, drop the option whose event matches the
+    // current ticket plus everything worse than it. Folds the
+    // "drop-current-and-below" rule into sync so it works regardless of
+    // which path produced the alignment (auto-swap, manual swap, etc).
+    if (fetchedIds.length > 0) {
+      const matched = await tx
+        .select({
+          ticketId: ticketOptions.ticketId,
+          priority: ticketOptions.priority,
+        })
+        .from(ticketOptions)
+        .innerJoin(
+          tickets,
+          and(eq(ticketOptions.ticketId, tickets.id), eq(ticketOptions.eventUid, tickets.eventUid)),
+        )
+        .where(inArray(tickets.id, fetchedIds))
+
+      for (const m of matched) {
+        await tx
+          .delete(ticketOptions)
+          .where(
+            and(
+              eq(ticketOptions.ticketId, m.ticketId),
+              sql`${ticketOptions.priority} >= ${m.priority}`,
+            ),
+          )
+      }
+    }
+  })
+
+  lastSyncAt.set(userId, Date.now())
+  log.debug({ userId, count: active.length }, 'sync complete')
+}

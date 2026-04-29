@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, Loader2, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
-import { moveOption, removeOption, unsubscribeTicket, updateOption } from '@/actions/tickets'
+import { moveOption, removeOption, updateOption } from '@/actions/tickets'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -32,21 +32,14 @@ const formatTime = (d: Date) =>
   d.toLocaleTimeString(DATE_TAG, { hour: '2-digit', minute: '2-digit' })
 
 export function TicketCard({ data }: { data: TicketWithOptions }) {
-  const bookingUid = data.ticket.bookingUid
-
-  const unsubscribeMutation = useOptimisticMutation<void, TicketWithOptions[]>({
-    queryKey: ['tickets'],
-    mutationFn: () => unsubscribeTicket({ bookingUid }),
-    optimisticUpdate: (old) => old.filter((c) => c.ticket.bookingUid !== bookingUid),
-    successMessage: 'Deleted',
-  })
+  const ticketId = data.ticket.id
 
   const removeOptionMutation = useOptimisticMutation<string, TicketWithOptions[]>({
     queryKey: ['tickets'],
     mutationFn: (optionId) => removeOption({ id: optionId }),
     optimisticUpdate: (old, optionId) =>
       old.map((c) =>
-        c.ticket.bookingUid === bookingUid
+        c.ticket.id === ticketId
           ? { ...c, options: c.options.filter((o) => o.id !== optionId) }
           : c,
       ),
@@ -61,7 +54,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
     mutationFn: ({ optionId, direction }) => moveOption({ id: optionId, direction }),
     optimisticUpdate: (old, { optionId, direction }) =>
       old.map((c) => {
-        if (c.ticket.bookingUid !== bookingUid) return c
+        if (c.ticket.id !== ticketId) return c
         const byPriority = [...c.options].sort((a, b) => a.priority - b.priority)
         const idx = byPriority.findIndex((o) => o.id === optionId)
         if (idx === -1) return c
@@ -90,7 +83,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
       updateOption({ id: optionId, stopBeforeMinutes }),
     optimisticUpdate: (old, { optionId, stopBeforeMinutes }) =>
       old.map((c) =>
-        c.ticket.bookingUid === bookingUid
+        c.ticket.id === ticketId
           ? {
               ...c,
               options: c.options.map((o) => (o.id === optionId ? { ...o, stopBeforeMinutes } : o)),
@@ -128,15 +121,6 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
               </span>
             </div>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => unsubscribeMutation.mutate()}
-            aria-label="Delete"
-            title="Delete"
-          >
-            <Trash2 className="size-4" />
-          </Button>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-3">
@@ -219,7 +203,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
           ) : null}
 
           <Link
-            href={`/tickets/${bookingUid}/options`}
+            href={`/tickets/${ticketId}/options`}
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             <Plus className="size-4" />

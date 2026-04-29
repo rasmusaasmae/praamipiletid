@@ -1,6 +1,6 @@
 'use server'
 
-import { and, asc, eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
 import { db } from '@/db'
@@ -35,27 +35,21 @@ export async function getTicketsWithOptions(): Promise<TicketWithOptions[]> {
   const rows = await db
     .select()
     .from(tickets)
-    .leftJoin(
-      ticketOptions,
-      and(
-        eq(ticketOptions.userId, tickets.userId),
-        eq(ticketOptions.bookingUid, tickets.bookingUid),
-      ),
-    )
+    .leftJoin(ticketOptions, eq(ticketOptions.ticketId, tickets.id))
     .where(eq(tickets.userId, session.user.id))
     .orderBy(asc(tickets.eventDtstart), asc(ticketOptions.priority))
 
-  const byBooking = new Map<string, TicketWithOptions>()
+  const byTicket = new Map<number, TicketWithOptions>()
   for (const row of rows) {
     const t = row.tickets
-    let entry = byBooking.get(t.bookingUid)
+    let entry = byTicket.get(t.id)
     if (!entry) {
       entry = { ticket: t, options: [] }
-      byBooking.set(t.bookingUid, entry)
+      byTicket.set(t.id, entry)
     }
     if (row.ticket_options) entry.options.push(row.ticket_options)
   }
-  return Array.from(byBooking.values())
+  return Array.from(byTicket.values())
 }
 
 export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {

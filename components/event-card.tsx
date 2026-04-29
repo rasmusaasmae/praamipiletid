@@ -14,7 +14,7 @@ const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
 type Props = {
   event: PraamidEvent
-  bookingUid: string
+  ticketId: number
   date: string
   measurementUnit: string
   alreadyAdded: boolean
@@ -27,13 +27,13 @@ function formatTime(iso: string) {
   return `${h}:${m}`
 }
 
-export function EventCard({ event, bookingUid, date, measurementUnit, alreadyAdded }: Props) {
+export function EventCard({ event, ticketId, date, measurementUnit, alreadyAdded }: Props) {
   const queryClient = useQueryClient()
 
   const highlighted = measurementUnit
 
   const addMutation = useMutation({
-    mutationFn: () => addOption({ bookingUid, eventUid: event.uid, date }),
+    mutationFn: () => addOption({ ticketId, eventUid: event.uid, date }),
     onSuccess: () => {
       toast.success('Alternative added')
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })

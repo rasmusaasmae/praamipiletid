@@ -24,7 +24,7 @@ function toIsoDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-type RouteParams = Promise<{ bookingUid: string }>
+type RouteParams = Promise<{ ticketId: string }>
 type SearchParams = Promise<Record<string, string | undefined>>
 
 export default async function AddOptionPage({
@@ -36,18 +36,32 @@ export default async function AddOptionPage({
 }) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return null
-  const { bookingUid } = await params
+  const { ticketId: ticketIdRaw } = await params
+  const ticketId = Number(ticketIdRaw)
   const query = await searchParams
+
+  if (!Number.isInteger(ticketId) || ticketId <= 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 py-6">
+          <p className="text-destructive text-sm">Invalid ticket id.</p>
+          <Link href="/" className={buttonVariants({ variant: 'secondary' })}>
+            Back to tickets
+          </Link>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const [ticket] = await db
     .select({
-      bookingUid: tickets.bookingUid,
+      id: tickets.id,
       direction: tickets.direction,
       measurementUnit: tickets.measurementUnit,
       eventDtstart: tickets.eventDtstart,
     })
     .from(tickets)
-    .where(and(eq(tickets.userId, session.user.id), eq(tickets.bookingUid, bookingUid)))
+    .where(and(eq(tickets.userId, session.user.id), eq(tickets.id, ticketId)))
     .limit(1)
 
   if (!ticket) {
@@ -68,7 +82,7 @@ export default async function AddOptionPage({
   const existingOptions = await db
     .select({ eventUid: ticketOptions.eventUid, eventDate: ticketOptions.eventDate })
     .from(ticketOptions)
-    .where(eq(ticketOptions.bookingUid, ticket.bookingUid))
+    .where(eq(ticketOptions.ticketId, ticket.id))
     .orderBy(asc(ticketOptions.priority))
   const takenUids = new Set(existingOptions.map((o) => o.eventUid))
 
@@ -96,7 +110,7 @@ export default async function AddOptionPage({
         </p>
       </div>
 
-      <OptionsDateFilter bookingUid={ticket.bookingUid} currentDate={date} />
+      <OptionsDateFilter ticketId={ticket.id} currentDate={date} />
 
       {error ? (
         <Card>
@@ -114,7 +128,7 @@ export default async function AddOptionPage({
             <EventCard
               key={event.uid}
               event={event}
-              bookingUid={ticket.bookingUid}
+              ticketId={ticket.id}
               date={date}
               measurementUnit={ticket.measurementUnit}
               alreadyAdded={takenUids.has(event.uid)}

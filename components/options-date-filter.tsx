@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 type Props = {
-  bookingUid: string
+  ticketId: number
   currentDate: string
 }
 
-export function OptionsDateFilter({ bookingUid, currentDate }: Props) {
+export function OptionsDateFilter({ ticketId, currentDate }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -30,7 +30,7 @@ export function OptionsDateFilter({ bookingUid, currentDate }: Props) {
             const date = e.target.value
             if (!date) return
             const qs = new URLSearchParams({ date })
-            startTransition(() => router.push(`/tickets/${bookingUid}/options?${qs.toString()}`))
+            startTransition(() => router.push(`/tickets/${ticketId}/options?${qs.toString()}`))
           }}
         />
       </div>

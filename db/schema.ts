@@ -1,32 +1,24 @@
-import {
-  boolean,
-  foreignKey,
-  index,
-  integer,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uniqueIndex,
-} from 'drizzle-orm/pg-core'
+import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 import { user } from './auth-schema'
 
 export * from './auth-schema'
 
-// Cache of the user's praamid.ee tickets that they have opted into
-// monitoring. PK is (userId, bookingUid): bookingUid is praamid's stable
-// booking handle and survives a swap (the ticket inside the booking
-// changes, the booking stays). Options FK against this composite, so they
-// stay attached to the same row across an in-place ticket swap.
+// Mirror of praamid.ee tickets the user currently holds. Identity is
+// praamid's ticketId (`id`) — every swap mints a fresh ticket with a new
+// id, linked to its predecessor via parentTicketId. The mirror is rebuilt
+// each sync; rows that vanish from praamid's response are deleted.
+// ticket_options follow swaps via parentTicketId-rewire in the sync.
 export const tickets = pgTable(
   'tickets',
   {
+    id: integer('id').primaryKey(),
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     bookingUid: text('booking_uid').notNull(),
-    ticketId: integer('ticket_id').notNull(),
+    bookingReferenceNumber: text('booking_reference_number').notNull(),
+    sequenceNumber: integer('sequence_number').notNull(),
     ticketCode: text('ticket_code').notNull(),
     ticketNumber: text('ticket_number').notNull(),
     direction: text('direction').notNull(),
@@ -34,6 +26,7 @@ export const tickets = pgTable(
     eventUid: text('event_uid').notNull(),
     eventDtstart: timestamp('event_dtstart', { withTimezone: true, mode: 'date' }).notNull(),
     ticketDate: text('ticket_date').notNull(),
+    parentTicketId: integer('parent_ticket_id'),
     swapInProgress: boolean('swap_in_progress').default(false).notNull(),
     capturedAt: timestamp('captured_at', { withTimezone: true, mode: 'date' }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
@@ -42,9 +35,9 @@ export const tickets = pgTable(
       .notNull(),
   },
   (table) => [
-    primaryKey({ name: 'tickets_pk', columns: [table.userId, table.bookingUid] }),
     index('tickets_user_id_idx').on(table.userId),
-    index('tickets_event_uid_idx').on(table.eventUid),
+    index('tickets_booking_uid_idx').on(table.bookingUid),
+    index('tickets_parent_ticket_id_idx').on(table.parentTicketId),
   ],
 )
 
@@ -52,10 +45,9 @@ export const ticketOptions = pgTable(
   'ticket_options',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id')
+    ticketId: integer('ticket_id')
       .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    bookingUid: text('booking_uid').notNull(),
+      .references(() => tickets.id, { onDelete: 'cascade' }),
     priority: integer('priority').notNull(),
     eventUid: text('event_uid').notNull(),
     eventDate: text('event_date').notNull(),
@@ -68,15 +60,9 @@ export const ticketOptions = pgTable(
       .notNull(),
   },
   (table) => [
-    foreignKey({
-      name: 'ticket_options_ticket_fk',
-      columns: [table.userId, table.bookingUid],
-      foreignColumns: [tickets.userId, tickets.bookingUid],
-    }).onDelete('cascade'),
-    uniqueIndex('ticket_options_event_unique').on(table.bookingUid, table.eventUid),
-    uniqueIndex('ticket_options_priority_unique').on(table.bookingUid, table.priority),
+    uniqueIndex('ticket_options_event_unique').on(table.ticketId, table.eventUid),
+    uniqueIndex('ticket_options_priority_unique').on(table.ticketId, table.priority),
     index('ticket_options_dtstart_idx').on(table.eventDtstart),
-    index('ticket_options_user_id_idx').on(table.userId),
   ],
 )
 
