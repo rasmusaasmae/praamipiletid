@@ -98,6 +98,18 @@ async function tick() {
     for (const row of batch) {
       const event = batchEventByUid.get(row.eventUid)
       if (!event) continue
+
+      // Refresh cached dtstart if praamid rescheduled the trip in place.
+      // The eventUid stays; dtstart drifts. Cheap to update opportunistically
+      // since we already have the event in hand.
+      const liveDtstart = Date.parse(event.dtstart)
+      if (!Number.isNaN(liveDtstart) && liveDtstart !== row.eventDtstart.getTime()) {
+        await db
+          .update(ticketOptions)
+          .set({ eventDtstart: new Date(liveDtstart) })
+          .where(eq(ticketOptions.id, row.optionId))
+      }
+
       if (row.eventUid === row.currentTicketEventUid) continue
       const capacity = event.capacities?.[row.measurementUnit] ?? 0
       if (capacity < 1) continue
