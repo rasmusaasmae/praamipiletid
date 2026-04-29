@@ -12,7 +12,7 @@ import { syncTicketsForUser } from '@/lib/sync-tickets'
 
 const log = logger.child({ scope: 'poller' })
 
-const POLL_INTERVAL_MS = Math.max(1000, Number(process.env.POLL_INTERVAL_MS ?? 15_000))
+const POLL_INTERVAL_MS = Math.max(1000, Number(process.env.POLL_INTERVAL_MS ?? 10_000))
 const MIRROR_SYNC_INTERVAL_MS = 10 * 60 * 1000
 // Praamid's events endpoint accepts a time-shift in seconds that biases
 // the schedule window we get back. 300s (5min) is the value the official
