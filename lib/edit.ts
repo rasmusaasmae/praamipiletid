@@ -164,6 +164,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   ): SwapOutcome => ({ kind: 'failed', stage, reason })
 
   const bookingUid = ticket.bookingUid
+  const t0 = Date.now()
   let booking
   try {
     booking = await getBooking(credential.token, bookingUid)
@@ -180,6 +181,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
       err instanceof Error ? err.message : String(err),
     )
   }
+  const tGetBooking = Date.now()
 
   const oldTicket = booking.tickets.find((t) => t.ticketCode === ticket.ticketCode)
   if (!oldTicket) {
@@ -201,6 +203,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     const status = err instanceof PraamidAuthError ? err.status : undefined
     return fail('put', 'put_failed', status, err instanceof Error ? err.message : String(err))
   }
+  const tEdit = Date.now()
 
   let balance
   try {
@@ -213,6 +216,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     await tryRollback(credential.token, ticket.ticketCode, oldTicket)
     return { kind: 'rolled_back', reason: `unpaid_${balance.unpaidAmount}` }
   }
+  const tBalance = Date.now()
 
   let commitResult
   try {
@@ -221,6 +225,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     await tryRollback(credential.token, ticket.ticketCode, oldTicket)
     return { kind: 'rolled_back', reason: 'commit_failed' }
   }
+  const tCommit = Date.now()
 
   let updated
   try {
@@ -233,6 +238,7 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
       err instanceof Error ? err.message : String(err),
     )
   }
+  const tGetBookingPost = Date.now()
 
   const newTicket = updated.tickets.find(
     (t) => t.parentTicketId === oldTicket.id && t.status.code === 'ACTIVE',
@@ -243,8 +249,23 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   // ticket_options migrate via parentTicketId-rewire, the just-used option
   // (and anything worse) gets pruned, the old ticket id is dropped.
   await syncTicketsForUser(userId)
+  const tSync = Date.now()
 
   lastAttemptAt.delete(ticketId)
+
+  log.info(
+    {
+      ticketId,
+      getBookingMs: tGetBooking - t0,
+      editMs: tEdit - tGetBooking,
+      balanceMs: tBalance - tEdit,
+      commitMs: tCommit - tBalance,
+      getBookingPostMs: tGetBookingPost - tCommit,
+      syncMs: tSync - tGetBookingPost,
+      totalMs: tSync - t0,
+    },
+    'swap timings',
+  )
 
   return {
     kind: 'succeeded',
