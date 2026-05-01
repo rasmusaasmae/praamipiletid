@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { praamidCredentials } from '@/db/schema'
-import { setAuthState, settleAuthState } from '@/lib/praamid/auth-state'
 
 const IV_BYTES = 12
 const TAG_BYTES = 16
@@ -52,7 +51,7 @@ type JwtPayload = {
   [key: string]: unknown
 }
 
-function decodeJwt(token: string): JwtPayload {
+export function decodeJwt(token: string): JwtPayload {
   const parts = token.split('.')
   if (parts.length !== 3) {
     throw new Error('Not a JWT (expected 3 segments)')
@@ -63,14 +62,14 @@ function decodeJwt(token: string): JwtPayload {
   return JSON.parse(json) as JwtPayload
 }
 
-export type SaveCredentialResult = {
-  expiresAt: Date
-  praamidSub: string
-}
-
 export type CapturedTokens = {
   accessToken: string
   refreshToken: string
+}
+
+export type SaveCredentialResult = {
+  expiresAt: Date
+  praamidSub: string
 }
 
 export async function saveCredential(
@@ -83,8 +82,7 @@ export async function saveCredential(
   if (!refreshClaims.exp) throw new Error('refresh token missing exp claim')
 
   // The refresh_token is the long-lived credential (~7 days). The
-  // access_token is ephemeral (~5 min) and is re-minted on demand via
-  // getFreshAccessToken.
+  // access_token is ephemeral (~5 min) and is re-minted on demand.
   const expiresAt = new Date(refreshClaims.exp * 1000)
   if (expiresAt.getTime() <= Date.now()) {
     throw new Error('refresh token already expired')
@@ -118,46 +116,16 @@ export async function saveCredential(
       },
     })
 
-  await setAuthState(userId, { status: 'authenticated' })
-
   return { expiresAt, praamidSub: accessClaims.sub }
 }
 
-export type ActiveCredential = {
-  token: string
+export type StoredRefreshToken = {
+  refreshToken: string
   expiresAt: Date
   praamidSub: string
 }
 
-const TOKEN_ENDPOINT =
-  'https://auth.praamid.ee/auth/realms/praamid-online/protocol/openid-connect/token'
-const CLIENT_ID = 'praamid-portal'
-
-type TokenResponse = {
-  access_token: string
-  refresh_token?: string
-  expires_in?: number
-}
-
-async function exchangeRefreshToken(refreshToken: string): Promise<TokenResponse> {
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    client_id: CLIENT_ID,
-    refresh_token: refreshToken,
-  })
-  const res = await fetch(TOKEN_ENDPOINT, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  })
-  if (!res.ok) {
-    const snippet = (await res.text().catch(() => '')).slice(0, 200)
-    throw new Error(`refresh failed ${res.status}: ${snippet}`)
-  }
-  return (await res.json()) as TokenResponse
-}
-
-export async function getCredential(userId: string): Promise<ActiveCredential | null> {
+export async function getStoredRefreshToken(userId: string): Promise<StoredRefreshToken | null> {
   const [row] = await db
     .select({
       refreshTokenEnc: praamidCredentials.refreshTokenEnc,
@@ -168,29 +136,21 @@ export async function getCredential(userId: string): Promise<ActiveCredential | 
     .where(eq(praamidCredentials.userId, userId))
     .limit(1)
   if (!row) return null
-
-  const refreshToken = decryptToken(row.refreshTokenEnc)
-  const tokens = await exchangeRefreshToken(refreshToken)
-
-  // Keycloak rotates refresh tokens when the feature is enabled — the new
-  // one arrives in the response. Persist it so the next call uses the
-  // rotated value. If rotation is off, refresh_token is omitted and we
-  // keep the stored one.
-  if (tokens.refresh_token && tokens.refresh_token !== refreshToken) {
-    await db
-      .update(praamidCredentials)
-      .set({ refreshTokenEnc: encryptToken(tokens.refresh_token) })
-      .where(eq(praamidCredentials.userId, userId))
-  }
-
   return {
-    token: tokens.access_token,
+    refreshToken: decryptToken(row.refreshTokenEnc),
     expiresAt: row.expiresAt,
     praamidSub: row.praamidSub,
   }
 }
 
-export type CredentialStatus = {
+export async function rotateRefreshToken(userId: string, newRefreshToken: string): Promise<void> {
+  await db
+    .update(praamidCredentials)
+    .set({ refreshTokenEnc: encryptToken(newRefreshToken) })
+    .where(eq(praamidCredentials.userId, userId))
+}
+
+export type CredentialMeta = {
   praamidSub: string
   expiresAt: Date
   capturedAt: Date
@@ -198,7 +158,7 @@ export type CredentialStatus = {
   lastError: string | null
 }
 
-export async function getCredentialStatus(userId: string): Promise<CredentialStatus | null> {
+export async function getCredentialMeta(userId: string): Promise<CredentialMeta | null> {
   const [row] = await db
     .select({
       praamidSub: praamidCredentials.praamidSub,
@@ -220,17 +180,27 @@ export async function markVerified(userId: string): Promise<void> {
     .where(eq(praamidCredentials.userId, userId))
 }
 
-export async function invalidateCredential(userId: string, reason: string): Promise<void> {
+export async function markCredentialError(userId: string, reason: string): Promise<void> {
   await db
     .update(praamidCredentials)
     .set({ lastError: reason })
     .where(eq(praamidCredentials.userId, userId))
-  // The refresh token might still be valid — only the last API call failed.
-  // Keep the live status based on credential presence and surface the error.
-  await settleAuthState(userId, { lastError: reason })
 }
 
-export async function forgetCredential(userId: string): Promise<void> {
+export async function deleteCredential(userId: string): Promise<void> {
   await db.delete(praamidCredentials).where(eq(praamidCredentials.userId, userId))
-  await setAuthState(userId, { status: 'unauthenticated' })
+}
+
+export async function hasCredential(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ userId: praamidCredentials.userId })
+    .from(praamidCredentials)
+    .where(eq(praamidCredentials.userId, userId))
+    .limit(1)
+  return Boolean(row)
+}
+
+export async function listCredentialedUserIds(): Promise<string[]> {
+  const rows = await db.select({ userId: praamidCredentials.userId }).from(praamidCredentials)
+  return rows.map((r) => r.userId)
 }

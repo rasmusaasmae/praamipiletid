@@ -5,14 +5,12 @@ import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { logger } from '@/lib/logger'
 import {
-  commitZeroSum,
-  editTicket,
-  getBooking,
-  getBookingBalance,
   PraamidAuthError,
-} from '@/lib/praamid/api'
-import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
-import type { PraamidEvent, Ticket as PraamidTicket } from '@/lib/praamid/types'
+  praamidee,
+  type PraamidEvent,
+  type Ticket as PraamidTicket,
+  type UserScope,
+} from '@/lib/praamidee'
 import { syncTicketsForUser } from '@/lib/sync-tickets'
 
 const log = logger.child({ scope: 'edit' })
@@ -93,9 +91,10 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
     .limit(1)
   if (!ticket) return { kind: 'gate_blocked', reason: 'ticket_missing' }
 
-  const credential = await getCredential(userId)
-  if (!credential) return { kind: 'gate_blocked', reason: 'no_credential' }
-  if (credential.expiresAt.getTime() < Date.now() + CREDENTIAL_BUFFER_MS) {
+  const u = praamidee.user(userId)
+  const info = await u.auth.get()
+  if (info.status !== 'authenticated') return { kind: 'gate_blocked', reason: 'no_credential' }
+  if (!info.expiresAt || info.expiresAt.getTime() < Date.now() + CREDENTIAL_BUFFER_MS) {
     return { kind: 'gate_blocked', reason: 'credential_expiring' }
   }
 
@@ -167,11 +166,9 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   const t0 = Date.now()
   let booking
   try {
-    booking = await getBooking(credential.token, bookingUid)
-    await markVerified(userId)
+    booking = await u.booking.get(bookingUid)
   } catch (err) {
     if (err instanceof PraamidAuthError && (err.status === 401 || err.status === 403)) {
-      await invalidateCredential(userId, `getBooking ${err.status}`)
       return fail('auth', 'auth_failed', err.status, err.message)
     }
     return fail(
@@ -194,10 +191,9 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
   const patchedBody = patchTicketEvent(oldTicket, targetEvent)
 
   try {
-    await editTicket(credential.token, ticket.ticketCode, patchedBody)
+    await u.ticket.edit(ticket.ticketCode, patchedBody)
   } catch (err) {
     if (err instanceof PraamidAuthError && (err.status === 401 || err.status === 403)) {
-      await invalidateCredential(userId, `editTicket ${err.status}`)
       return fail('auth', 'auth_failed', err.status, err.message)
     }
     const status = err instanceof PraamidAuthError ? err.status : undefined
@@ -207,29 +203,29 @@ async function runSwap(input: SwapInput): Promise<SwapOutcome> {
 
   let balance
   try {
-    balance = await getBookingBalance(credential.token, bookingUid)
+    balance = await u.booking.balance(bookingUid)
   } catch {
-    await tryRollback(credential.token, ticket.ticketCode, oldTicket)
+    await tryRollback(u, ticket.ticketCode, oldTicket)
     return { kind: 'rolled_back', reason: 'balance_failed' }
   }
   if (balance.unpaidAmount > 0) {
-    await tryRollback(credential.token, ticket.ticketCode, oldTicket)
+    await tryRollback(u, ticket.ticketCode, oldTicket)
     return { kind: 'rolled_back', reason: `unpaid_${balance.unpaidAmount}` }
   }
   const tBalance = Date.now()
 
   let commitResult
   try {
-    commitResult = await commitZeroSum(credential.token, bookingUid)
+    commitResult = await u.booking.commitZeroSum(bookingUid)
   } catch {
-    await tryRollback(credential.token, ticket.ticketCode, oldTicket)
+    await tryRollback(u, ticket.ticketCode, oldTicket)
     return { kind: 'rolled_back', reason: 'commit_failed' }
   }
   const tCommit = Date.now()
 
   let updated
   try {
-    updated = await getBooking(credential.token, bookingUid)
+    updated = await u.booking.get(bookingUid)
   } catch (err) {
     return fail(
       'internal',
@@ -304,12 +300,12 @@ function patchTicketEvent(oldTicket: PraamidTicket, newEvent: PraamidEvent): Pra
 }
 
 async function tryRollback(
-  token: string,
+  u: UserScope,
   ticketCode: string,
   originalTicket: PraamidTicket,
 ): Promise<void> {
   try {
-    await editTicket(token, ticketCode, originalTicket)
+    await u.ticket.edit(ticketCode, originalTicket)
   } catch {
     // Best-effort. Praamid's 15-min draft TTL reverts server-side.
   }

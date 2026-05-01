@@ -2,12 +2,11 @@ import 'server-only'
 import { eq, gt } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { praamidCredentials, ticketOptions, tickets } from '@/db/schema'
+import { ticketOptions, tickets } from '@/db/schema'
 import { processSwapFor } from '@/lib/edit'
 import { sendEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
-import { listEvents } from '@/lib/praamid/api'
-import type { PraamidEvent } from '@/lib/praamid/types'
+import { praamidee, type PraamidEvent } from '@/lib/praamidee'
 import { syncTicketsForUser } from '@/lib/sync-tickets'
 
 const log = logger.child({ scope: 'poller' })
@@ -42,11 +41,11 @@ async function loadBatchEvents(
   timeShift: number,
 ): Promise<PraamidEvent[] | null> {
   try {
-    return await listEvents(dir, date, timeShift)
+    return await praamidee.event.list(dir, date, timeShift)
   } catch (err) {
     log.error(
       { dir, date, err: err instanceof Error ? err.message : String(err) },
-      'listEvents failed',
+      'event.list failed',
     )
     return null
   }
@@ -168,9 +167,9 @@ async function mirrorSyncTick() {
   if (Date.now() - lastMirrorSyncAt < MIRROR_SYNC_INTERVAL_MS) return
   lastMirrorSyncAt = Date.now()
 
-  const userIds = await db.select({ userId: praamidCredentials.userId }).from(praamidCredentials)
+  const userIds = await praamidee.listAuthedUserIds()
 
-  for (const { userId } of userIds) {
+  for (const userId of userIds) {
     try {
       await syncTicketsForUser(userId)
     } catch (err) {

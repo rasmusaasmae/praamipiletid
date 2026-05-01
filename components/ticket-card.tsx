@@ -20,8 +20,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/labels'
 import { useOptimisticMutation } from '@/lib/mutations'
-import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid/labels'
 import type { TicketWithOptions } from '@/lib/queries'
 
 const DATE_TAG = 'en-GB'

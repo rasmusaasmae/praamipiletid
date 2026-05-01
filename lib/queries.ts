@@ -4,15 +4,9 @@ import { asc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
 import { db } from '@/db'
-import {
-  praamidAuthState,
-  ticketOptions,
-  tickets,
-  type PraamidAuthStatus,
-  type Ticket,
-  type TicketOption,
-} from '@/db/schema'
+import { ticketOptions, tickets, type Ticket, type TicketOption } from '@/db/schema'
 import { auth } from '@/lib/auth'
+import { praamidee, type PraamidAuthStatus } from '@/lib/praamidee'
 
 export type TicketWithOptions = {
   ticket: Ticket
@@ -54,13 +48,6 @@ export async function getTicketsWithOptions(): Promise<TicketWithOptions[]> {
 
 export async function getMyPraamidAuthState(): Promise<PraamidAuthStateView> {
   const session = await requireSession()
-  const [row] = await db
-    .select({ status: praamidAuthState.status, lastError: praamidAuthState.lastError })
-    .from(praamidAuthState)
-    .where(eq(praamidAuthState.userId, session.user.id))
-    .limit(1)
-  return {
-    status: (row?.status as PraamidAuthStatus | undefined) ?? 'unauthenticated',
-    lastError: row?.lastError ?? null,
-  }
+  const info = await praamidee.user(session.user.id).auth.get()
+  return { status: info.status, lastError: info.lastError }
 }

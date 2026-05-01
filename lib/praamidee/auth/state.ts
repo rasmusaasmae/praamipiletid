@@ -2,16 +2,17 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/db'
-import { praamidAuthState, praamidCredentials, type PraamidAuthStatus } from '@/db/schema'
+import { praamidAuthState } from '@/db/schema'
+
+import type { PraamidAuthStatus } from '../types'
+import { hasCredential } from './credentials'
 
 export type AuthStatePatch = {
   status: PraamidAuthStatus
   lastError?: string | null
 }
 
-// Upsert the observable login state for a user. Read side goes through
-// `getMyPraamidAuthState()` in lib/queries; callers here just describe the
-// next state and we persist it.
+// Upsert the observable login state for a user.
 export async function setAuthState(userId: string, patch: AuthStatePatch): Promise<void> {
   const lastError = patch.lastError ?? null
   const now = new Date()
@@ -44,13 +45,25 @@ export async function settleAuthState(
   opts: { lastError?: string | null; forceUnauth?: boolean } = {},
 ): Promise<void> {
   let status: PraamidAuthStatus = 'unauthenticated'
-  if (!opts.forceUnauth) {
-    const [row] = await db
-      .select({ userId: praamidCredentials.userId })
-      .from(praamidCredentials)
-      .where(eq(praamidCredentials.userId, userId))
-      .limit(1)
-    if (row) status = 'authenticated'
+  if (!opts.forceUnauth && (await hasCredential(userId))) {
+    status = 'authenticated'
   }
   await setAuthState(userId, { status, lastError: opts.lastError ?? null })
+}
+
+export type AuthStateRow = {
+  status: PraamidAuthStatus
+  lastError: string | null
+}
+
+export async function getAuthState(userId: string): Promise<AuthStateRow> {
+  const [row] = await db
+    .select({ status: praamidAuthState.status, lastError: praamidAuthState.lastError })
+    .from(praamidAuthState)
+    .where(eq(praamidAuthState.userId, userId))
+    .limit(1)
+  return {
+    status: (row?.status as PraamidAuthStatus | undefined) ?? 'unauthenticated',
+    lastError: row?.lastError ?? null,
+  }
 }

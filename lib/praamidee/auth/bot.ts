@@ -2,10 +2,12 @@ import 'server-only'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 
 import { logger } from '@/lib/logger'
-import { setAuthState, settleAuthState } from '@/lib/praamid/auth-state'
-import { saveCredential } from '@/lib/praamid/credentials'
 
-const log = logger.child({ scope: 'praamid-login' })
+import { saveCredential } from './credentials'
+import { setAuthState, settleAuthState } from './state'
+import { invalidateCachedToken } from './tokens'
+
+const log = logger.child({ scope: 'praamidee-bot' })
 
 const ENTRY_URL = 'https://www.praamid.ee/portal/integration/wp?action=login&redirectPath=/'
 
@@ -47,7 +49,7 @@ async function cleanupSession(userId: string): Promise<void> {
   }
 }
 
-export async function cancelLogin(userId: string): Promise<void> {
+export async function cancelLoginBot(userId: string): Promise<void> {
   const s = sessions.get(userId)
   if (!s) return
   s.cancelled = true
@@ -55,13 +57,13 @@ export async function cancelLogin(userId: string): Promise<void> {
   await settleAuthState(userId)
 }
 
-export async function startLogin(userId: string, isikukood: string): Promise<void> {
+export async function startLoginBot(userId: string, isikukood: string): Promise<void> {
   if (!/^\d{11}$/.test(isikukood)) {
     throw new Error('invalid_isikukood')
   }
 
   // Any previous in-flight session for this user is discarded.
-  await cancelLogin(userId)
+  await cancelLoginBot(userId)
   await setAuthState(userId, { status: 'loading' })
 
   const browser = await getBrowser()
@@ -141,6 +143,8 @@ async function driveLogin(session: Session, isikukood: string): Promise<void> {
   if (session.cancelled) return
 
   await saveCredential(session.userId, tokens)
+  invalidateCachedToken(session.userId)
+  await setAuthState(session.userId, { status: 'authenticated' })
   await cleanupSession(session.userId)
 }
 

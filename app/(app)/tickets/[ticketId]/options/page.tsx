@@ -9,8 +9,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { auth } from '@/lib/auth'
-import { listEvents } from '@/lib/praamid/api'
-import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/praamid/labels'
+import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/labels'
+import { praamidee } from '@/lib/praamidee'
 
 const DIRECTION_CODES = ['VK', 'KV', 'RH', 'HR'] as const
 type DirectionCode = (typeof DIRECTION_CODES)[number]
@@ -89,10 +89,10 @@ export default async function AddOptionPage({
   const fallbackDate = existingOptions[0]?.eventDate ?? toIsoDate(ticket.eventDtstart) ?? todayIso()
   const date = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : fallbackDate
 
-  let events: Awaited<ReturnType<typeof listEvents>> = []
+  let events: Awaited<ReturnType<typeof praamidee.event.list>> = []
   let error: string | null = null
   try {
-    events = await listEvents(direction, date)
+    events = await praamidee.event.list(direction, date)
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to load ferry schedule'
   }

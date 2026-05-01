@@ -7,8 +7,8 @@ import { addOption } from '@/actions/tickets'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { CAPACITY_LABELS, SHIP_NAMES } from '@/lib/praamid/labels'
-import type { PraamidEvent } from '@/lib/praamid/types'
+import { CAPACITY_LABELS, SHIP_NAMES } from '@/lib/labels'
+import type { PraamidEvent } from '@/lib/praamidee'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 

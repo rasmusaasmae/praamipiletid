@@ -102,22 +102,7 @@ export const praamidAuthState = pgTable('praamid_auth_state', {
     .notNull(),
 })
 
-export type PraamidCredential = typeof praamidCredentials.$inferSelect
-export type NewPraamidCredential = typeof praamidCredentials.$inferInsert
 export type Ticket = typeof tickets.$inferSelect
 export type NewTicket = typeof tickets.$inferInsert
 export type TicketOption = typeof ticketOptions.$inferSelect
 export type NewTicketOption = typeof ticketOptions.$inferInsert
-export type PraamidAuthState = typeof praamidAuthState.$inferSelect
-export type NewPraamidAuthState = typeof praamidAuthState.$inferInsert
-
-// Flow state the user observes via RSC refresh. last_error rides alongside
-// any status when the previous flow ended with an error — there is no
-// separate error state, just unauthenticated/authenticated with a message.
-export const PRAAMID_AUTH_STATUSES = [
-  'unauthenticated',
-  'loading',
-  'awaiting_confirmation',
-  'authenticated',
-] as const
-export type PraamidAuthStatus = (typeof PRAAMID_AUTH_STATUSES)[number]

@@ -4,9 +4,7 @@ import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { logger } from '@/lib/logger'
-import { listTickets, PraamidAuthError } from '@/lib/praamid/api'
-import { getCredential, invalidateCredential, markVerified } from '@/lib/praamid/credentials'
-import type { Ticket as PraamidTicket } from '@/lib/praamid/types'
+import { praamidee, type Ticket as PraamidTicket } from '@/lib/praamidee'
 
 const log = logger.child({ scope: 'sync-tickets' })
 
@@ -21,21 +19,18 @@ export async function maybeSyncTickets(userId: string, opts: { maxAgeMs: number 
 }
 
 export async function syncTicketsForUser(userId: string): Promise<void> {
-  const credential = await getCredential(userId).catch(() => null)
-  if (!credential) return
-  if (credential.expiresAt.getTime() <= Date.now()) return
+  const u = praamidee.user(userId)
+  const info = await u.auth.get()
+  if (info.status !== 'authenticated') return
+  if (info.expiresAt && info.expiresAt.getTime() <= Date.now()) return
 
   let raw: PraamidTicket[]
   try {
-    raw = await listTickets(credential.token)
-    await markVerified(userId)
+    raw = await u.ticket.list()
   } catch (err) {
-    if (err instanceof PraamidAuthError && (err.status === 401 || err.status === 403)) {
-      await invalidateCredential(userId, `listTickets ${err.status}`)
-    }
     log.debug(
       { userId, err: err instanceof Error ? err.message : String(err) },
-      'listTickets failed',
+      'ticket.list failed',
     )
     return
   }

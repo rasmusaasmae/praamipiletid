@@ -11,9 +11,7 @@ import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
 import { auth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
-import { listEvents } from '@/lib/praamid/api'
-import { forgetCredential } from '@/lib/praamid/credentials'
-import { cancelLogin, startLogin } from '@/lib/praamid/login'
+import { praamidee } from '@/lib/praamidee'
 import { syncTicketsForUser } from '@/lib/sync-tickets'
 
 const log = logger.child({ scope: 'actions/tickets' })
@@ -60,7 +58,7 @@ export async function addOption(dto: z.input<typeof optionAddSchema>): Promise<v
     throw new Error('That alternative matches the current ticket')
   }
 
-  const events = await listEvents(ticket.direction, parsed.data.date)
+  const events = await praamidee.event.list(ticket.direction, parsed.data.date)
   const event = events.find((e) => e.uid === parsed.data.eventUid)
   if (!event) throw new Error('Event not found')
 
@@ -258,7 +256,7 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
 export async function forgetPraamidCredential(): Promise<void> {
   const session = await requireSession()
   try {
-    await forgetCredential(session.user.id)
+    await praamidee.user(session.user.id).auth.forget()
     revalidatePath('/')
   } catch {
     throw new Error('Invalid data')
@@ -273,10 +271,10 @@ export async function startPraamidLogin(dto: z.input<typeof StartPraamidLoginDto
   const session = await requireSession()
   const parsed = StartPraamidLoginDto.safeParse(dto)
   if (!parsed.success) throw new Error('invalid_isikukood')
-  await startLogin(session.user.id, parsed.data.isikukood)
+  await praamidee.user(session.user.id).auth.startLogin(parsed.data.isikukood)
 }
 
 export async function cancelPraamidLogin(): Promise<void> {
   const session = await requireSession()
-  await cancelLogin(session.user.id)
+  await praamidee.user(session.user.id).auth.cancelLogin()
 }

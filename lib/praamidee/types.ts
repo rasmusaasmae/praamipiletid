@@ -191,17 +191,7 @@ export type BookingExpiration = {
   expiresIn: number
 }
 
-export type Userinfo = {
-  sub: string
-  email_verified?: boolean
-  preferred_username?: string
-  given_name?: string
-  family_name?: string
-  email?: string
-  [key: string]: unknown
-}
-
-// Patched ticket body for editTicket — caller starts from a Ticket and
+// Patched ticket body for ticket.edit — caller starts from a Ticket and
 // swaps event fields (uid, dtstart, dtend, ship, pricelist,
 // transportationType, capacities, status, highPrice). The runtime object
 // carries extra upstream fields (services, qrcode, vehicleDimensions, …)
@@ -209,3 +199,22 @@ export type Userinfo = {
 export type EditTicketBody = Ticket
 
 export type CommitZeroSumResult = { invoiceNumber: string }
+
+// Auth surface -------------------------------------------------------------
+
+export const PRAAMID_AUTH_STATUSES = [
+  'unauthenticated',
+  'loading',
+  'awaiting_confirmation',
+  'authenticated',
+] as const
+export type PraamidAuthStatus = (typeof PRAAMID_AUTH_STATUSES)[number]
+
+export type AuthInfo = {
+  status: PraamidAuthStatus
+  lastError: string | null
+  praamidSub: string | null
+  capturedAt: Date | null
+  expiresAt: Date | null
+  lastVerifiedAt: Date | null
+}
