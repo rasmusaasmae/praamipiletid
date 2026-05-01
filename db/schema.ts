@@ -103,6 +103,4 @@ export const praamidAuthState = pgTable('praamid_auth_state', {
 })
 
 export type Ticket = typeof tickets.$inferSelect
-export type NewTicket = typeof tickets.$inferInsert
 export type TicketOption = typeof ticketOptions.$inferSelect
-export type NewTicketOption = typeof ticketOptions.$inferInsert
