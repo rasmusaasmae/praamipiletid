@@ -8,7 +8,11 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { cancelPraamidLogin, forgetPraamidCredential, startPraamidLogin } from '@/actions/tickets'
+import {
+  cancelPraamidLogin,
+  forgetPraamidCredential,
+  startPraamidLogin,
+} from '@/actions/praamid-auth'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

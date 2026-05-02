@@ -3,11 +3,12 @@ import { eq, gt } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
-import { processSwapFor } from '@/lib/edit'
 import { sendEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
 import { praamidee, type PraamidEvent } from '@/lib/praamidee'
-import { syncTicketsForUser } from '@/lib/sync-tickets'
+
+import { processAutoSwap } from './engine'
+import { syncTicketsForUser } from './sync'
 
 const log = logger.child({ scope: 'poller' })
 
@@ -126,7 +127,7 @@ async function tick() {
 
     log.info({ ticketId, userId }, 'swap started')
     try {
-      const outcome = await processSwapFor({
+      const outcome = await processAutoSwap({
         userId,
         ticketId,
         openedEventUids,
@@ -155,7 +156,7 @@ async function tick() {
           ticketId,
           err: err instanceof Error ? err.message : String(err),
         },
-        'processSwapFor threw',
+        'processAutoSwap threw',
       )
     } finally {
       log.info({ ticketId, userId }, 'swap finished')

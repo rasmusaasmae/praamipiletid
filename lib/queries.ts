@@ -1,11 +1,10 @@
 'use server'
 
 import { asc, eq } from 'drizzle-orm'
-import { headers } from 'next/headers'
 
 import { db } from '@/db'
 import { ticketOptions, tickets, type Ticket, type TicketOption } from '@/db/schema'
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth'
 import { praamidee, type PraamidAuthStatus } from '@/lib/praamidee'
 
 export type TicketWithOptions = {
@@ -16,12 +15,6 @@ export type TicketWithOptions = {
 export type PraamidAuthStateView = {
   status: PraamidAuthStatus
   lastError: string | null
-}
-
-async function requireSession() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) throw new Error('unauthenticated')
-  return session
 }
 
 export async function getTicketsWithOptions(): Promise<TicketWithOptions[]> {

@@ -4,31 +4,17 @@ import { randomUUID } from 'node:crypto'
 
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { headers } from 'next/headers'
 import { z } from 'zod'
 
 import { db } from '@/db'
 import { ticketOptions, tickets } from '@/db/schema'
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import { praamidee } from '@/lib/praamidee'
-import { syncTicketsForUser } from '@/lib/sync-tickets'
 
-const log = logger.child({ scope: 'actions/tickets' })
-
-async function requireSession() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) throw new Error('unauthenticated')
-  return session
-}
+const log = logger.child({ scope: 'actions/options' })
 
 const DEFAULT_STOP_BEFORE_MINUTES = 60
-
-export async function refreshMyTickets(): Promise<void> {
-  const session = await requireSession()
-  await syncTicketsForUser(session.user.id)
-  revalidatePath('/')
-}
 
 const optionAddSchema = z.object({
   ticketId: z.coerce.number().int().positive(),
@@ -249,32 +235,4 @@ export async function moveOption(dto: z.input<typeof optionMoveSchema>): Promise
   )
 
   revalidatePath('/')
-}
-
-// Praamid auth flow actions ------------------------------------------------
-
-export async function forgetPraamidCredential(): Promise<void> {
-  const session = await requireSession()
-  try {
-    await praamidee.user(session.user.id).auth.forget()
-    revalidatePath('/')
-  } catch {
-    throw new Error('Invalid data')
-  }
-}
-
-const StartPraamidLoginDto = z.object({
-  isikukood: z.string().regex(/^\d{11}$/, 'isikukoodInvalid'),
-})
-
-export async function startPraamidLogin(dto: z.input<typeof StartPraamidLoginDto>): Promise<void> {
-  const session = await requireSession()
-  const parsed = StartPraamidLoginDto.safeParse(dto)
-  if (!parsed.success) throw new Error('invalid_isikukood')
-  await praamidee.user(session.user.id).auth.startLogin(parsed.data.isikukood)
-}
-
-export async function cancelPraamidLogin(): Promise<void> {
-  const session = await requireSession()
-  await praamidee.user(session.user.id).auth.cancelLogin()
 }

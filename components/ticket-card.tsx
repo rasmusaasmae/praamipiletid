@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
-import { moveOption, removeOption, updateOption } from '@/actions/tickets'
+import { moveOption, removeOption, updateOption } from '@/actions/options'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'

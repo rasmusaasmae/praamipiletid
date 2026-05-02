@@ -11,9 +11,10 @@ import {
   type Ticket as PraamidTicket,
   type UserScope,
 } from '@/lib/praamidee'
-import { syncTicketsForUser } from '@/lib/sync-tickets'
 
-const log = logger.child({ scope: 'edit' })
+import { syncTicketsForUser } from './sync'
+
+const log = logger.child({ scope: 'auto-swap' })
 
 const CREDENTIAL_BUFFER_MS = 15 * 60 * 1000
 const BOOKING_BACKOFF_MS = 10 * 60 * 1000
@@ -44,9 +45,9 @@ export type SwapInput = {
   eventsByUid: Map<string, PraamidEvent>
 }
 
-export async function processSwapFor(input: SwapInput): Promise<SwapOutcome> {
+export async function processAutoSwap(input: SwapInput): Promise<SwapOutcome> {
   log.debug({ ticketId: input.ticketId }, 'start')
-  const outcome = await runSwap(input)
+  const outcome = await attemptSwap(input)
   if (outcome.kind === 'succeeded') {
     log.info(
       {
@@ -74,7 +75,7 @@ export async function processSwapFor(input: SwapInput): Promise<SwapOutcome> {
   return outcome
 }
 
-async function runSwap(input: SwapInput): Promise<SwapOutcome> {
+async function attemptSwap(input: SwapInput): Promise<SwapOutcome> {
   const { userId, ticketId, openedEventUids, eventsByUid } = input
 
   const [ticket] = await db

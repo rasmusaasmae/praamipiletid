@@ -3,10 +3,10 @@ import { headers } from 'next/headers'
 
 import { Home } from '@/components/home'
 import { auth } from '@/lib/auth'
+import { maybeSyncTickets } from '@/lib/auto-swap'
 import { getQueryClient } from '@/lib/get-query-client'
 import { praamidee } from '@/lib/praamidee'
 import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
-import { maybeSyncTickets } from '@/lib/sync-tickets'
 
 export default async function HomePage() {
   const session = await auth.api.getSession({ headers: await headers() })
