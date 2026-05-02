@@ -1,20 +1,25 @@
 'use client'
 
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { forgetPraamidCredential } from '@/actions/praamid-auth'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useOptimisticMutation } from '@/lib/mutations'
-import type { PraamidAuthStateView } from '@/lib/queries'
 
 export function ForgetButton() {
-  const forgetMutation = useOptimisticMutation<void, PraamidAuthStateView>({
-    queryKey: ['praamidAuthState'],
+  const queryClient = useQueryClient()
+
+  const forgetMutation = useMutation({
     mutationFn: () => forgetPraamidCredential(),
-    optimisticUpdate: () => ({ status: 'unauthenticated', lastError: null }),
-    successMessage: 'Session deleted',
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['praamidAuthState'] })
+      toast.success('Session deleted')
+    },
+    onError: (err) => toast.error(err.message),
   })
+
   return (
     <Tooltip>
       <TooltipTrigger

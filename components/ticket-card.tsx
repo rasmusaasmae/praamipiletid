@@ -1,7 +1,9 @@
 'use client'
 
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 import { moveOption, removeOption, updateOption } from '@/actions/options'
 import { CutoffEditor } from '@/components/cutoff-editor'
@@ -10,7 +12,6 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/labels'
-import { useOptimisticMutation } from '@/lib/mutations'
 import type { TicketWithOptions } from '@/lib/queries'
 
 const DATE_TAG = 'en-GB'
@@ -22,64 +23,37 @@ const formatTime = (d: Date) =>
 
 export function TicketCard({ data }: { data: TicketWithOptions }) {
   const ticketId = data.ticket.id
+  const queryClient = useQueryClient()
 
-  const removeOptionMutation = useOptimisticMutation<string, TicketWithOptions[]>({
-    queryKey: ['tickets'],
-    mutationFn: (optionId) => removeOption({ id: optionId }),
-    optimisticUpdate: (old, optionId) =>
-      old.map((c) =>
-        c.ticket.id === ticketId
-          ? { ...c, options: c.options.filter((o) => o.id !== optionId) }
-          : c,
-      ),
-    successMessage: 'Alternative removed',
+  const invalidateTickets = () => queryClient.invalidateQueries({ queryKey: ['tickets'] })
+
+  const removeOptionMutation = useMutation({
+    mutationFn: (optionId: string) => removeOption({ id: optionId }),
+    onSuccess: () => {
+      void invalidateTickets()
+      toast.success('Alternative removed')
+    },
+    onError: (err) => toast.error(err.message),
   })
 
-  const moveOptionMutation = useOptimisticMutation<
-    { optionId: string; direction: 'up' | 'down' },
-    TicketWithOptions[]
-  >({
-    queryKey: ['tickets'],
-    mutationFn: ({ optionId, direction }) => moveOption({ id: optionId, direction }),
-    optimisticUpdate: (old, { optionId, direction }) =>
-      old.map((c) => {
-        if (c.ticket.id !== ticketId) return c
-        const byPriority = [...c.options].sort((a, b) => a.priority - b.priority)
-        const idx = byPriority.findIndex((o) => o.id === optionId)
-        if (idx === -1) return c
-        const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-        if (swapIdx < 0 || swapIdx >= byPriority.length) return c
-        const a = byPriority[idx]!
-        const b = byPriority[swapIdx]!
-        return {
-          ...c,
-          options: c.options.map((o) => {
-            if (o.id === a.id) return { ...o, priority: b.priority }
-            if (o.id === b.id) return { ...o, priority: a.priority }
-            return o
-          }),
-        }
-      }),
-    successMessage: 'Moved',
+  const moveOptionMutation = useMutation({
+    mutationFn: (vars: { optionId: string; direction: 'up' | 'down' }) =>
+      moveOption({ id: vars.optionId, direction: vars.direction }),
+    onSuccess: () => {
+      void invalidateTickets()
+      toast.success('Moved')
+    },
+    onError: (err) => toast.error(err.message),
   })
 
-  const updateOptionMutation = useOptimisticMutation<
-    { optionId: string; stopBeforeMinutes: number },
-    TicketWithOptions[]
-  >({
-    queryKey: ['tickets'],
-    mutationFn: ({ optionId, stopBeforeMinutes }) =>
-      updateOption({ id: optionId, stopBeforeMinutes }),
-    optimisticUpdate: (old, { optionId, stopBeforeMinutes }) =>
-      old.map((c) =>
-        c.ticket.id === ticketId
-          ? {
-              ...c,
-              options: c.options.map((o) => (o.id === optionId ? { ...o, stopBeforeMinutes } : o)),
-            }
-          : c,
-      ),
-    successMessage: 'Saved',
+  const updateOptionMutation = useMutation({
+    mutationFn: (vars: { optionId: string; stopBeforeMinutes: number }) =>
+      updateOption({ id: vars.optionId, stopBeforeMinutes: vars.stopBeforeMinutes }),
+    onSuccess: () => {
+      void invalidateTickets()
+      toast.success('Saved')
+    },
+    onError: (err) => toast.error(err.message),
   })
 
   const sorted = [...data.options].sort((a, b) => a.priority - b.priority)
@@ -125,7 +99,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          disabled={idx === 0}
+                          disabled={idx === 0 || moveOptionMutation.isPending}
                           onClick={() =>
                             moveOptionMutation.mutate({ optionId: option.id, direction: 'up' })
                           }
@@ -136,7 +110,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          disabled={idx === sorted.length - 1}
+                          disabled={idx === sorted.length - 1 || moveOptionMutation.isPending}
                           onClick={() =>
                             moveOptionMutation.mutate({
                               optionId: option.id,
@@ -155,7 +129,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
                         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
                           <CutoffEditor
                             stopBeforeMinutes={option.stopBeforeMinutes}
-                            disabled={past}
+                            disabled={past || updateOptionMutation.isPending}
                             onSave={(stopBeforeMinutes) =>
                               updateOptionMutation.mutate({
                                 optionId: option.id,
@@ -173,6 +147,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
                       <Button
                         size="icon"
                         variant="ghost"
+                        disabled={removeOptionMutation.isPending}
                         onClick={() => removeOptionMutation.mutate(option.id)}
                         aria-label="Remove alternative"
                       >
