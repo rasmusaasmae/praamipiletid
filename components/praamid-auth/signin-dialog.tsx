@@ -1,21 +1,14 @@
 'use client'
 
 import { useForm, useStore } from '@tanstack/react-form'
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { CheckCircle2, Loader2, Smartphone, Trash2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { CheckCircle2, Loader2, Smartphone } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import {
-  cancelPraamidLogin,
-  forgetPraamidCredential,
-  startPraamidLogin,
-} from '@/actions/praamid-auth'
-import { Badge } from '@/components/ui/badge'
+import { cancelPraamidLogin, startPraamidLogin } from '@/actions/praamid-auth'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -27,197 +20,31 @@ import {
 import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useOptimisticMutation } from '@/lib/mutations'
 import type { PraamidAuthStatus } from '@/lib/praamidee'
-import { getMyPraamidAuthState, type PraamidAuthStateView } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 
-export type PraamidCredentialMeta = {
-  capturedAt: Date
-  expiresAt: Date
-  lastVerifiedAt: Date | null
-  lastError: string | null
-}
-
-type Status = PraamidAuthStatus
-
-const STEP_ORDER: Status[] = [
+const STEP_ORDER: PraamidAuthStatus[] = [
   'unauthenticated',
   'loading',
   'awaiting_confirmation',
   'authenticated',
 ]
 
-const STATUS_LABEL: Record<Status, string> = {
-  unauthenticated: 'Unauthenticated',
-  loading: 'Loading',
-  awaiting_confirmation: 'Awaiting confirmation',
-  authenticated: 'Authenticated',
-}
-
-const STEP_LABEL: Record<Status, string> = {
+const STEP_LABEL: Record<PraamidAuthStatus, string> = {
   unauthenticated: 'Enter ID Code',
   loading: 'Opening praamid.ee',
   awaiting_confirmation: 'Confirm',
   authenticated: 'Authenticated',
 }
 
-const DATE_TAG = 'en-GB'
-
-function formatRelativeFuture(to: Date, now: Date): string {
-  const diffMs = to.getTime() - now.getTime()
-  const sign = diffMs >= 0 ? 'in' : 'ago'
-  const abs = Math.abs(diffMs)
-  const mins = Math.round(abs / 60_000)
-  if (mins < 60) return sign === 'in' ? `in ${mins} min` : `${mins} min ago`
-  const hours = Math.round(mins / 60)
-  if (hours < 48) return sign === 'in' ? `in ${hours} h` : `${hours} h ago`
-  const days = Math.round(hours / 24)
-  return sign === 'in' ? `in ${days} days` : `${days} days ago`
-}
-
-export function PraamidAuthCard({
-  credentialMeta,
-}: {
-  credentialMeta: PraamidCredentialMeta | null
-}) {
-  const router = useRouter()
-
-  const { data: authState } = useSuspenseQuery({
-    queryKey: ['praamidAuthState'],
-    queryFn: () => getMyPraamidAuthState(),
-    refetchInterval: (query) => {
-      const s = query.state.data?.status
-      return s === 'loading' || s === 'awaiting_confirmation' ? 1000 : false
-    },
-  })
-  const status = authState.status
-
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-
-  const prevStatus = useRef<Status>(status)
-  useEffect(() => {
-    const justAuthed = prevStatus.current !== 'authenticated' && status === 'authenticated'
-    prevStatus.current = status
-    if (!justAuthed) return
-    router.refresh()
-    if (!dialogOpen) return
-    const t = setTimeout(() => setDialogOpen(false), 1200)
-    return () => clearTimeout(t)
-  }, [status, dialogOpen, router])
-
-  const isAuthenticated = status === 'authenticated'
-  const isActive = status === 'loading' || status === 'awaiting_confirmation'
-
-  return (
-    <Card id="praamid" className="scroll-mt-24">
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <CardTitle>praamid.ee</CardTitle>
-            <StatusBadge status={status} />
-          </div>
-          <CardDescription>
-            We replay your praamid.ee session to auto-update tickets when a better slot opens.
-            Session tokens last up to 7 days — you&apos;ll need to re-authenticate after that.
-          </CardDescription>
-        </div>
-        {isAuthenticated ? <ForgetButton /> : null}
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-4">
-        {credentialMeta && isAuthenticated ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <p className="text-muted-foreground w-fit text-sm">
-                  Expires {formatRelativeFuture(credentialMeta.expiresAt, now)}
-                </p>
-              }
-            />
-            <TooltipContent>
-              {credentialMeta.expiresAt.toLocaleString(DATE_TAG, {
-                dateStyle: 'long',
-                timeStyle: 'short',
-              })}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
-
-        {isAuthenticated ? null : (
-          <Button type="button" onClick={() => setDialogOpen(true)} className="self-start">
-            {isActive ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                {STATUS_LABEL[status]}
-              </>
-            ) : (
-              'Authenticate'
-            )}
-          </Button>
-        )}
-      </CardContent>
-
-      <SigninDialog open={dialogOpen} onOpenChange={setDialogOpen} status={status} />
-    </Card>
-  )
-}
-
-function StatusBadge({ status }: { status: Status }) {
-  const variant =
-    status === 'authenticated'
-      ? 'success'
-      : status === 'loading' || status === 'awaiting_confirmation'
-        ? 'secondary'
-        : 'outline'
-  return <Badge variant={variant}>{STATUS_LABEL[status]}</Badge>
-}
-
-function ForgetButton() {
-  const forgetMutation = useOptimisticMutation<void, PraamidAuthStateView>({
-    queryKey: ['praamidAuthState'],
-    mutationFn: () => forgetPraamidCredential(),
-    optimisticUpdate: () => ({ status: 'unauthenticated', lastError: null }),
-    successMessage: 'Session deleted',
-  })
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            disabled={forgetMutation.isPending}
-            aria-label="Delete session"
-            onClick={() => {
-              if (!confirm('Delete the stored praamid session?')) return
-              forgetMutation.mutate()
-            }}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        }
-      />
-      <TooltipContent>Delete session</TooltipContent>
-    </Tooltip>
-  )
-}
-
-function SigninDialog({
+export function SigninDialog({
   open,
   onOpenChange,
   status,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
-  status: Status
+  status: PraamidAuthStatus
 }) {
   const queryClient = useQueryClient()
 
@@ -247,7 +74,7 @@ function SigninDialog({
   const canSubmit = useStore(form.store, (s) => s.canSubmit)
   const isFormSubmitting = useStore(form.store, (s) => s.isSubmitting)
 
-  const step: Status =
+  const step: PraamidAuthStatus =
     status === 'authenticated'
       ? 'authenticated'
       : status === 'awaiting_confirmation'
@@ -361,7 +188,7 @@ function SigninDialog({
   )
 }
 
-function Stepper({ current }: { current: Status }) {
+function Stepper({ current }: { current: PraamidAuthStatus }) {
   const currentIdx = STEP_ORDER.indexOf(current)
   return (
     <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">

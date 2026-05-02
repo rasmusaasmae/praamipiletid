@@ -3,7 +3,7 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 
-import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth-card'
+import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth'
 import { TicketCard } from '@/components/ticket-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
