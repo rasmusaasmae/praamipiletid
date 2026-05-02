@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 
-import { Providers } from '@/components/providers'
+import { QueryProvider } from '@/components/query-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={cn('h-full antialiased', geistSans.variable, geistMono.variable)}
     >
       <body className="bg-background text-foreground flex min-h-full flex-col">
-        <Providers>
+        <QueryProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Toaster richColors position="top-right" />
             </TooltipProvider>
           </ThemeProvider>
-        </Providers>
+        </QueryProvider>
       </body>
     </html>
   )
