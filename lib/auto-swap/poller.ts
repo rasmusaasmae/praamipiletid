@@ -22,7 +22,7 @@ const POLL_TIME_SHIFT = 300
 let running = false
 let lastMirrorSyncAt = 0
 
-type JoinedOption = {
+type DueOption = {
   optionId: string
   ticketId: number
   userId: string
@@ -36,23 +36,23 @@ type JoinedOption = {
   currentTicketEventUid: string
 }
 
-async function loadBatchEvents(
-  dir: string,
-  date: string,
-  timeShift: number,
-): Promise<PraamidEvent[] | null> {
-  try {
-    return await praamidee.event.list(dir, date, timeShift)
-  } catch (err) {
-    log.error(
-      { dir, date, err: err instanceof Error ? err.message : String(err) },
-      'event.list failed',
-    )
-    return null
-  }
+// Top-level swap tick — five named phases.
+async function tick() {
+  const due = await loadDueOptions()
+  if (due.length === 0) return
+
+  const events = await fetchEventsForBatches(due)
+  await refreshDriftedDtstarts(due, events)
+
+  const openedByTicket = findOpenedSlots(due, events)
+  if (openedByTicket.size === 0) return
+
+  await runSwapsAndNotify(openedByTicket, events)
 }
 
-async function tick() {
+// Phase 1 — DB read + due-time filter --------------------------------------
+
+async function loadDueOptions(): Promise<DueOption[]> {
   const now = new Date()
   const rows = await db
     .select({
@@ -72,56 +72,91 @@ async function tick() {
     .innerJoin(tickets, eq(tickets.id, ticketOptions.ticketId))
     .where(gt(ticketOptions.eventDtstart, now))
 
-  const due: JoinedOption[] = rows.filter(
-    (r) => r.eventDtstart.getTime() - r.stopBeforeMinutes * 60_000 > now.getTime(),
-  )
-  if (due.length === 0) return
+  return rows.filter((r) => r.eventDtstart.getTime() - r.stopBeforeMinutes * 60_000 > now.getTime())
+}
 
-  const batches = new Map<string, JoinedOption[]>()
-  for (const r of due) {
-    const key = `${r.direction}|${r.eventDate}`
-    const list = batches.get(key) ?? []
-    list.push(r)
-    batches.set(key, list)
-  }
+// Phase 2 — fetch events for each (direction, date) bucket -----------------
+
+async function fetchEventsForBatches(due: DueOption[]): Promise<Map<string, PraamidEvent>> {
+  const batchKeys = new Set<string>()
+  for (const r of due) batchKeys.add(`${r.direction}|${r.eventDate}`)
 
   const eventsByUid = new Map<string, PraamidEvent>()
-  const openedRowsByTicket = new Map<number, JoinedOption[]>()
-
-  for (const [key, batch] of batches) {
+  for (const key of batchKeys) {
     const [dir, date] = key.split('|') as [string, string]
     const events = await loadBatchEvents(dir, date, POLL_TIME_SHIFT)
     if (!events) continue
     for (const e of events) eventsByUid.set(e.uid, e)
-    const batchEventByUid = new Map(events.map((e) => [e.uid, e]))
-
-    for (const row of batch) {
-      const event = batchEventByUid.get(row.eventUid)
-      if (!event) continue
-
-      // Refresh cached dtstart if praamid rescheduled the trip in place.
-      // The eventUid stays; dtstart drifts. Cheap to update opportunistically
-      // since we already have the event in hand.
-      const liveDtstart = Date.parse(event.dtstart)
-      if (!Number.isNaN(liveDtstart) && liveDtstart !== row.eventDtstart.getTime()) {
-        await db
-          .update(ticketOptions)
-          .set({ eventDtstart: new Date(liveDtstart) })
-          .where(eq(ticketOptions.id, row.optionId))
-      }
-
-      if (row.eventUid === row.currentTicketEventUid) continue
-      const capacity = event.capacities?.[row.measurementUnit] ?? 0
-      if (capacity < 1) continue
-      const list = openedRowsByTicket.get(row.ticketId) ?? []
-      list.push(row)
-      openedRowsByTicket.set(row.ticketId, list)
-    }
   }
+  return eventsByUid
+}
 
-  if (openedRowsByTicket.size === 0) return
+async function loadBatchEvents(
+  dir: string,
+  date: string,
+  timeShift: number,
+): Promise<PraamidEvent[] | null> {
+  try {
+    return await praamidee.event.list(dir, date, timeShift)
+  } catch (err) {
+    log.error(
+      { dir, date, err: err instanceof Error ? err.message : String(err) },
+      'event.list failed',
+    )
+    return null
+  }
+}
 
-  for (const [ticketId, openedRows] of openedRowsByTicket) {
+// Phase 3 — opportunistic correction of cached dtstart ---------------------
+
+// Praamid sometimes reschedules a trip in place (the eventUid stays, only
+// dtstart drifts). Cheap to reconcile while we already have the events in
+// hand, so the next tick's due-time filter sees the right value.
+async function refreshDriftedDtstarts(
+  due: DueOption[],
+  eventsByUid: Map<string, PraamidEvent>,
+): Promise<void> {
+  for (const row of due) {
+    const event = eventsByUid.get(row.eventUid)
+    if (!event) continue
+    const liveDtstart = Date.parse(event.dtstart)
+    if (Number.isNaN(liveDtstart) || liveDtstart === row.eventDtstart.getTime()) continue
+    await db
+      .update(ticketOptions)
+      .set({ eventDtstart: new Date(liveDtstart) })
+      .where(eq(ticketOptions.id, row.optionId))
+  }
+}
+
+// Phase 4 — pure: which options are "opened" right now? --------------------
+
+// An option is opened if it's not the ticket's current event and the live
+// event has at least one unit of capacity in the ticket's measurement unit.
+function findOpenedSlots(
+  due: DueOption[],
+  eventsByUid: Map<string, PraamidEvent>,
+): Map<number, DueOption[]> {
+  const openedByTicket = new Map<number, DueOption[]>()
+  for (const row of due) {
+    if (row.eventUid === row.currentTicketEventUid) continue
+    const event = eventsByUid.get(row.eventUid)
+    if (!event) continue
+    const capacity = event.capacities?.[row.measurementUnit] ?? 0
+    if (capacity < 1) continue
+    const list = openedByTicket.get(row.ticketId) ?? []
+    list.push(row)
+    openedByTicket.set(row.ticketId, list)
+  }
+  return openedByTicket
+}
+
+// Phase 5 — hand each ticket to the engine; notify on success --------------
+
+async function runSwapsAndNotify(
+  openedByTicket: Map<number, DueOption[]>,
+  eventsByUid: Map<string, PraamidEvent>,
+): Promise<void> {
+  for (const [ticketId, openedRows] of openedByTicket) {
     const userId = openedRows[0]!.userId
     const openedEventUids = new Set(openedRows.map((r) => r.eventUid))
 
@@ -134,28 +169,11 @@ async function tick() {
         eventsByUid,
       })
       if (outcome.kind === 'succeeded') {
-        try {
-          await sendEmail({
-            userId,
-            subject: 'Ticket updated',
-            body: `New ticket ${outcome.newTicketNumber} (invoice ${outcome.invoiceNumber})`,
-          })
-        } catch (err) {
-          log.error(
-            {
-              ticketId,
-              err: err instanceof Error ? err.message : String(err),
-            },
-            'swap notify failed',
-          )
-        }
+        await notifySwapSuccess(userId, ticketId, outcome.newTicketNumber, outcome.invoiceNumber)
       }
     } catch (err) {
       log.error(
-        {
-          ticketId,
-          err: err instanceof Error ? err.message : String(err),
-        },
+        { ticketId, err: err instanceof Error ? err.message : String(err) },
         'processAutoSwap threw',
       )
     } finally {
@@ -163,6 +181,28 @@ async function tick() {
     }
   }
 }
+
+async function notifySwapSuccess(
+  userId: string,
+  ticketId: number,
+  newTicketNumber: string,
+  invoiceNumber: string,
+): Promise<void> {
+  try {
+    await sendEmail({
+      userId,
+      subject: 'Ticket updated',
+      body: `New ticket ${newTicketNumber} (invoice ${invoiceNumber})`,
+    })
+  } catch (err) {
+    log.error(
+      { ticketId, err: err instanceof Error ? err.message : String(err) },
+      'swap notify failed',
+    )
+  }
+}
+
+// Mirror sync tick + outer loop --------------------------------------------
 
 async function mirrorSyncTick() {
   if (Date.now() - lastMirrorSyncAt < MIRROR_SYNC_INTERVAL_MS) return
