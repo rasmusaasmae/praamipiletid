@@ -1,6 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 import { EventCard } from '@/components/event-card'
 import { OptionsDateFilter } from '@/components/options-date-filter'
@@ -35,7 +36,7 @@ export default async function AddOptionPage({
   searchParams: SearchParams
 }) {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return null
+  if (!session) redirect('/sign-in')
   const { ticketId: ticketIdRaw } = await params
   const ticketId = Number(ticketIdRaw)
   const query = await searchParams

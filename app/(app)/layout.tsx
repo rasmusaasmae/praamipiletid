@@ -1,11 +1,12 @@
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 
 import { NavBar } from '@/components/nav-bar'
 import { auth } from '@/lib/auth'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return null
+  if (!session) redirect('/sign-in')
   return (
     <div className="flex flex-1 flex-col">
       <NavBar

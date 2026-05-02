@@ -1,5 +1,6 @@
 import { HydrationBoundary, dehydrate } from '@tanstack/react-query'
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 
 import { Home } from '@/components/home'
 import { auth } from '@/lib/auth'
@@ -10,7 +11,7 @@ import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
 
 export default async function HomePage() {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return null
+  if (!session) redirect('/sign-in')
   const configured = Boolean(process.env.PRAAMID_CRED_KEY)
   const info = configured ? await praamidee.user(session.user.id).auth.get() : null
 
