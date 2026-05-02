@@ -2,42 +2,38 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-ferry}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ferry}
-      POSTGRES_DB: ${POSTGRES_DB:-ferry}
-    ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      POSTGRES_USER: ferry
+      POSTGRES_PASSWORD: ferry
+      POSTGRES_DB: ferry
     volumes:
       - ferry_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-ferry} -d ${POSTGRES_DB:-ferry}']
+      test: ['CMD-SHELL', 'pg_isready -U ferry -d ferry']
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
   app:
-    image: ${IMAGE_NAME:-ghcr.io/rasmusaasmae/praamipiletid}:${IMAGE_TAG:-latest}
+    image: ghcr.io/rasmusaasmae/praamipiletid:latest
     depends_on:
       postgres:
         condition: service_healthy
     ports:
       - '${APP_PORT:-3000}:3000'
     environment:
-      APP_URL: ${APP_URL:-http://localhost:3000}
+      APP_URL: ${APP_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      SMTP_HOST: ${SMTP_HOST:-smtp.protonmail.ch}
-      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM}
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-10000}
       PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
-      DATABASE_URL: postgres://${POSTGRES_USER:-ferry}:${POSTGRES_PASSWORD:-ferry}@postgres:5432/${POSTGRES_DB:-ferry}
-    # Chromium crashes with the default 64MB /dev/shm when Playwright drives
-    # logins. Raise it instead of using ipc=host so we don't share host IPC.
+      DATABASE_URL: postgres://ferry:ferry@postgres:5432/ferry
     shm_size: 1gb
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
