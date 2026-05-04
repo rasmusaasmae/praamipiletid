@@ -1,1 +1,1 @@
-export { PraamidAuthCard, type PraamidCredentialMeta } from './card'
+export { PraamidAuthCard } from './card'

@@ -15,13 +15,6 @@ import { ForgetButton } from './forget-button'
 import { SigninDialog } from './signin-dialog'
 import { STATUS_LABEL, StatusBadge } from './status-badge'
 
-export type PraamidCredentialMeta = {
-  capturedAt: Date
-  expiresAt: Date
-  lastVerifiedAt: Date | null
-  lastError: string | null
-}
-
 const DATE_TAG = 'en-GB'
 
 function formatRelativeFuture(to: Date, now: Date): string {
@@ -36,14 +29,10 @@ function formatRelativeFuture(to: Date, now: Date): string {
   return sign === 'in' ? `in ${days} days` : `${days} days ago`
 }
 
-export function PraamidAuthCard({
-  credentialMeta,
-}: {
-  credentialMeta: PraamidCredentialMeta | null
-}) {
+export function PraamidAuthCard() {
   const router = useRouter()
 
-  const { data: authState } = useSuspenseQuery({
+  const { data: info } = useSuspenseQuery({
     queryKey: ['praamidAuthState'],
     queryFn: () => getMyPraamidAuthState(),
     refetchInterval: (query) => {
@@ -51,7 +40,7 @@ export function PraamidAuthCard({
       return s === 'loading' || s === 'awaiting_confirmation' ? 1000 : false
     },
   })
-  const status = authState.status
+  const status = info.status
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [now, setNow] = useState(() => new Date())
@@ -91,17 +80,17 @@ export function PraamidAuthCard({
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">
-        {credentialMeta && isAuthenticated ? (
+        {info.expiresAt && isAuthenticated ? (
           <Tooltip>
             <TooltipTrigger
               render={
                 <p className="text-muted-foreground w-fit text-sm">
-                  Expires {formatRelativeFuture(credentialMeta.expiresAt, now)}
+                  Expires {formatRelativeFuture(info.expiresAt, now)}
                 </p>
               }
             />
             <TooltipContent>
-              {credentialMeta.expiresAt.toLocaleString(DATE_TAG, {
+              {info.expiresAt.toLocaleString(DATE_TAG, {
                 dateStyle: 'long',
                 timeStyle: 'short',
               })}

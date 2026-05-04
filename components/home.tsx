@@ -3,18 +3,12 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 
-import { PraamidAuthCard, type PraamidCredentialMeta } from '@/components/praamid-auth'
+import { PraamidAuthCard } from '@/components/praamid-auth'
 import { TicketCard } from '@/components/ticket-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
 
-export function Home({
-  configured,
-  credentialMeta,
-}: {
-  configured: boolean
-  credentialMeta: PraamidCredentialMeta | null
-}) {
+export function Home({ configured }: { configured: boolean }) {
   const { data: cards } = useSuspenseQuery({
     queryKey: ['tickets'],
     queryFn: () => getTicketsWithOptions(),
@@ -29,11 +23,7 @@ export function Home({
 
   return (
     <div className="flex flex-col gap-6">
-      {configured ? (
-        <PraamidAuthCard credentialMeta={credentialMeta} />
-      ) : (
-        <PraamidNotConfiguredCard />
-      )}
+      {configured ? <PraamidAuthCard /> : <PraamidNotConfiguredCard />}
 
       <div>
         <h2 className="text-2xl font-semibold">My tickets</h2>
