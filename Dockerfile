@@ -52,7 +52,7 @@ RUN node ./node_modules/.bin/next build
 # Microsoft's Playwright image bundles Chromium + the exact system libs
 # Playwright needs. Pin the tag to match the playwright npm version so the
 # bundled browser and client stay in sync.
-FROM mcr.microsoft.com/playwright:v1.59.1-noble AS runner
+FROM mcr.microsoft.com/playwright:v1.60.0-noble AS runner
 
 WORKDIR /app
 
