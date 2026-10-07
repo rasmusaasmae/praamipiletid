@@ -1,5 +1,5 @@
 import 'server-only'
-import { listCredentialedUserIds } from './auth/credentials'
+import { deleteExpiredCredentials, listCredentialedUserIds } from './auth/credentials'
 import { capacityUnit } from './capacity-unit'
 import { direction } from './direction'
 import { event } from './event'
@@ -11,6 +11,7 @@ export const praamidee = {
   capacityUnit,
   user: createUserScope,
   listAuthedUserIds: listCredentialedUserIds,
+  deleteExpiredCredentials,
 }
 
 export { PraamidAuthError } from './errors'

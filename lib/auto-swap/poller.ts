@@ -208,6 +208,9 @@ async function mirrorSyncTick() {
   if (Date.now() - lastMirrorSyncAt < MIRROR_SYNC_INTERVAL_MS) return
   lastMirrorSyncAt = Date.now()
 
+  const purged = await praamidee.deleteExpiredCredentials()
+  if (purged > 0) log.info({ purged }, 'expired credentials deleted')
+
   const userIds = await praamidee.listAuthedUserIds()
 
   for (const userId of userIds) {

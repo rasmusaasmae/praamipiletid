@@ -7,8 +7,12 @@ import type { AuthInfo } from '../types'
 
 export async function getAuthInfo(userId: string): Promise<AuthInfo> {
   const [state, meta] = await Promise.all([getAuthState(userId), getCredentialMeta(userId)])
+  // The stored status is only written by the login flow; it says nothing
+  // about expiry. 'authenticated' holds only while an unexpired credential
+  // backs it.
+  const live = meta !== null && meta.expiresAt.getTime() > Date.now()
   return {
-    status: state.status,
+    status: state.status === 'authenticated' && !live ? 'unauthenticated' : state.status,
     lastError: state.lastError,
     praamidSub: meta?.praamidSub ?? null,
     capturedAt: meta?.capturedAt ?? null,

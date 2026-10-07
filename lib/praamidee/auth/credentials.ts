@@ -1,7 +1,7 @@
 import 'server-only'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
-import { eq } from 'drizzle-orm'
+import { eq, gt, lte } from 'drizzle-orm'
 
 import { db } from '@/db'
 import { praamidCredentials } from '@/db/schema'
@@ -144,9 +144,14 @@ export async function getStoredRefreshToken(userId: string): Promise<StoredRefre
 }
 
 export async function rotateRefreshToken(userId: string, newRefreshToken: string): Promise<void> {
+  // A rotated refresh token carries its own exp; keep expiresAt in step.
+  const { exp } = decodeJwt(newRefreshToken)
   await db
     .update(praamidCredentials)
-    .set({ refreshTokenEnc: encryptToken(newRefreshToken) })
+    .set({
+      refreshTokenEnc: encryptToken(newRefreshToken),
+      ...(exp ? { expiresAt: new Date(exp * 1000) } : {}),
+    })
     .where(eq(praamidCredentials.userId, userId))
 }
 
@@ -201,6 +206,18 @@ export async function hasCredential(userId: string): Promise<boolean> {
 }
 
 export async function listCredentialedUserIds(): Promise<string[]> {
-  const rows = await db.select({ userId: praamidCredentials.userId }).from(praamidCredentials)
+  const rows = await db
+    .select({ userId: praamidCredentials.userId })
+    .from(praamidCredentials)
+    .where(gt(praamidCredentials.expiresAt, new Date()))
   return rows.map((r) => r.userId)
+}
+
+// Expired refresh tokens are useless; don't keep them around encrypted at rest.
+export async function deleteExpiredCredentials(): Promise<number> {
+  const rows = await db
+    .delete(praamidCredentials)
+    .where(lte(praamidCredentials.expiresAt, new Date()))
+    .returning({ userId: praamidCredentials.userId })
+  return rows.length
 }
