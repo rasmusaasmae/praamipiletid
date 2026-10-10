@@ -1,4 +1,11 @@
-import { ticketOptions, tickets, ticketSyncs, type Db, type Tx } from '@praamipiletid/db'
+import {
+  notifyUserChanged,
+  ticketOptions,
+  tickets,
+  ticketSyncs,
+  type Db,
+  type Tx,
+} from '@praamipiletid/db'
 import type { Praamid, Ticket as PraamidTicket } from '@praamipiletid/praamidee'
 import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
 
@@ -28,6 +35,7 @@ export async function syncUser(db: Db, praamid: Praamid, userId: string, now: Da
       .insert(ticketSyncs)
       .values({ userId, syncedAt: now })
       .onConflictDoUpdate({ target: ticketSyncs.userId, set: { syncedAt: now } })
+    await notifyUserChanged(tx, userId)
   })
 }
 

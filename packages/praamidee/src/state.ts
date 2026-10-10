@@ -1,4 +1,4 @@
-import { praamidAuthState, type Db } from '@praamipiletid/db'
+import { notifyUserChanged, praamidAuthState, type Db } from '@praamipiletid/db'
 import { eq } from 'drizzle-orm'
 
 import type { CredentialStore } from './credentials'
@@ -18,6 +18,7 @@ export function createAuthStateStore(db: Db, credentials: CredentialStore) {
       .insert(praamidAuthState)
       .values({ userId, ...values })
       .onConflictDoUpdate({ target: praamidAuthState.userId, set: values })
+    await notifyUserChanged(db, userId)
   }
 
   return {

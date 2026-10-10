@@ -8,7 +8,11 @@ export type { WorkerDeps } from './deps'
 
 export async function createWorker(deps: WorkerDeps) {
   setDeps(deps)
-  DBOS.setConfig({ name: 'praamipiletid', systemDatabaseUrl: deps.databaseUrl })
+  DBOS.setConfig({
+    name: 'praamipiletid',
+    systemDatabaseUrl: deps.databaseUrl,
+    logLevel: deps.logLevel ?? 'info',
+  })
   await DBOS.launch()
 
   const running = new Set<Promise<unknown>>()
@@ -34,9 +38,14 @@ export async function createWorker(deps: WorkerDeps) {
       }
     },
 
-    // Resolves once every swap this worker started has finished.
+    // Resolves once every swap this worker started, or recovered after a
+    // restart, has finished.
     async drain(): Promise<void> {
-      await Promise.allSettled(running)
+      const pending = await DBOS.listWorkflows({ status: ['PENDING', 'ENQUEUED'] })
+      await Promise.allSettled([
+        ...running,
+        ...pending.map((w) => DBOS.retrieveWorkflow(w.workflowID).getResult()),
+      ])
     },
 
     async shutdown(): Promise<void> {

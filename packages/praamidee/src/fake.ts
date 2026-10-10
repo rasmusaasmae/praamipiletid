@@ -20,7 +20,7 @@ export type FakeDeparture = {
 
 type Operation = keyof PraamidUser | 'events'
 
-type Hold = { promise: Promise<void>; release: () => void }
+type Hold = { promise: Promise<void>; release: () => void; arrive: () => void }
 
 export function createFakePraamid() {
   const departures = new Map<string, Required<FakeDeparture>>()
@@ -37,6 +37,7 @@ export function createFakePraamid() {
     const hold = holds.get(op)
     if (hold) {
       holds.delete(op)
+      hold.arrive()
       await hold.promise
     }
     const left = failures.get(op) ?? 0
@@ -268,12 +269,15 @@ export function createFakePraamid() {
       failures.set(op, times)
     },
 
-    // Makes the next call of `op` wait until released.
-    hold(op: Operation): { release: () => void } {
+    // Makes the next call of `op` wait until released. `reached` resolves
+    // once that call is waiting.
+    hold(op: Operation): { reached: Promise<void>; release: () => void } {
       let release!: () => void
+      let arrive!: () => void
       const promise = new Promise<void>((r) => (release = r))
-      holds.set(op, { promise, release })
-      return { release }
+      const reached = new Promise<void>((r) => (arrive = r))
+      holds.set(op, { promise, release, arrive })
+      return { reached, release }
     },
 
     // Inspection -------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { ticketOptions, tickets, ticketSyncs, type Db } from '@praamipiletid/db'
+import { ticketOptions, tickets, ticketSyncs, type Db, type TicketOption } from '@praamipiletid/db'
 import type { Praamid, PraamidEvent } from '@praamipiletid/praamidee'
 import { and, eq, isNull, lte, or } from 'drizzle-orm'
 
@@ -45,6 +45,12 @@ export async function findSwaps(db: Db, praamid: Praamid, now: Date): Promise<Pl
     rows.map((r) => ({ direction: r.ticket.direction, date: r.option.eventDate })),
   )
 
+  await followRescheduledDepartures(
+    db,
+    rows.map((r) => r.option),
+    events,
+  )
+
   const byTicket = new Map<number, typeof rows>()
   for (const row of rows) byTicket.set(row.ticket.id, [...(byTicket.get(row.ticket.id) ?? []), row])
 
@@ -81,6 +87,26 @@ export async function claim(db: Db, ticketId: number, now: Date): Promise<boolea
     )
     .returning({ id: tickets.id })
   return claimed.length > 0
+}
+
+// praamid.ee sometimes moves a departure in place (same uid, new time).
+// Keep our copy in step so cutoffs are measured from the real time.
+async function followRescheduledDepartures(
+  db: Db,
+  options: TicketOption[],
+  events: Map<string, PraamidEvent>,
+): Promise<void> {
+  for (const option of options) {
+    const event = events.get(option.eventUid)
+    if (!event) continue
+    const live = new Date(event.dtstart)
+    if (Number.isNaN(live.getTime()) || live.getTime() === option.eventDtstart.getTime()) continue
+    option.eventDtstart = live
+    await db
+      .update(ticketOptions)
+      .set({ eventDtstart: live })
+      .where(eq(ticketOptions.id, option.id))
+  }
 }
 
 // Departures for every direction and date an option is on, one request each.
