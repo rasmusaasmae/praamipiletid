@@ -8,6 +8,13 @@
       "when": 1791618927375,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791639462952,
+      "tag": "0001_user_isikukood",
+      "breakpoints": true
     }
   ]
 }

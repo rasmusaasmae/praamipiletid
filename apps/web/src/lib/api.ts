@@ -35,11 +35,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   event_not_found: 'That departure no longer exists.',
   ticket_not_found: 'Ticket not found.',
   option_not_found: 'Alternative not found.',
+  isikukood_missing: 'Add your ID code to your profile first.',
 }
 
 export const ticketsQuery = queryOptions({
   queryKey: ['tickets'],
   queryFn: async () => withDates(await (await ok(await client.tickets.$get())).json()),
+})
+
+export const profileQuery = queryOptions({
+  queryKey: ['profile'],
+  queryFn: async () => (await ok(await client.profile.$get())).json(),
 })
 
 export const praamidLoginQuery = queryOptions({
@@ -94,8 +100,11 @@ export const api = {
   removeOption: async (id: string) => {
     await ok(await client.options[':id'].$delete({ param: { id } }))
   },
-  startPraamidLogin: async (isikukood: string) => {
-    await ok(await client.praamid.login.$post({ json: { isikukood } }))
+  saveProfile: async (profile: { isikukood: string }) => {
+    await ok(await client.profile.$put({ json: profile }))
+  },
+  startPraamidLogin: async () => {
+    await ok(await client.praamid.login.$post())
   },
   cancelPraamidLogin: async () => {
     await ok(await client.praamid.login.cancel.$post())

@@ -10,9 +10,10 @@ import { z } from 'zod'
 
 import { AppLayout } from '@/components/app-layout'
 import { Home } from '@/components/home'
-import { praamidLoginQuery, ticketsQuery } from '@/lib/api'
+import { praamidLoginQuery, profileQuery, ticketsQuery } from '@/lib/api'
 import { authClient } from '@/lib/auth-client'
 import { AddOptionPage } from '@/pages/add-option'
+import { SettingsPage } from '@/pages/settings'
 import { SignInPage } from '@/pages/sign-in'
 
 const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -29,13 +30,16 @@ const signInRoute = createRoute({
   component: SignInPage,
 })
 
-// Everything below requires a signed-in user.
+// Everything below requires a signed-in user. One whose profile is missing
+// something required is sent to settings to fill it in.
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app',
-  beforeLoad: async () => {
+  beforeLoad: async ({ context, location }) => {
     const { data } = await authClient.getSession()
     if (!data) throw redirect({ to: '/sign-in' })
+    const profile = await context.queryClient.ensureQueryData(profileQuery)
+    if (!profile.isikukood && location.pathname !== '/settings') throw redirect({ to: '/settings' })
     return { user: data.user }
   },
   component: AppLayout,
@@ -69,9 +73,15 @@ export const addOptionRoute = createRoute({
   component: AddOptionPage,
 })
 
+const settingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/settings',
+  component: SettingsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   signInRoute,
-  appRoute.addChildren([homeRoute, addOptionRoute]),
+  appRoute.addChildren([homeRoute, addOptionRoute, settingsRoute]),
 ])
 
 export function createAppRouter(queryClient: QueryClient) {

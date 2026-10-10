@@ -1,12 +1,13 @@
 import type { PraamidAuthStatus } from '@ferry-tickets/praamidee'
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { praamidLoginQuery } from '@/lib/api'
+import { api, praamidLoginQuery } from '@/lib/api'
 
 import { ForgetButton } from './forget-button'
 import { SigninDialog } from './signin-dialog'
@@ -41,6 +42,12 @@ export function PraamidAuthCard() {
   const status = info.status
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  // Pending until the page has seen the login under way.
+  const start = useMutation({
+    mutationFn: api.startPraamidLogin,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['praamidLogin'] }),
+    onError: (err) => toast.error(err.message),
+  })
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
@@ -97,7 +104,14 @@ export function PraamidAuthCard() {
         ) : null}
 
         {isAuthenticated ? null : (
-          <Button type="button" onClick={() => setDialogOpen(true)} className="self-start">
+          <Button
+            type="button"
+            onClick={() => {
+              setDialogOpen(true)
+              if (!isActive) start.mutate()
+            }}
+            className="self-start"
+          >
             {isActive ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
@@ -110,7 +124,13 @@ export function PraamidAuthCard() {
         )}
       </CardContent>
 
-      <SigninDialog open={dialogOpen} onOpenChange={setDialogOpen} status={status} />
+      <SigninDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        status={status}
+        starting={start.isPending}
+        onRetry={() => start.mutate()}
+      />
     </Card>
   )
 }

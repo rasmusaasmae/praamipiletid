@@ -1,5 +1,5 @@
 import { createTickets, TicketsError } from '@ferry-tickets/core'
-import type { Db } from '@ferry-tickets/db'
+import { user, type Db } from '@ferry-tickets/db'
 import {
   LOGIN_CHANNEL,
   type LoginRequest,
@@ -7,6 +7,7 @@ import {
   type Praamidee,
 } from '@ferry-tickets/praamidee'
 import { zValidator } from '@hono/zod-validator'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createMiddleware } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
@@ -23,6 +24,7 @@ export type AppDeps = {
 }
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const isikukood = z.string().regex(/^\d{11}$/)
 
 export function createApp(deps: AppDeps) {
   const tickets = createTickets(deps)
@@ -32,6 +34,14 @@ export function createApp(deps: AppDeps) {
   // The worker owns the browser that drives the praamid.ee login.
   async function toWorker(request: LoginRequest) {
     await deps.db.client.notify(LOGIN_CHANNEL, JSON.stringify(request))
+  }
+
+  async function profileOf(userId: string) {
+    const [row] = await deps.db
+      .select({ isikukood: user.isikukood })
+      .from(user)
+      .where(eq(user.id, userId))
+    return { isikukood: row?.isikukood ?? null }
   }
 
   const signedIn = createMiddleware<{ Variables: { userId: string } }>(async (c, next) => {
@@ -128,19 +138,22 @@ export function createApp(deps: AppDeps) {
       return c.body(null, 204)
     })
     .get('/praamid/login', async (c) => c.json(await login.info(c.var.userId)))
-    .post(
-      '/praamid/login',
-      zValidator('json', z.object({ isikukood: z.string().regex(/^\d{11}$/) })),
-      async (c) => {
-        await login.markLoading(c.var.userId)
-        await toWorker({
-          action: 'start',
-          userId: c.var.userId,
-          isikukood: c.req.valid('json').isikukood,
-        })
-        return c.body(null, 202)
-      },
-    )
+    .get('/profile', async (c) => c.json(await profileOf(c.var.userId)))
+    .put('/profile', zValidator('json', z.object({ isikukood })), async (c) => {
+      await deps.db
+        .update(user)
+        .set({ isikukood: c.req.valid('json').isikukood })
+        .where(eq(user.id, c.var.userId))
+      return c.body(null, 204)
+    })
+    // Smart-ID login with the isikukood saved on the profile.
+    .post('/praamid/login', async (c) => {
+      const { isikukood } = await profileOf(c.var.userId)
+      if (!isikukood) return c.json({ error: 'isikukood_missing' }, 409)
+      await login.markLoading(c.var.userId)
+      await toWorker({ action: 'start', userId: c.var.userId, isikukood })
+      return c.body(null, 202)
+    })
     .post('/praamid/login/cancel', async (c) => {
       await toWorker({ action: 'cancel', userId: c.var.userId })
       // Settle right away too, in case no worker is running to do it.
