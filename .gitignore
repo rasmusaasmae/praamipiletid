@@ -6,8 +6,6 @@ node_modules
 # testing
 /coverage
 
-# next.js
-/.next/
 
 # misc
 .DS_Store
@@ -22,4 +20,6 @@ node_modules
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# build output
+dist/

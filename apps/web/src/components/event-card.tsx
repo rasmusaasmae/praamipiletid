@@ -1,14 +1,11 @@
-'use client'
-
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
-import { addOption } from '@/actions/options'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { api, type PraamidEvent } from '@/lib/api'
 import { CAPACITY_LABELS, SHIP_NAMES } from '@/lib/labels'
-import type { PraamidEvent } from '@/lib/praamidee'
 
 const CAPACITY_ORDER = ['sv', 'bv', 'pcs', 'mc', 'bc'] as const
 
@@ -20,11 +17,13 @@ type Props = {
   alreadyAdded: boolean
 }
 
+// Departure times as shown at the harbour, whatever the viewer's time zone.
 function formatTime(iso: string) {
-  const d = new Date(iso)
-  const h = d.getHours().toString().padStart(2, '0')
-  const m = d.getMinutes().toString().padStart(2, '0')
-  return `${h}:${m}`
+  return new Date(iso).toLocaleTimeString('en-GB', {
+    timeZone: 'Europe/Tallinn',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export function EventCard({ event, ticketId, date, measurementUnit, alreadyAdded }: Props) {
@@ -33,7 +32,7 @@ export function EventCard({ event, ticketId, date, measurementUnit, alreadyAdded
   const highlighted = measurementUnit
 
   const addMutation = useMutation({
-    mutationFn: () => addOption({ ticketId, eventUid: event.uid, date }),
+    mutationFn: () => api.addOption(ticketId, event.uid, date),
     onSuccess: () => {
       toast.success('Alternative added')
       void queryClient.invalidateQueries({ queryKey: ['tickets'] })

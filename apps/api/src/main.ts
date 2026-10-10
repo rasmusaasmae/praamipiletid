@@ -46,8 +46,10 @@ const server = new Hono()
       userIdFrom: async (headers) => (await auth.api.getSession({ headers }))?.user.id ?? null,
     }),
   )
+  .all('/api/*', (c) => c.json({ error: 'not_found' }, 404))
   .use('/*', serveStatic({ root: webDist }))
-  .get('*', serveStatic({ path: `${webDist}/index.html` }))
+  // Client-side routes all load the same page.
+  .get('*', async (c) => c.html(await Bun.file(`${webDist}/index.html`).text()))
 
 const port = Number(process.env.PORT ?? 3000)
 Bun.serve({

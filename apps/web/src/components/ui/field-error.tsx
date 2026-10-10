@@ -1,5 +1,3 @@
-'use client'
-
 import type { AnyFieldApi } from '@tanstack/react-form'
 
 type Props = {

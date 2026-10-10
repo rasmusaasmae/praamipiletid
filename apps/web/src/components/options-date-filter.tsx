@@ -1,7 +1,4 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,8 +9,7 @@ type Props = {
 }
 
 export function OptionsDateFilter({ ticketId, currentDate }: Props) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const navigate = useNavigate()
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[200px]">
@@ -25,12 +21,14 @@ export function OptionsDateFilter({ ticketId, currentDate }: Props) {
           id="date"
           type="date"
           defaultValue={currentDate}
-          disabled={isPending}
           onChange={(e) => {
             const date = e.target.value
             if (!date) return
-            const qs = new URLSearchParams({ date })
-            startTransition(() => router.push(`/tickets/${ticketId}/options?${qs.toString()}`))
+            void navigate({
+              to: '/tickets/$ticketId/options',
+              params: { ticketId },
+              search: { date },
+            })
           }}
         />
       </div>

@@ -1,5 +1,4 @@
-'use client'
-
+import type { PraamidAuthStatus } from '@praamipiletid/praamidee'
 import { useForm, useStore } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Loader2, Smartphone } from 'lucide-react'
@@ -7,7 +6,6 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { cancelPraamidLogin, startPraamidLogin } from '@/actions/praamid-auth'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,7 +18,7 @@ import {
 import { FieldError } from '@/components/ui/field-error'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { PraamidAuthStatus } from '@/lib/praamidee'
+import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const STEP_ORDER: PraamidAuthStatus[] = [
@@ -60,11 +58,9 @@ export function SigninDialog({
     defaultValues: { isikukood: '' },
     onSubmit: async ({ value }) => {
       try {
-        await startPraamidLogin({ isikukood: value.isikukood })
+        await api.startPraamidLogin(value.isikukood)
         setSubmitting(true)
-        void queryClient.invalidateQueries({
-          queryKey: ['praamidAuthState'],
-        })
+        void queryClient.invalidateQueries({ queryKey: ['praamidLogin'] })
       } catch (err) {
         const message = err instanceof Error ? err.message : 'start_failed'
         toast.error(`Capture failed: ${message}`)
@@ -89,11 +85,11 @@ export function SigninDialog({
 
   const onCancel = async () => {
     try {
-      await cancelPraamidLogin()
+      await api.cancelPraamidLogin()
     } catch {
       // ignore
     }
-    void queryClient.invalidateQueries({ queryKey: ['praamidAuthState'] })
+    void queryClient.invalidateQueries({ queryKey: ['praamidLogin'] })
     onOpenChange(false)
   }
 

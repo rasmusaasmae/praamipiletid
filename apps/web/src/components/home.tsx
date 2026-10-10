@@ -1,29 +1,18 @@
-'use client'
-
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
-import Link from 'next/link'
+import { useSuspenseQuery } from '@tanstack/react-query'
 
 import { PraamidAuthCard } from '@/components/praamid-auth'
 import { TicketCard } from '@/components/ticket-card'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getMyPraamidAuthState, getTicketsWithOptions } from '@/lib/queries'
+import { Card, CardContent } from '@/components/ui/card'
+import { praamidLoginQuery, ticketsQuery } from '@/lib/api'
 
-export function Home({ configured }: { configured: boolean }) {
-  const { data: cards } = useSuspenseQuery({
-    queryKey: ['tickets'],
-    queryFn: () => getTicketsWithOptions(),
-    refetchInterval: 60_000,
-  })
-
-  const authState = useQuery({
-    queryKey: ['praamidAuthState'],
-    queryFn: () => getMyPraamidAuthState(),
-  })
-  const isAuthed = authState.data?.status === 'authenticated'
+export function Home() {
+  const { data: cards } = useSuspenseQuery(ticketsQuery)
+  const { data: login } = useSuspenseQuery(praamidLoginQuery)
+  const isAuthed = login.status === 'authenticated'
 
   return (
     <div className="flex flex-col gap-6">
-      {configured ? <PraamidAuthCard /> : <PraamidNotConfiguredCard />}
+      <PraamidAuthCard />
 
       <div>
         <h2 className="text-2xl font-semibold">My tickets</h2>
@@ -42,9 +31,9 @@ export function Home({ configured }: { configured: boolean }) {
         <Card>
           <CardContent className="text-muted-foreground flex flex-col gap-2 py-6 text-sm">
             <p>You&apos;re not connected to praamid.ee yet.</p>
-            <Link href="/#praamid" className="hover:text-foreground underline">
+            <a href="#praamid" className="hover:text-foreground underline">
               Connect praamid.ee
-            </Link>
+            </a>
           </CardContent>
         </Card>
       ) : (
@@ -55,23 +44,5 @@ export function Home({ configured }: { configured: boolean }) {
         </Card>
       )}
     </div>
-  )
-}
-
-function PraamidNotConfiguredCard() {
-  return (
-    <Card id="praamid" className="scroll-mt-24">
-      <CardHeader>
-        <CardTitle>praamid.ee</CardTitle>
-        <CardDescription>
-          We replay your praamid.ee session to auto-update tickets when a better slot opens.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-destructive text-sm">
-          Credential encryption key is not configured on the server.
-        </p>
-      </CardContent>
-    </Card>
   )
 }

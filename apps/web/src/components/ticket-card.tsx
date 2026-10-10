@@ -1,25 +1,29 @@
-'use client'
-
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 
-import { moveOption, removeOption, updateOption } from '@/actions/options'
 import { CutoffEditor } from '@/components/cutoff-editor'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { api, type TicketWithOptions } from '@/lib/api'
 import { CAPACITY_LABELS, DIRECTION_LABELS } from '@/lib/labels'
-import type { TicketWithOptions } from '@/lib/queries'
 
 const DATE_TAG = 'en-GB'
 
+// Times as shown at the harbour, whatever the viewer's time zone.
+const TIME_ZONE = 'Europe/Tallinn'
 const formatDate = (d: Date) =>
-  d.toLocaleDateString(DATE_TAG, { weekday: 'short', day: 'numeric', month: 'short' })
+  d.toLocaleDateString(DATE_TAG, {
+    timeZone: TIME_ZONE,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
 const formatTime = (d: Date) =>
-  d.toLocaleTimeString(DATE_TAG, { hour: '2-digit', minute: '2-digit' })
+  d.toLocaleTimeString(DATE_TAG, { timeZone: TIME_ZONE, hour: '2-digit', minute: '2-digit' })
 
 export function TicketCard({ data }: { data: TicketWithOptions }) {
   const ticketId = data.ticket.id
@@ -28,7 +32,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
   const invalidateTickets = () => queryClient.invalidateQueries({ queryKey: ['tickets'] })
 
   const removeOptionMutation = useMutation({
-    mutationFn: (optionId: string) => removeOption({ id: optionId }),
+    mutationFn: (optionId: string) => api.removeOption(optionId),
     onSuccess: () => {
       void invalidateTickets()
       toast.success('Alternative removed')
@@ -38,7 +42,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
 
   const moveOptionMutation = useMutation({
     mutationFn: (vars: { optionId: string; direction: 'up' | 'down' }) =>
-      moveOption({ id: vars.optionId, direction: vars.direction }),
+      api.moveOption(vars.optionId, vars.direction),
     onSuccess: () => {
       void invalidateTickets()
       toast.success('Moved')
@@ -48,7 +52,7 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
 
   const updateOptionMutation = useMutation({
     mutationFn: (vars: { optionId: string; stopBeforeMinutes: number }) =>
-      updateOption({ id: vars.optionId, stopBeforeMinutes: vars.stopBeforeMinutes }),
+      api.setCutoff(vars.optionId, vars.stopBeforeMinutes),
     onSuccess: () => {
       void invalidateTickets()
       toast.success('Saved')
@@ -161,7 +165,8 @@ export function TicketCard({ data }: { data: TicketWithOptions }) {
           ) : null}
 
           <Link
-            href={`/tickets/${ticketId}/options`}
+            to="/tickets/$ticketId/options"
+            params={{ ticketId }}
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             <Plus className="size-4" />

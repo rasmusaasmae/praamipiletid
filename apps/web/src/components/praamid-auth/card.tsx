@@ -1,15 +1,12 @@
-'use client'
-
-import { useSuspenseQuery } from '@tanstack/react-query'
+import type { PraamidAuthStatus } from '@praamipiletid/praamidee'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import type { PraamidAuthStatus } from '@/lib/praamidee'
-import { getMyPraamidAuthState } from '@/lib/queries'
+import { praamidLoginQuery } from '@/lib/api'
 
 import { ForgetButton } from './forget-button'
 import { SigninDialog } from './signin-dialog'
@@ -30,16 +27,9 @@ function formatRelativeFuture(to: Date, now: Date): string {
 }
 
 export function PraamidAuthCard() {
-  const router = useRouter()
-
-  const { data: info } = useSuspenseQuery({
-    queryKey: ['praamidAuthState'],
-    queryFn: () => getMyPraamidAuthState(),
-    refetchInterval: (query) => {
-      const s = query.state.data?.status
-      return s === 'loading' || s === 'awaiting_confirmation' ? 1000 : false
-    },
-  })
+  const queryClient = useQueryClient()
+  // Login progress arrives through the change stream; no polling needed.
+  const { data: info } = useSuspenseQuery(praamidLoginQuery)
   const status = info.status
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -54,11 +44,11 @@ export function PraamidAuthCard() {
     const justAuthed = prevStatus.current !== 'authenticated' && status === 'authenticated'
     prevStatus.current = status
     if (!justAuthed) return
-    router.refresh()
+    void queryClient.invalidateQueries({ queryKey: ['tickets'] })
     if (!dialogOpen) return
     const t = setTimeout(() => setDialogOpen(false), 1200)
     return () => clearTimeout(t)
-  }, [status, dialogOpen, router])
+  }, [status, dialogOpen, queryClient])
 
   const isAuthenticated = status === 'authenticated'
   const isActive = status === 'loading' || status === 'awaiting_confirmation'

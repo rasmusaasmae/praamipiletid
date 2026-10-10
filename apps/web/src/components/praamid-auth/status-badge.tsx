@@ -1,7 +1,6 @@
-'use client'
+import type { PraamidAuthStatus } from '@praamipiletid/praamidee'
 
 import { Badge } from '@/components/ui/badge'
-import type { PraamidAuthStatus } from '@/lib/praamidee'
 
 export const STATUS_LABEL: Record<PraamidAuthStatus, string> = {
   unauthenticated: 'Unauthenticated',

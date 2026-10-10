@@ -1,8 +1,7 @@
-'use client'
-
+import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { MoonIcon, SunIcon, MonitorIcon, LogOutIcon, UserIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useRouter } from 'next/navigation'
 
 import {
   DropdownMenu,
@@ -23,7 +22,8 @@ type Props = {
 
 export function AvatarMenu({ user }: Props) {
   const { theme, setTheme } = useTheme()
-  const router = useRouter()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   return (
     <DropdownMenu>
@@ -32,7 +32,6 @@ export function AvatarMenu({ user }: Props) {
         aria-label={user.email}
       >
         {user.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={user.image}
             alt=""
@@ -68,8 +67,8 @@ export function AvatarMenu({ user }: Props) {
           variant="destructive"
           onClick={async () => {
             await authClient.signOut()
-            router.push('/sign-in')
-            router.refresh()
+            queryClient.clear()
+            await navigate({ to: '/sign-in' })
           }}
         >
           <LogOutIcon />
