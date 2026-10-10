@@ -9,13 +9,16 @@ type TicketsJson = InferResponseType<typeof client.tickets.$get>
 
 // Dates arrive as ISO strings; the UI works with Date objects.
 function withDates(json: TicketsJson) {
-  return json.map(({ ticket, options }) => ({
-    ticket: { ...ticket, eventDtstart: new Date(ticket.eventDtstart) },
-    options: options.map((o) => ({ ...o, eventDtstart: new Date(o.eventDtstart) })),
-  }))
+  return {
+    syncedAt: json.syncedAt ? new Date(json.syncedAt) : null,
+    tickets: json.tickets.map(({ ticket, options }) => ({
+      ticket: { ...ticket, eventDtstart: new Date(ticket.eventDtstart) },
+      options: options.map((o) => ({ ...o, eventDtstart: new Date(o.eventDtstart) })),
+    })),
+  }
 }
 
-export type TicketWithOptions = ReturnType<typeof withDates>[number]
+export type TicketWithOptions = ReturnType<typeof withDates>['tickets'][number]
 export type { PraamidEvent }
 
 async function ok<T extends Response>(res: T): Promise<T> {
@@ -71,6 +74,9 @@ export const departuresQuery = (ticketId: number, date: string) =>
   })
 
 export const api = {
+  syncTickets: async () => {
+    await ok(await client.tickets.sync.$post())
+  },
   addOption: async (ticketId: number, eventUid: string, date: string) => {
     await ok(
       await client.tickets[':ticketId'].options.$post({

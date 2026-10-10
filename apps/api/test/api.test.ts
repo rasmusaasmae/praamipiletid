@@ -56,11 +56,13 @@ function call(userId: string | null, method: string, path: string, body?: unknow
 
 async function options(userId = 'u1') {
   const res = await call(userId, 'GET', '/api/tickets')
-  const list = (await res.json()) as {
-    ticket: { id: number }
-    options: { id: string; eventUid: string; priority: number; stopBeforeMinutes: number }[]
-  }[]
-  return list[0]?.options ?? []
+  const { tickets } = (await res.json()) as {
+    tickets: {
+      ticket: { id: number }
+      options: { id: string; eventUid: string; priority: number; stopBeforeMinutes: number }[]
+    }[]
+  }
+  return tickets[0]?.options ?? []
 }
 
 test('adds a new option at the bottom of the list with a 60-minute cutoff', async () => {
@@ -94,7 +96,7 @@ test('keeps each user’s tickets private', async () => {
   const list = await call('u2', 'GET', '/api/tickets')
   const add = await call('u2', 'POST', '/api/tickets/1/options', { eventUid: 'vk-1630', date: DAY })
 
-  expect(await list.json()).toEqual([])
+  expect(await list.json()).toEqual({ syncedAt: null, tickets: [] })
   expect(add.status).toBe(404)
   expect(await options('u1')).toEqual([])
 })

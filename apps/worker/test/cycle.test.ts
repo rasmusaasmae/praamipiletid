@@ -203,6 +203,20 @@ test('forgets a ticket the user cancelled on praamid.ee', async () => {
   expect(await tickets().list('u1')).toEqual([])
 })
 
+test('a refresh fetches the user’s tickets on the next cycle, however recent the last sync', async () => {
+  await userWithTicket()
+  praamid.book('u1', 'vk-1800')
+  await cycle(at('12:01'))
+  expect(await tickets().list('u1')).toHaveLength(1)
+
+  await tickets().requestSync('u1')
+  expect(await tickets().syncedAt('u1')).toBeNull()
+  await cycle(at('12:02'))
+
+  expect(await tickets().list('u1')).toHaveLength(2)
+  expect(await tickets().syncedAt('u1')).toEqual(at('12:02'))
+})
+
 test('uses the departure time praamid.ee currently shows for the cutoff', async () => {
   const ticket = await userWithTicket()
   departure('vk-1500', '15:00', 0)

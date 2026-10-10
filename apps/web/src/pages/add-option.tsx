@@ -17,7 +17,7 @@ export function AddOptionPage() {
   const { ticketId } = route.useParams()
   const search = route.useSearch()
   const { data: all } = useSuspenseQuery(ticketsQuery)
-  const entry = all.find((t) => t.ticket.id === ticketId)
+  const entry = all.tickets.find((t) => t.ticket.id === ticketId)
 
   const date =
     search.date ??

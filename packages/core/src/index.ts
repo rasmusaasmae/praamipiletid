@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto'
 
-import { ticketOptions, tickets, type Db, type Ticket, type TicketOption } from '@ferry-tickets/db'
+import {
+  ticketOptions,
+  tickets,
+  ticketSyncs,
+  type Db,
+  type Ticket,
+  type TicketOption,
+} from '@ferry-tickets/db'
 import type { Praamid } from '@ferry-tickets/praamidee'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 
@@ -68,6 +75,21 @@ export function createTickets({ db, praamid }: { db: Db; praamid: Praamid }) {
         if (row.ticket_options) entry.options.push(row.ticket_options)
       }
       return [...byTicket.values()]
+    },
+
+    // When the user's tickets were last fetched from praamid.ee; null until
+    // the worker next syncs them.
+    async syncedAt(userId: string): Promise<Date | null> {
+      const [row] = await db
+        .select({ syncedAt: ticketSyncs.syncedAt })
+        .from(ticketSyncs)
+        .where(eq(ticketSyncs.userId, userId))
+      return row?.syncedAt ?? null
+    },
+
+    // Marks the user's copy stale so the worker's next cycle syncs it.
+    async requestSync(userId: string): Promise<void> {
+      await db.delete(ticketSyncs).where(eq(ticketSyncs.userId, userId))
     },
 
     // The day's departures in the ticket's direction, earliest first.
