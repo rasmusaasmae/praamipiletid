@@ -16,7 +16,7 @@ services:
       - POCKET_ID_CLIENT_ID=
       - POCKET_ID_CLIENT_SECRET=
       - PRAAMID_CRED_KEY=
-      - DATABASE_URL=postgres://ferry:ferry@ferry-tickets-db:5432/ferry
+      - DATABASE_URL=postgres://ferry_tickets:ferry_tickets@ferry-tickets-db:5432/ferry_tickets
       - TZ=Europe/Tallinn
     networks:
       - hermes
@@ -53,7 +53,7 @@ services:
       - SMTP_USER=
       - SMTP_PASS=
       - SMTP_FROM=
-      - DATABASE_URL=postgres://ferry:ferry@ferry-tickets-db:5432/ferry
+      - DATABASE_URL=postgres://ferry_tickets:ferry_tickets@ferry-tickets-db:5432/ferry_tickets
       - TZ=Europe/Tallinn
     networks:
       - internal
@@ -68,9 +68,9 @@ services:
     container_name: ferry-tickets-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=ferry
-      - POSTGRES_PASSWORD=ferry
-      - POSTGRES_DB=ferry
+      - POSTGRES_USER=ferry_tickets
+      - POSTGRES_PASSWORD=ferry_tickets
+      - POSTGRES_DB=ferry_tickets
       - TZ=Europe/Tallinn
     volumes:
       - /mnt/user/appdata/ferry-tickets/postgres:/var/lib/postgresql/data
@@ -79,7 +79,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U ferry -d ferry
+        - pg_isready -U ferry_tickets -d ferry_tickets
       interval: 10s
       timeout: 5s
       retries: 5
