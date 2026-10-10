@@ -111,14 +111,13 @@ export function createLoginBot({ credentials, tokens, state, onError }: Deps) {
     await page.waitForSelector('#sid-personal-code', { timeout: 15000 })
     if (session.cancelled) return
     await page.fill('#sid-personal-code', isikukood)
-    await Promise.all([
-      page.waitForLoadState('domcontentloaded').catch(() => {}),
-      page.click('#kc-login'),
-    ])
 
-    // Step 3: Smart-ID is now pending user approval on the phone.
+    // Step 3: submitting sends the Smart-ID request to the phone. Say so now:
+    // praamid.ee's next page can take a while to load, and the user would
+    // otherwise be asked on the phone while the page still says "opening".
     if (session.cancelled) return
     await state.set(session.userId, 'awaiting_confirmation')
+    await page.click('#kc-login')
 
     // Step 4: wait for the final callback that closes the OIDC flow. The
     // browser ends up on www.praamid.ee with success=true.
