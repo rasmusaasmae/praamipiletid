@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
-import { ticketOptions, tickets, type Db, type Ticket, type TicketOption } from '@praamipiletid/db'
-import type { Praamid } from '@praamipiletid/praamidee'
+import { ticketOptions, tickets, type Db, type Ticket, type TicketOption } from '@ferry-tickets/db'
+import type { Praamid } from '@ferry-tickets/praamidee'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 
 export const DEFAULT_STOP_BEFORE_MINUTES = 60

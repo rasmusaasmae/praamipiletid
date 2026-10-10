@@ -3,14 +3,14 @@ name: ferry-tickets
 services:
   # Web UI and HTTP API. Applies database migrations on start.
   app:
-    image: ghcr.io/rasmusaasmae/praamipiletid:latest
+    image: ghcr.io/rasmusaasmae/ferry-tickets:latest
     container_name: ferry-tickets
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - APP_URL=https://praamipiletid.aasmae.com
+      - APP_URL=https://ferry-tickets.aasmae.com
       - BETTER_AUTH_SECRET=
       - POCKET_ID_URL=https://auth.aasmae.com
       - POCKET_ID_CLIENT_ID=
@@ -23,7 +23,7 @@ services:
       - internal
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
-      net.unraid.docker.webui: 'https://praamipiletid.aasmae.com'
+      net.unraid.docker.webui: 'https://ferry-tickets.aasmae.com'
     healthcheck:
       test:
         - CMD
@@ -37,7 +37,7 @@ services:
   # Swap cycle, praamid.ee login bot and email. Waits for the app so the
   # schema is migrated first.
   worker:
-    image: ghcr.io/rasmusaasmae/praamipiletid:latest
+    image: ghcr.io/rasmusaasmae/ferry-tickets:latest
     container_name: ferry-tickets-worker
     restart: unless-stopped
     depends_on:

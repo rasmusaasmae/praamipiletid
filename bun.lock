@@ -16,14 +16,14 @@
       },
     },
     "apps/api": {
-      "name": "@praamipiletid/api",
+      "name": "@ferry-tickets/api",
       "version": "0.0.0",
       "dependencies": {
+        "@ferry-tickets/core": "workspace:*",
+        "@ferry-tickets/db": "workspace:*",
+        "@ferry-tickets/logger": "workspace:*",
+        "@ferry-tickets/praamidee": "workspace:*",
         "@hono/zod-validator": "0.9.1",
-        "@praamipiletid/core": "workspace:*",
-        "@praamipiletid/db": "workspace:*",
-        "@praamipiletid/logger": "workspace:*",
-        "@praamipiletid/praamidee": "workspace:*",
         "better-auth": "1.7.7",
         "drizzle-orm": "0.45.4",
         "hono": "4.13.13",
@@ -31,7 +31,7 @@
       },
     },
     "apps/web": {
-      "name": "@praamipiletid/web",
+      "name": "@ferry-tickets/web",
       "version": "0.0.0",
       "dependencies": {
         "@base-ui/react": "1.4.0",
@@ -57,8 +57,8 @@
         "zod": "4.3.6",
       },
       "devDependencies": {
-        "@praamipiletid/api": "workspace:*",
-        "@praamipiletid/praamidee": "workspace:*",
+        "@ferry-tickets/api": "workspace:*",
+        "@ferry-tickets/praamidee": "workspace:*",
         "@tailwindcss/vite": "4.3.3",
         "@tanstack/router-plugin": "1.168.43",
         "@types/react": "19.2.14",
@@ -69,14 +69,14 @@
       },
     },
     "apps/worker": {
-      "name": "@praamipiletid/worker",
+      "name": "@ferry-tickets/worker",
       "version": "0.0.0",
       "dependencies": {
         "@dbos-inc/dbos-sdk": "5.2.11",
-        "@praamipiletid/core": "workspace:*",
-        "@praamipiletid/db": "workspace:*",
-        "@praamipiletid/logger": "workspace:*",
-        "@praamipiletid/praamidee": "workspace:*",
+        "@ferry-tickets/core": "workspace:*",
+        "@ferry-tickets/db": "workspace:*",
+        "@ferry-tickets/logger": "workspace:*",
+        "@ferry-tickets/praamidee": "workspace:*",
         "drizzle-orm": "0.45.4",
         "nodemailer": "8.0.6",
       },
@@ -85,16 +85,16 @@
       },
     },
     "packages/core": {
-      "name": "@praamipiletid/core",
+      "name": "@ferry-tickets/core",
       "version": "0.0.0",
       "dependencies": {
-        "@praamipiletid/db": "workspace:*",
-        "@praamipiletid/praamidee": "workspace:*",
+        "@ferry-tickets/db": "workspace:*",
+        "@ferry-tickets/praamidee": "workspace:*",
         "drizzle-orm": "0.45.4",
       },
     },
     "packages/db": {
-      "name": "@praamipiletid/db",
+      "name": "@ferry-tickets/db",
       "version": "0.0.0",
       "dependencies": {
         "drizzle-orm": "0.45.4",
@@ -105,7 +105,7 @@
       },
     },
     "packages/logger": {
-      "name": "@praamipiletid/logger",
+      "name": "@ferry-tickets/logger",
       "version": "0.0.0",
       "dependencies": {
         "pino": "10.3.1",
@@ -113,10 +113,10 @@
       },
     },
     "packages/praamidee": {
-      "name": "@praamipiletid/praamidee",
+      "name": "@ferry-tickets/praamidee",
       "version": "0.0.0",
       "dependencies": {
-        "@praamipiletid/db": "workspace:*",
+        "@ferry-tickets/db": "workspace:*",
         "drizzle-orm": "0.45.4",
         "playwright": "1.59.1",
       },
@@ -305,6 +305,20 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.12", "", { "os": "win32", "cpu": "x64" }, "sha512-alJC0uCZpTFrSL0CCDjcgleBXPnCrEAhTBILpeAp7M/OFgoqtAetfBzX0xM00MUsVVPpVjlPuMbREqnZCXaTnA=="],
 
+    "@ferry-tickets/api": ["@ferry-tickets/api@workspace:apps/api"],
+
+    "@ferry-tickets/core": ["@ferry-tickets/core@workspace:packages/core"],
+
+    "@ferry-tickets/db": ["@ferry-tickets/db@workspace:packages/db"],
+
+    "@ferry-tickets/logger": ["@ferry-tickets/logger@workspace:packages/logger"],
+
+    "@ferry-tickets/praamidee": ["@ferry-tickets/praamidee@workspace:packages/praamidee"],
+
+    "@ferry-tickets/web": ["@ferry-tickets/web@workspace:apps/web"],
+
+    "@ferry-tickets/worker": ["@ferry-tickets/worker@workspace:apps/worker"],
+
     "@floating-ui/core": ["@floating-ui/core@1.8.0", "", { "dependencies": { "@floating-ui/utils": "^0.2.12" } }, "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="],
 
     "@floating-ui/dom": ["@floating-ui/dom@1.8.0", "", { "dependencies": { "@floating-ui/core": "^1.8.0", "@floating-ui/utils": "^0.2.12" } }, "sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg=="],
@@ -454,20 +468,6 @@
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.61.0", "", { "os": "win32", "cpu": "x64" }, "sha512-0xgSiyeqDLDZxXoe9CVJrOx3TUVsfyoOY7cNi03JbItNcC9WCZqrSNdrAbHONxhSPaVh/lzfnDcON1RqSUMhHw=="],
 
     "@pinojs/redact": ["@pinojs/redact@0.4.0", "", {}, "sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg=="],
-
-    "@praamipiletid/api": ["@praamipiletid/api@workspace:apps/api"],
-
-    "@praamipiletid/core": ["@praamipiletid/core@workspace:packages/core"],
-
-    "@praamipiletid/db": ["@praamipiletid/db@workspace:packages/db"],
-
-    "@praamipiletid/logger": ["@praamipiletid/logger@workspace:packages/logger"],
-
-    "@praamipiletid/praamidee": ["@praamipiletid/praamidee@workspace:packages/praamidee"],
-
-    "@praamipiletid/web": ["@praamipiletid/web@workspace:apps/web"],
-
-    "@praamipiletid/worker": ["@praamipiletid/worker@workspace:apps/worker"],
 
     "@rolldown/binding-android-arm-eabi": ["@rolldown/binding-android-arm-eabi@1.2.13", "", { "os": "android", "cpu": "arm" }, "sha512-Vu/NICrgdRvUOeaJZIyB2FP63s6fO/4ud5l8dXmxDx9yDyn+mN0y+gsvsVviSli+T361Aqo0h46EuMoobrwawA=="],
 

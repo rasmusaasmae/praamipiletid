@@ -1,5 +1,5 @@
-import type { Db } from '@praamipiletid/db'
-import type { Praamid } from '@praamipiletid/praamidee'
+import type { Db } from '@ferry-tickets/db'
+import type { Praamid } from '@ferry-tickets/praamidee'
 
 import type { Mailer } from './mailer'
 

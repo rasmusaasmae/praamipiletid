@@ -9,7 +9,7 @@ export type { WorkerDeps } from './deps'
 export async function createWorker(deps: WorkerDeps) {
   setDeps(deps)
   DBOS.setConfig({
-    name: 'praamipiletid',
+    name: 'ferry-tickets',
     systemDatabaseUrl: deps.databaseUrl,
     logLevel: deps.logLevel ?? 'info',
   })

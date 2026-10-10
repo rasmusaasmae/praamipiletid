@@ -1,4 +1,4 @@
-import type { PraamidAuthStatus } from '@praamipiletid/praamidee'
+import type { PraamidAuthStatus } from '@ferry-tickets/praamidee'
 import { useForm, useStore } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Loader2, Smartphone } from 'lucide-react'

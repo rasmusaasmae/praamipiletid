@@ -1,6 +1,6 @@
 import { DBOS } from '@dbos-inc/dbos-sdk'
-import { tickets, user as users, type Db } from '@praamipiletid/db'
-import type { PraamidEvent, Ticket as PraamidTicket } from '@praamipiletid/praamidee'
+import { tickets, user as users, type Db } from '@ferry-tickets/db'
+import type { PraamidEvent, Ticket as PraamidTicket } from '@ferry-tickets/praamidee'
 import { eq } from 'drizzle-orm'
 
 import { deps } from './deps'

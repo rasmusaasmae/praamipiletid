@@ -1,8 +1,8 @@
 import { beforeEach, expect, test } from 'bun:test'
 
-import { createUser, getTestDb, resetDb, seedTicket } from '@praamipiletid/db/testing'
-import { createPraamidee } from '@praamipiletid/praamidee'
-import { createFakePraamid, type FakePraamid } from '@praamipiletid/praamidee/fake'
+import { createUser, getTestDb, resetDb, seedTicket } from '@ferry-tickets/db/testing'
+import { createPraamidee } from '@ferry-tickets/praamidee'
+import { createFakePraamid, type FakePraamid } from '@ferry-tickets/praamidee/fake'
 
 import { createApp } from '../src/app'
 

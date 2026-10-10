@@ -1,6 +1,6 @@
-import { ticketOptions, tickets, ticketSyncs, type Db, type TicketOption } from '@praamipiletid/db'
-import { logger } from '@praamipiletid/logger'
-import type { Praamid, PraamidEvent } from '@praamipiletid/praamidee'
+import { ticketOptions, tickets, ticketSyncs, type Db, type TicketOption } from '@ferry-tickets/db'
+import { logger } from '@ferry-tickets/logger'
+import type { Praamid, PraamidEvent } from '@ferry-tickets/praamidee'
 import { and, asc, eq, isNull, lte, or } from 'drizzle-orm'
 
 import { syncUser } from './sync'

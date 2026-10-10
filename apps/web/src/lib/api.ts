@@ -1,5 +1,5 @@
-import type { App } from '@praamipiletid/api/app'
-import type { AuthInfo, PraamidEvent } from '@praamipiletid/praamidee'
+import type { App } from '@ferry-tickets/api/app'
+import type { AuthInfo, PraamidEvent } from '@ferry-tickets/praamidee'
 import { queryOptions } from '@tanstack/react-query'
 import { hc, type InferResponseType } from 'hono/client'
 

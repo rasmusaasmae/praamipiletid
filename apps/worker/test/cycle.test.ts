@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from 'bun:test'
 
-import { createTickets } from '@praamipiletid/core'
-import { createUser, getTestDb, resetDb, testDatabaseUrl } from '@praamipiletid/db/testing'
-import { createFakePraamid, type FakePraamid } from '@praamipiletid/praamidee/fake'
+import { createTickets } from '@ferry-tickets/core'
+import { createUser, getTestDb, resetDb, testDatabaseUrl } from '@ferry-tickets/db/testing'
+import { createFakePraamid, type FakePraamid } from '@ferry-tickets/praamidee/fake'
 
 import { createFakeMailer } from '../src/mailer'
 import { createWorker, type Worker } from '../src/worker'

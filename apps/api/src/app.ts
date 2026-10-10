@@ -1,12 +1,12 @@
-import { zValidator } from '@hono/zod-validator'
-import { createTickets, TicketsError } from '@praamipiletid/core'
-import type { Db } from '@praamipiletid/db'
+import { createTickets, TicketsError } from '@ferry-tickets/core'
+import type { Db } from '@ferry-tickets/db'
 import {
   LOGIN_CHANNEL,
   type LoginRequest,
   type Praamid,
   type Praamidee,
-} from '@praamipiletid/praamidee'
+} from '@ferry-tickets/praamidee'
+import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { createMiddleware } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'

@@ -1,5 +1,5 @@
 {
-  "name": "@praamipiletid/worker",
+  "name": "@ferry-tickets/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@dbos-inc/dbos-sdk": "5.2.11",
-    "@praamipiletid/core": "workspace:*",
-    "@praamipiletid/db": "workspace:*",
-    "@praamipiletid/logger": "workspace:*",
-    "@praamipiletid/praamidee": "workspace:*",
+    "@ferry-tickets/core": "workspace:*",
+    "@ferry-tickets/db": "workspace:*",
+    "@ferry-tickets/logger": "workspace:*",
+    "@ferry-tickets/praamidee": "workspace:*",
     "drizzle-orm": "0.45.4",
     "nodemailer": "8.0.6"
   },

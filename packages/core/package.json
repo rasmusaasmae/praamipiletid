@@ -1,5 +1,5 @@
 {
-  "name": "@praamipiletid/core",
+  "name": "@ferry-tickets/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@praamipiletid/db": "workspace:*",
-    "@praamipiletid/praamidee": "workspace:*",
+    "@ferry-tickets/db": "workspace:*",
+    "@ferry-tickets/praamidee": "workspace:*",
     "drizzle-orm": "0.45.4"
   }
 }
