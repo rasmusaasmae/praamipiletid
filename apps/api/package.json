@@ -1,5 +1,5 @@
 {
-  "name": "@praamipiletid/api",
+  "name": "@ferry-tickets/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,11 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ferry-tickets/core": "workspace:*",
+    "@ferry-tickets/db": "workspace:*",
+    "@ferry-tickets/logger": "workspace:*",
+    "@ferry-tickets/praamidee": "workspace:*",
     "@hono/zod-validator": "0.9.1",
-    "@praamipiletid/core": "workspace:*",
-    "@praamipiletid/db": "workspace:*",
-    "@praamipiletid/logger": "workspace:*",
-    "@praamipiletid/praamidee": "workspace:*",
     "better-auth": "1.7.7",
     "drizzle-orm": "0.45.4",
     "hono": "4.13.13",

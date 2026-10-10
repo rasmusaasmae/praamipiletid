@@ -16,7 +16,7 @@ DO use patterns and APIs the library documentation recommends. Prefer the simple
 
 # Tests
 
-Work test-first. Tests live at two seams only: the worker's `runCycle` (`apps/worker/test`) and the HTTP API through `app.request()` (`apps/api/test`). They run against a real Postgres (`TEST_DATABASE_URL`); praamid.ee is faked with `@praamipiletid/praamidee/fake` and email with the worker's fake mailer. Do not mock our own modules, and check results through the app's interfaces or the fakes' state, not by querying tables.
+Work test-first. Tests live at two seams only: the worker's `runCycle` (`apps/worker/test`) and the HTTP API through `app.request()` (`apps/api/test`). They run against a real Postgres (`TEST_DATABASE_URL`); praamid.ee is faked with `@ferry-tickets/praamidee/fake` and email with the worker's fake mailer. Do not mock our own modules, and check results through the app's interfaces or the fakes' state, not by querying tables.
 
 Test business decisions, not every edge case.
 

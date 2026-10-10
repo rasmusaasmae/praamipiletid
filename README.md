@@ -1,4 +1,4 @@
-# Praamipiletid
+# Ferry tickets
 
 Moves your praamid.ee ferry tickets to a better departure when one opens up, without paying anything extra.
 
@@ -37,7 +37,7 @@ The worker needs a Chromium for the login bot: `bunx playwright install chromium
 Tests run against a real Postgres that they empty between tests, with praamid.ee and email faked. They describe behaviour at two seams: the worker's `runCycle` and the HTTP API.
 
 ```bash
-TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/praamipiletid_test bun test
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/ferry_tickets_test bun test
 ```
 
 ### Database changes
@@ -50,4 +50,4 @@ bun run db:generate --name <meaningful_name>
 
 ## Deployment
 
-`docker-compose.yml` runs Postgres, the API and the worker from the one image published to `ghcr.io/rasmusaasmae/praamipiletid`. The API applies migrations on start; the worker waits for it.
+`docker-compose.yml` runs Postgres, the API and the worker from the one image published to `ghcr.io/rasmusaasmae/ferry-tickets`. The API applies migrations on start; the worker waits for it.

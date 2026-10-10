@@ -1,7 +1,7 @@
-import { createDb } from '@praamipiletid/db'
-import { logger } from '@praamipiletid/logger'
-import { createPraamidee, LOGIN_CHANNEL, type LoginRequest } from '@praamipiletid/praamidee'
-import { createLoginBot } from '@praamipiletid/praamidee/bot'
+import { createDb } from '@ferry-tickets/db'
+import { logger } from '@ferry-tickets/logger'
+import { createPraamidee, LOGIN_CHANNEL, type LoginRequest } from '@ferry-tickets/praamidee'
+import { createLoginBot } from '@ferry-tickets/praamidee/bot'
 
 import { createSmtpMailer } from './mailer'
 import { createWorker } from './worker'

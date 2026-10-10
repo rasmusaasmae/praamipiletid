@@ -1,4 +1,4 @@
-import type { Db } from '@praamipiletid/db'
+import type { Db } from '@ferry-tickets/db'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { genericOAuth } from 'better-auth/plugins'

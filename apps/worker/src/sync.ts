@@ -5,8 +5,8 @@ import {
   ticketSyncs,
   type Db,
   type Tx,
-} from '@praamipiletid/db'
-import type { Praamid, Ticket as PraamidTicket } from '@praamipiletid/praamidee'
+} from '@ferry-tickets/db'
+import type { Praamid, Ticket as PraamidTicket } from '@ferry-tickets/praamidee'
 import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
 
 // The unit every ticket is checked in. praamid.ee tickets carry it per

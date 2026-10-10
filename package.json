@@ -1,5 +1,5 @@
 {
-  "name": "praamipiletid",
+  "name": "ferry-tickets",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
@@ -8,17 +8,17 @@
   ],
   "type": "module",
   "scripts": {
-    "dev:api": "bun --filter @praamipiletid/api dev",
-    "dev:worker": "bun --filter @praamipiletid/worker dev",
-    "dev:web": "bun --filter @praamipiletid/web dev",
-    "build": "bun --filter @praamipiletid/web build",
+    "dev:api": "bun --filter @ferry-tickets/api dev",
+    "dev:worker": "bun --filter @ferry-tickets/worker dev",
+    "dev:web": "bun --filter @ferry-tickets/web dev",
+    "build": "bun --filter @ferry-tickets/web build",
     "test": "bun test",
     "typecheck": "bun --filter '*' typecheck",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
-    "db:generate": "bun --filter @praamipiletid/db generate",
+    "db:generate": "bun --filter @ferry-tickets/db generate",
     "prepare": "husky || true"
   },
   "devDependencies": {

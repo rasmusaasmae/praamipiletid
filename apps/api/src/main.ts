@@ -1,6 +1,6 @@
-import { createDb, runMigrations } from '@praamipiletid/db'
-import { logger } from '@praamipiletid/logger'
-import { createPraamidee } from '@praamipiletid/praamidee'
+import { createDb, runMigrations } from '@ferry-tickets/db'
+import { logger } from '@ferry-tickets/logger'
+import { createPraamidee } from '@ferry-tickets/praamidee'
 import { Hono } from 'hono'
 import { serveStatic } from 'hono/bun'
 

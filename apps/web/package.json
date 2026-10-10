@@ -1,5 +1,5 @@
 {
-  "name": "@praamipiletid/web",
+  "name": "@ferry-tickets/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -32,8 +32,8 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@praamipiletid/api": "workspace:*",
-    "@praamipiletid/praamidee": "workspace:*",
+    "@ferry-tickets/api": "workspace:*",
+    "@ferry-tickets/praamidee": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/router-plugin": "1.168.43",
     "@types/react": "19.2.14",

@@ -1,4 +1,4 @@
-import { notifyUserChanged, praamidAuthState, type Db } from '@praamipiletid/db'
+import { notifyUserChanged, praamidAuthState, type Db } from '@ferry-tickets/db'
 import { eq } from 'drizzle-orm'
 
 import type { CredentialStore } from './credentials'

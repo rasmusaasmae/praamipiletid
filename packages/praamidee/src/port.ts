@@ -8,7 +8,7 @@ import type {
 } from './types'
 
 // Everything the app needs from praamid.ee. The real implementation talks to
-// the site; tests use the in-memory fake from `@praamipiletid/praamidee/fake`.
+// the site; tests use the in-memory fake from `@ferry-tickets/praamidee/fake`.
 export interface Praamid {
   // Departures in one direction on one date (YYYY-MM-DD), with live capacity.
   events(direction: string, date: string): Promise<PraamidEvent[]>

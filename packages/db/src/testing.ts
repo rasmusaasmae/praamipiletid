@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm'
 
 import { createDb, runMigrations, tickets, user, type Db } from './index'
 
-const DEFAULT_TEST_URL = 'postgres://postgres:postgres@localhost:5432/praamipiletid_test'
+const DEFAULT_TEST_URL = 'postgres://postgres:postgres@localhost:5432/ferry_tickets_test'
 
 export const testDatabaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_URL
 

@@ -1,5 +1,5 @@
 {
-  "name": "@praamipiletid/logger",
+  "name": "@ferry-tickets/logger",
   "version": "0.0.0",
   "private": true,
   "type": "module",

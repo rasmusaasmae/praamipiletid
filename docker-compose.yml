@@ -3,27 +3,27 @@ name: ferry-tickets
 services:
   # Web UI and HTTP API. Applies database migrations on start.
   app:
-    image: ghcr.io/rasmusaasmae/praamipiletid:latest
+    image: ghcr.io/rasmusaasmae/ferry-tickets:latest
     container_name: ferry-tickets
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - APP_URL=https://praamipiletid.aasmae.com
+      - APP_URL=https://ferry-tickets.aasmae.com
       - BETTER_AUTH_SECRET=
       - POCKET_ID_URL=https://auth.aasmae.com
       - POCKET_ID_CLIENT_ID=
       - POCKET_ID_CLIENT_SECRET=
       - PRAAMID_CRED_KEY=
-      - DATABASE_URL=postgres://ferry:ferry@ferry-tickets-db:5432/ferry
+      - DATABASE_URL=postgres://ferry_tickets:ferry_tickets@ferry-tickets-db:5432/ferry_tickets
       - TZ=Europe/Tallinn
     networks:
       - hermes
       - internal
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
-      net.unraid.docker.webui: 'https://praamipiletid.aasmae.com'
+      net.unraid.docker.webui: 'https://ferry-tickets.aasmae.com'
     healthcheck:
       test:
         - CMD
@@ -37,7 +37,7 @@ services:
   # Swap cycle, praamid.ee login bot and email. Waits for the app so the
   # schema is migrated first.
   worker:
-    image: ghcr.io/rasmusaasmae/praamipiletid:latest
+    image: ghcr.io/rasmusaasmae/ferry-tickets:latest
     container_name: ferry-tickets-worker
     restart: unless-stopped
     depends_on:
@@ -53,7 +53,7 @@ services:
       - SMTP_USER=
       - SMTP_PASS=
       - SMTP_FROM=
-      - DATABASE_URL=postgres://ferry:ferry@ferry-tickets-db:5432/ferry
+      - DATABASE_URL=postgres://ferry_tickets:ferry_tickets@ferry-tickets-db:5432/ferry_tickets
       - TZ=Europe/Tallinn
     networks:
       - internal
@@ -68,9 +68,9 @@ services:
     container_name: ferry-tickets-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=ferry
-      - POSTGRES_PASSWORD=ferry
-      - POSTGRES_DB=ferry
+      - POSTGRES_USER=ferry_tickets
+      - POSTGRES_PASSWORD=ferry_tickets
+      - POSTGRES_DB=ferry_tickets
       - TZ=Europe/Tallinn
     volumes:
       - /mnt/user/appdata/ferry-tickets/postgres:/var/lib/postgresql/data
@@ -79,7 +79,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U ferry -d ferry
+        - pg_isready -U ferry_tickets -d ferry_tickets
       interval: 10s
       timeout: 5s
       retries: 5

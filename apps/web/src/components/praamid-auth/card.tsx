@@ -1,4 +1,4 @@
-import type { PraamidAuthStatus } from '@praamipiletid/praamidee'
+import type { PraamidAuthStatus } from '@ferry-tickets/praamidee'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'

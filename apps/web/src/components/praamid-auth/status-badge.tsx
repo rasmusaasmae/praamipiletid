@@ -1,4 +1,4 @@
-import type { PraamidAuthStatus } from '@praamipiletid/praamidee'
+import type { PraamidAuthStatus } from '@ferry-tickets/praamidee'
 
 import { Badge } from '@/components/ui/badge'
 

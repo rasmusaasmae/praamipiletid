@@ -1,4 +1,4 @@
-import { USER_CHANGED_CHANNEL, type Db } from '@praamipiletid/db'
+import { USER_CHANGED_CHANNEL, type Db } from '@ferry-tickets/db'
 
 // Fans Postgres change notifications out to the open pages of each user.
 export function createChangeFeed(db: Db) {

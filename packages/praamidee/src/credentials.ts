@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
-import { praamidCredentials, type Db } from '@praamipiletid/db'
+import { praamidCredentials, type Db } from '@ferry-tickets/db'
 import { eq, gt, lte } from 'drizzle-orm'
 
 const IV_BYTES = 12

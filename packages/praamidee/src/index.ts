@@ -1,4 +1,4 @@
-import type { Db } from '@praamipiletid/db'
+import type { Db } from '@ferry-tickets/db'
 
 import { createCredentialStore } from './credentials'
 import { PraamidAuthError } from './errors'
