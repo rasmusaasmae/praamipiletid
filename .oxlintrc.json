@@ -10,5 +10,6 @@
   },
   "options": {
     "typeAware": true
-  }
+  },
+  "ignorePatterns": ["**/node_modules/**", "**/drizzle/**", "**/dist/**", "**/routeTree.gen.ts"]
 }

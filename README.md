@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Praamipiletid
 
-## Getting Started
+Moves your praamid.ee ferry tickets to a better departure when one opens up, without paying anything extra.
 
-First, run the development server:
+You list the departures you would rather be on, in order. Every 10 seconds the worker checks praamid.ee; when a more wanted departure has room for your vehicle, it changes the ticket, commits only if the change costs nothing, and emails you. Terms are defined in [GLOSSARY.md](GLOSSARY.md).
+
+## Layout
+
+| Path                 | What it is                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `apps/web`           | Vite + React + TanStack Router single-page app                                               |
+| `apps/api`           | Hono on Bun: the HTTP API, sign-in (better-auth with Pocket ID) and the built web app        |
+| `apps/worker`        | Bun process: the swap cycle on DBOS, the praamid.ee login bot (Playwright) and email         |
+| `packages/db`        | Drizzle schema, connection and migrations                                                    |
+| `packages/praamidee` | praamid.ee client, the `Praamid` port the app codes against, and an in-memory fake for tests |
+| `packages/core`      | Ticket and option rules shared by the API and the worker                                     |
+| `packages/logger`    | pino logger with an optional Discord sink                                                    |
+
+The API and the worker share one Postgres. The API hands praamid.ee login requests to the worker with `NOTIFY`, and the worker announces changes back the same way; the API streams them to open pages as server-sent events.
+
+## Development
+
+Requires Bun and a Postgres.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+cp .env.example .env   # fill in; APP_URL=http://localhost:5173 for the dev server
+bun --env-file=.env run dev:api      # http://localhost:3000, applies migrations
+bun --env-file=.env run dev:worker
+bun run dev:web                      # http://localhost:5173, proxies /api to the API
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The worker needs a Chromium for the login bot: `bunx playwright install chromium`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Tests
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Tests run against a real Postgres that they empty between tests, with praamid.ee and email faked. They describe behaviour at two seams: the worker's `runCycle` and the HTTP API.
 
-## Learn More
+```bash
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/praamipiletid_test bun test
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Database changes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Change `packages/db/src/schema.ts`, then generate a migration:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+bun run db:generate --name <meaningful_name>
+```
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`docker-compose.yml` runs Postgres, the API and the worker from the one image published to `ghcr.io/rasmusaasmae/praamipiletid`. The API applies migrations on start; the worker waits for it.

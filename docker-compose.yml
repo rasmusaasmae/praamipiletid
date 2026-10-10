@@ -1,48 +1,90 @@
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ferry
-      POSTGRES_PASSWORD: ferry
-      POSTGRES_DB: ferry
-    volumes:
-      - ferry_pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ferry -d ferry']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+name: ferry-tickets
 
+services:
+  # Web UI and HTTP API. Applies database migrations on start.
   app:
     image: ghcr.io/rasmusaasmae/praamipiletid:latest
+    container_name: ferry-tickets
+    restart: unless-stopped
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
-    ports:
-      - '${APP_PORT:-3000}:3000'
     environment:
-      APP_URL: ${APP_URL}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      SMTP_FROM: ${SMTP_FROM}
-      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-10000}
-      PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
-      DATABASE_URL: postgres://ferry:ferry@postgres:5432/ferry
-    shm_size: 1gb
+      - APP_URL=https://praamipiletid.aasmae.com
+      - BETTER_AUTH_SECRET=
+      - POCKET_ID_URL=https://auth.aasmae.com
+      - POCKET_ID_CLIENT_ID=
+      - POCKET_ID_CLIENT_SECRET=
+      - PRAAMID_CRED_KEY=
+      - DATABASE_URL=postgres://ferry:ferry@ferry-tickets-db:5432/ferry
+      - TZ=Europe/Tallinn
+    networks:
+      - hermes
+      - internal
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
+      net.unraid.docker.webui: 'https://praamipiletid.aasmae.com'
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
+      test:
+        - CMD
+        - bun
+        - -e
+        - "const r = await fetch('http://127.0.0.1:3000/api/health'); process.exit(r.ok ? 0 : 1)"
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
 
-volumes:
-  ferry_pg:
+  # Swap cycle, praamid.ee login bot and email. Waits for the app so the
+  # schema is migrated first.
+  worker:
+    image: ghcr.io/rasmusaasmae/praamipiletid:latest
+    container_name: ferry-tickets-worker
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    command:
+      - bun
+      - apps/worker/src/main.ts
+    environment:
+      - PRAAMID_CRED_KEY=
+      - SMTP_HOST=smtp.protonmail.ch
+      - SMTP_PORT=587
+      - SMTP_USER=
+      - SMTP_PASS=
+      - SMTP_FROM=
+      - DATABASE_URL=postgres://ferry:ferry@ferry-tickets-db:5432/ferry
+      - TZ=Europe/Tallinn
+    networks:
+      - internal
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    # Chromium crashes with the default 64MB /dev/shm when Playwright drives
+    # logins. Raise it instead of using ipc=host so we don't share host IPC.
+    shm_size: 1gb
+
+  db:
+    image: postgres:16-alpine
+    container_name: ferry-tickets-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=ferry
+      - POSTGRES_PASSWORD=ferry
+      - POSTGRES_DB=ferry
+      - TZ=Europe/Tallinn
+    volumes:
+      - /mnt/user/appdata/ferry-tickets/postgres:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ferry -d ferry
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  hermes:
+    external: true
+  internal:

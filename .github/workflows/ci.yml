@@ -32,7 +32,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: 1.3.5
+          bun-version: 1.4.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
@@ -51,7 +51,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: 1.3.5
+          bun-version: 1.4.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
@@ -70,18 +70,32 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: 1.3.5
+          bun-version: 1.4.2
 
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Typecheck
-        run: bunx tsc --noEmit
+        run: bun run typecheck
 
-  build:
-    name: Build
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    needs: [format, lint, typecheck]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: praamipiletid_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout
@@ -90,19 +104,47 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: 1.3.5
+          bun-version: 1.4.2
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Build
+      - name: Test
         env:
-          # Placeholder env vars so `next build` can evaluate modules that
-          # validate env at import time. Real values are supplied at runtime.
-          DATABASE_URL: postgres://ci:ci@localhost:5432/ci
-          APP_URL: http://localhost:3000
-          BETTER_AUTH_SECRET: ci-build-placeholder-at-least-32-chars-long
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/praamipiletid_test
+        run: bun test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [format, lint, typecheck, test]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build web app
         run: bun run build
+
+      - name: Set up Docker Buildx
+        if: github.event_name == 'pull_request'
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Build Docker image
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
 
   deploy:
     name: Deploy
