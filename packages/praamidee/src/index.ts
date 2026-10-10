@@ -106,6 +106,9 @@ export function createPraamidee({ db, credKey }: { db: Db; credKey: string }) {
     },
 
     markLoading: (userId: string) => state.set(userId, 'loading'),
+
+    // Ends a login attempt the user abandoned.
+    settle: (userId: string) => state.settle(userId),
   }
 
   return { praamid, login, credentials, tokens, state }

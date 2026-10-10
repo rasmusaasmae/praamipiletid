@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 
-import { createDb, runMigrations, user, type Db } from './index'
+import { createDb, runMigrations, tickets, user, type Db } from './index'
 
 const DEFAULT_TEST_URL = 'postgres://postgres:postgres@localhost:5432/praamipiletid_test'
 
@@ -34,4 +34,26 @@ export async function resetDb(db: Db): Promise<void> {
 // A signed-up app user, as better-auth would create one.
 export async function createUser(db: Db, id: string): Promise<void> {
   await db.insert(user).values({ id, name: id, email: `${id}@example.com`, emailVerified: true })
+}
+
+// A ticket in our copy, as the worker's sync would have stored it.
+export async function seedTicket(
+  db: Db,
+  t: { id: number; userId: string; eventUid: string; dtstart: string; direction?: string },
+): Promise<void> {
+  await db.insert(tickets).values({
+    id: t.id,
+    userId: t.userId,
+    bookingUid: `B-${t.id}`,
+    bookingReferenceNumber: `R-${t.id}`,
+    sequenceNumber: 1,
+    ticketCode: `TC-${t.id}`,
+    ticketNumber: `T-${t.id}`,
+    direction: t.direction ?? 'VK',
+    measurementUnit: 'sv',
+    eventUid: t.eventUid,
+    eventDtstart: new Date(t.dtstart),
+    ticketDate: t.dtstart.slice(0, 10),
+    capturedAt: new Date(),
+  })
 }

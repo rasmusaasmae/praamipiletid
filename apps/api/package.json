@@ -1,0 +1,22 @@
+{
+  "name": "@praamipiletid/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "0.9.1",
+    "@praamipiletid/core": "workspace:*",
+    "@praamipiletid/db": "workspace:*",
+    "@praamipiletid/logger": "workspace:*",
+    "@praamipiletid/praamidee": "workspace:*",
+    "better-auth": "1.7.7",
+    "drizzle-orm": "0.45.4",
+    "hono": "4.13.13",
+    "zod": "4.3.6"
+  }
+}

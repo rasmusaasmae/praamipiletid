@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { ticketOptions, tickets, type Db, type Ticket, type TicketOption } from '@praamipiletid/db'
 import type { Praamid } from '@praamipiletid/praamidee'
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 
 export const DEFAULT_STOP_BEFORE_MINUTES = 60
 
@@ -37,6 +37,17 @@ export function createTickets({ db, praamid }: { db: Db; praamid: Praamid }) {
     return ticket
   }
 
+  async function ownedOption(userId: string, optionId: string) {
+    const [row] = await db
+      .select({ option: ticketOptions })
+      .from(ticketOptions)
+      .innerJoin(tickets, eq(tickets.id, ticketOptions.ticketId))
+      .where(and(eq(ticketOptions.id, optionId), eq(tickets.userId, userId)))
+      .limit(1)
+    if (!row) throw new TicketsError('option_not_found')
+    return row.option
+  }
+
   return {
     // The user's tickets, soonest first, each with its options best first.
     async list(userId: string): Promise<TicketWithOptions[]> {
@@ -57,6 +68,13 @@ export function createTickets({ db, praamid }: { db: Db; praamid: Praamid }) {
         if (row.ticket_options) entry.options.push(row.ticket_options)
       }
       return [...byTicket.values()]
+    },
+
+    // The day's departures in the ticket's direction, earliest first.
+    async departures(userId: string, ticketId: number, date: string) {
+      const ticket = await ownedTicket(userId, ticketId)
+      const events = await praamid.events(ticket.direction, date)
+      return events.toSorted((a, b) => Date.parse(a.dtstart) - Date.parse(b.dtstart))
     },
 
     // Adds a departure the user would rather be on, at the bottom of the
@@ -101,6 +119,52 @@ export function createTickets({ db, praamid }: { db: Db; praamid: Praamid }) {
         })
         .returning()
       return option!
+    },
+
+    async setCutoff(userId: string, optionId: string, stopBeforeMinutes: number): Promise<void> {
+      const option = await ownedOption(userId, optionId)
+      await db
+        .update(ticketOptions)
+        .set({ stopBeforeMinutes })
+        .where(eq(ticketOptions.id, option.id))
+    },
+
+    async removeOption(userId: string, optionId: string): Promise<void> {
+      const option = await ownedOption(userId, optionId)
+      await db.delete(ticketOptions).where(eq(ticketOptions.id, option.id))
+    },
+
+    // Swaps an option's priority with its neighbour above or below.
+    async moveOption(userId: string, optionId: string, direction: 'up' | 'down'): Promise<void> {
+      const option = await ownedOption(userId, optionId)
+      const [neighbour] = await db
+        .select({ id: ticketOptions.id, priority: ticketOptions.priority })
+        .from(ticketOptions)
+        .where(
+          and(
+            eq(ticketOptions.ticketId, option.ticketId),
+            direction === 'up'
+              ? lt(ticketOptions.priority, option.priority)
+              : gt(ticketOptions.priority, option.priority),
+          ),
+        )
+        .orderBy(direction === 'up' ? desc(ticketOptions.priority) : asc(ticketOptions.priority))
+        .limit(1)
+      if (!neighbour) return
+
+      // Priorities are unique per ticket, so park one option out of the way
+      // while the other takes its place.
+      await db.transaction(async (tx) => {
+        await tx.update(ticketOptions).set({ priority: -1 }).where(eq(ticketOptions.id, option.id))
+        await tx
+          .update(ticketOptions)
+          .set({ priority: option.priority })
+          .where(eq(ticketOptions.id, neighbour.id))
+        await tx
+          .update(ticketOptions)
+          .set({ priority: neighbour.priority })
+          .where(eq(ticketOptions.id, option.id))
+      })
     },
   }
 }
