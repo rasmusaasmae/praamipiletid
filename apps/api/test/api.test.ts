@@ -218,3 +218,12 @@ test('tells the user’s open pages when their data changes', async () => {
   await reader.cancel()
   expect(new TextDecoder().decode(next.value)).toContain('event: changed')
 })
+
+test('asks reverse proxies not to hold back the change stream', async () => {
+  const res = await call('u1', 'GET', '/api/events')
+  await res.body!.cancel()
+
+  // nginx buffers responses unless told otherwise, and a buffered event
+  // stream never reaches the page.
+  expect(res.headers.get('x-accel-buffering')).toBe('no')
+})

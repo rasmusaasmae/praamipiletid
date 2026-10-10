@@ -28,8 +28,16 @@ function formatRelativeFuture(to: Date, now: Date): string {
 
 export function PraamidAuthCard() {
   const queryClient = useQueryClient()
-  // Login progress arrives through the change stream; no polling needed.
-  const { data: info } = useSuspenseQuery(praamidLoginQuery)
+  // Progress normally arrives through the change stream. While a login is
+  // under way, also poll, so a proxy that holds the stream back can't leave
+  // the dialog stuck.
+  const { data: info } = useSuspenseQuery({
+    ...praamidLoginQuery,
+    refetchInterval: (query) => {
+      const s = query.state.data?.status
+      return s === 'loading' || s === 'awaiting_confirmation' ? 2000 : false
+    },
+  })
   const status = info.status
 
   const [dialogOpen, setDialogOpen] = useState(false)
