@@ -24,9 +24,9 @@ services:
       - '${APP_PORT:-3000}:3000'
     environment:
       DATABASE_URL: postgres://ferry:ferry@postgres:5432/ferry
-      APP_URL: ${APP_URL}
+      APP_URL: ${APP_URL:-https://praamipiletid.aasmae.com}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      POCKET_ID_URL: ${POCKET_ID_URL}
+      POCKET_ID_URL: ${POCKET_ID_URL:-https://auth.aasmae.com}
       POCKET_ID_CLIENT_ID: ${POCKET_ID_CLIENT_ID}
       POCKET_ID_CLIENT_SECRET: ${POCKET_ID_CLIENT_SECRET}
       PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
