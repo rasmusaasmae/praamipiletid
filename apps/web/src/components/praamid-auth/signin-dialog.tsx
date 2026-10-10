@@ -1,10 +1,7 @@
 import type { PraamidAuthStatus } from '@ferry-tickets/praamidee'
-import { useForm, useStore } from '@tanstack/react-form'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { CheckCircle2, Loader2, Smartphone } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -15,21 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { FieldError } from '@/components/ui/field-error'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { api } from '@/lib/api'
+import { api, profileQuery } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-const STEP_ORDER: PraamidAuthStatus[] = [
-  'unauthenticated',
-  'loading',
-  'awaiting_confirmation',
-  'authenticated',
-]
+const STEP_ORDER: PraamidAuthStatus[] = ['loading', 'awaiting_confirmation', 'authenticated']
 
 const STEP_LABEL: Record<PraamidAuthStatus, string> = {
-  unauthenticated: 'Enter ID Code',
+  unauthenticated: 'Not authenticated',
   loading: 'Opening praamid.ee',
   awaiting_confirmation: 'Confirm',
   authenticated: 'Authenticated',
@@ -39,49 +28,19 @@ export function SigninDialog({
   open,
   onOpenChange,
   status,
+  starting,
+  onRetry,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   status: PraamidAuthStatus
+  starting: boolean
+  onRetry: () => void
 }) {
   const queryClient = useQueryClient()
+  const { data: profile } = useSuspenseQuery(profileQuery)
 
-  const [submitting, setSubmitting] = useState(false)
-  useEffect(() => {
-    if (!open) setSubmitting(false)
-  }, [open])
-  useEffect(() => {
-    if (submitting && status !== 'unauthenticated') setSubmitting(false)
-  }, [submitting, status])
-
-  const form = useForm({
-    defaultValues: { isikukood: '' },
-    onSubmit: async ({ value }) => {
-      try {
-        await api.startPraamidLogin(value.isikukood)
-        setSubmitting(true)
-        void queryClient.invalidateQueries({ queryKey: ['praamidLogin'] })
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'start_failed'
-        toast.error(`Capture failed: ${message}`)
-      }
-    },
-  })
-  const canSubmit = useStore(form.store, (s) => s.canSubmit)
-  const isFormSubmitting = useStore(form.store, (s) => s.isSubmitting)
-
-  const step: PraamidAuthStatus =
-    status === 'authenticated'
-      ? 'authenticated'
-      : status === 'awaiting_confirmation'
-        ? 'awaiting_confirmation'
-        : submitting || status === 'loading'
-          ? 'loading'
-          : 'unauthenticated'
-
-  useEffect(() => {
-    if (open) form.reset()
-  }, [open, form])
+  const step: PraamidAuthStatus = starting && status === 'unauthenticated' ? 'loading' : status
 
   const onCancel = async () => {
     try {
@@ -99,67 +58,26 @@ export function SigninDialog({
         <DialogHeader>
           <DialogTitle>Authenticate with praamid.ee</DialogTitle>
           <DialogDescription>
-            We&apos;ll start a Smart-ID session with praamid.ee and store the resulting token so we
-            can keep your ticket fresh.
+            We&apos;ll start a Smart-ID session with praamid.ee for ID code {profile.isikukood} and
+            store the resulting token so we can keep your ticket fresh.{' '}
+            <Link to="/settings" className="hover:text-foreground underline">
+              Change ID code
+            </Link>
           </DialogDescription>
         </DialogHeader>
 
         <Stepper current={step} />
 
         <div className="min-h-[10rem]">
-          {step === 'unauthenticated' ? (
-            <form
-              id="praamid-isikukood-form"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void form.handleSubmit()
-              }}
-              className="flex flex-col gap-3"
-            >
-              <form.Field
-                name="isikukood"
-                validators={{
-                  onChange: z.string().regex(/^\d{11}$/, 'isikukoodInvalid'),
-                }}
-              >
-                {(field) => (
-                  <div>
-                    <Label htmlFor={field.name} className="mb-1 block">
-                      Estonian ID code
-                    </Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) =>
-                        field.handleChange(e.target.value.replace(/\D/g, '').slice(0, 11))
-                      }
-                      pattern="\d{11}"
-                      maxLength={11}
-                      required
-                      placeholder="11 digits"
-                      autoFocus
-                    />
-                    <FieldError field={field} />
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      We use this to start a Smart-ID session with praamid.ee. You&apos;ll need to
-                      approve the request on your phone.
-                    </p>
-                  </div>
-                )}
-              </form.Field>
-            </form>
-          ) : step === 'loading' ? (
+          {step === 'loading' ? (
             <LoadingPanel />
           ) : step === 'awaiting_confirmation' ? (
             <AwaitingPanel />
           ) : step === 'authenticated' ? (
             <SuccessPanel />
-          ) : null}
+          ) : (
+            <FailedPanel />
+          )}
         </div>
 
         <DialogFooter>
@@ -169,13 +87,8 @@ export function SigninDialog({
             </Button>
           ) : null}
           {step === 'unauthenticated' ? (
-            <Button
-              type="submit"
-              form="praamid-isikukood-form"
-              disabled={!canSubmit || isFormSubmitting || submitting}
-            >
-              {isFormSubmitting || submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              Next
+            <Button type="button" onClick={onRetry}>
+              Try again
             </Button>
           ) : null}
         </DialogFooter>
@@ -241,6 +154,15 @@ function AwaitingPanel() {
       <p className="text-muted-foreground text-xs">
         Open the Smart-ID app and approve the request.
       </p>
+    </div>
+  )
+}
+
+function FailedPanel() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-6 text-center text-sm">
+      <p className="font-medium">The login didn&apos;t go through</p>
+      <p className="text-muted-foreground">Check the ID code and try again.</p>
     </div>
   )
 }

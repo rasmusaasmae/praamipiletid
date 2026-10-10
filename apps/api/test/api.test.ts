@@ -160,17 +160,42 @@ async function loginStatus(userId = 'u1') {
   return ((await res.json()) as { status: string }).status
 }
 
+async function profile(userId = 'u1') {
+  const res = await call(userId, 'GET', '/api/profile')
+  return (await res.json()) as { isikukood: string | null }
+}
+
+test('a new user has no isikukood yet', async () => {
+  expect(await profile()).toEqual({ isikukood: null })
+})
+
+test('saves and changes the user’s isikukood', async () => {
+  await call('u1', 'PUT', '/api/profile', { isikukood: '38001010000' })
+  await call('u1', 'PUT', '/api/profile', { isikukood: '49002020000' })
+
+  expect(await profile()).toEqual({ isikukood: '49002020000' })
+})
+
+test('rejects an isikukood that is not 11 digits', async () => {
+  const res = await call('u1', 'PUT', '/api/profile', { isikukood: '3800101' })
+
+  expect(res.status).toBe(400)
+  expect(await profile()).toEqual({ isikukood: null })
+})
+
 test('starting a praamid.ee login shows it as in progress', async () => {
-  const res = await call('u1', 'POST', '/api/praamid/login', { isikukood: '38001010000' })
+  await call('u1', 'PUT', '/api/profile', { isikukood: '38001010000' })
+
+  const res = await call('u1', 'POST', '/api/praamid/login')
 
   expect(res.status).toBe(202)
   expect(await loginStatus()).toBe('loading')
 })
 
-test('rejects an isikukood that is not 11 digits', async () => {
-  const res = await call('u1', 'POST', '/api/praamid/login', { isikukood: '3800101' })
+test('cannot start a praamid.ee login without an isikukood', async () => {
+  const res = await call('u1', 'POST', '/api/praamid/login')
 
-  expect(res.status).toBe(400)
+  expect(res.status).toBe(409)
   expect(await loginStatus()).toBe('unauthenticated')
 })
 

@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { MoonIcon, SunIcon, MonitorIcon, LogOutIcon, UserIcon } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { MoonIcon, SunIcon, MonitorIcon, LogOutIcon, UserIcon, SettingsIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
 import {
@@ -44,6 +44,10 @@ export function AvatarMenu({ user }: Props) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
         <div className="truncate px-1.5 py-1 text-sm font-medium">{user.email}</div>
+        <DropdownMenuItem render={<Link to="/settings" />}>
+          <SettingsIcon />
+          Settings
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>Toggle theme</DropdownMenuLabel>

@@ -21,6 +21,12 @@ export function createAuth(config: {
     baseURL: config.baseURL,
     secret: config.secret,
     database: drizzleAdapter(config.db, { provider: 'pg' }),
+    // Owned by the app's profile endpoints, not by sign-in.
+    user: {
+      additionalFields: {
+        isikukood: { type: 'string', required: false, input: false, returned: false },
+      },
+    },
     plugins: [
       genericOAuth({
         config: [
