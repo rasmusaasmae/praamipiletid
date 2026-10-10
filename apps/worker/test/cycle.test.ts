@@ -259,3 +259,62 @@ test('a committed swap is still synced and emailed after the worker crashes', as
   expect(praamid.activeTickets('u1')).toHaveLength(1)
   expect(mailer.sent).toHaveLength(1)
 })
+
+test('a praamid.ee error for one user does not hold up the others', async () => {
+  await userWithTicket('u1')
+  await createUser(db, 'u2')
+  praamid.login('u2', at('23:59'))
+  praamid.book('u2', 'vk-1800')
+
+  // Both users are due a sync; the first one's fails.
+  praamid.fail('tickets')
+  await cycle(at('12:06'))
+
+  expect(await tickets().list('u2')).toHaveLength(1)
+})
+
+test('a praamid.ee error for one day’s departures does not hold up other days', async () => {
+  const ticket = await userWithTicket()
+  const NEXT = '2026-10-18'
+  departure('vk-1630', '16:30', 0)
+  praamid.addDeparture({
+    uid: 'vk-next',
+    direction: 'VK',
+    date: NEXT,
+    dtstart: `${NEXT}T08:00:00+03:00`,
+    free: { sv: 2 },
+  })
+  await tickets().addOption('u1', { ticketId: ticket.id, eventUid: 'vk-1630', date: DAY })
+  await tickets().addOption('u1', { ticketId: ticket.id, eventUid: 'vk-next', date: NEXT })
+
+  // Departures are fetched day by day, earliest first; today's fails.
+  praamid.fail('events')
+  await cycle(at('12:01'))
+
+  const [after] = await tickets().list('u1')
+  expect(after!.ticket.eventUid).toBe('vk-next')
+})
+
+test('undoes the edit when praamid.ee rejects the commit', async () => {
+  const ticket = await userWithTicket()
+  departure('vk-1630', '16:30', 2)
+  await tickets().addOption('u1', { ticketId: ticket.id, eventUid: 'vk-1630', date: DAY })
+
+  praamid.fail('commitZeroSum')
+  await cycle(at('12:01'))
+
+  expect(praamid.pendingEdits()).toEqual([])
+  expect(praamid.activeTickets('u1').map((t) => t.event.uid)).toEqual(['vk-1800'])
+})
+
+test('undoes the edit when praamid.ee cannot say what the change costs', async () => {
+  const ticket = await userWithTicket()
+  departure('vk-1630', '16:30', 2)
+  await tickets().addOption('u1', { ticketId: ticket.id, eventUid: 'vk-1630', date: DAY })
+
+  praamid.fail('balance')
+  await cycle(at('12:01'))
+
+  expect(praamid.pendingEdits()).toEqual([])
+  expect(praamid.owed('u1')).toBe(0)
+})

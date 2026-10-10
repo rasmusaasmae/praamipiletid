@@ -14,7 +14,8 @@ services:
       retries: 5
     restart: unless-stopped
 
-  app:
+  # Web UI and HTTP API. Applies database migrations on start.
+  api:
     image: ghcr.io/rasmusaasmae/praamipiletid:latest
     depends_on:
       postgres:
@@ -22,26 +23,51 @@ services:
     ports:
       - '${APP_PORT:-3000}:3000'
     environment:
+      DATABASE_URL: postgres://ferry:ferry@postgres:5432/ferry
       APP_URL: ${APP_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      POCKET_ID_URL: ${POCKET_ID_URL}
+      POCKET_ID_CLIENT_ID: ${POCKET_ID_CLIENT_ID}
+      POCKET_ID_CLIENT_SECRET: ${POCKET_ID_CLIENT_SECRET}
+      PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'bun',
+          '-e',
+          "const r = await fetch('http://127.0.0.1:3000/api/health'); process.exit(r.ok ? 0 : 1)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Swap cycle, praamid.ee login bot and email. Waits for the API so the
+  # schema is migrated first.
+  worker:
+    image: ghcr.io/rasmusaasmae/praamipiletid:latest
+    command: ['bun', 'apps/worker/src/main.ts']
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://ferry:ferry@postgres:5432/ferry
+      PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-10000}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM}
-      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-10000}
-      PRAAMID_CRED_KEY: ${PRAAMID_CRED_KEY}
-      DATABASE_URL: postgres://ferry:ferry@postgres:5432/ferry
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+    # Headless Chromium needs more shared memory than Docker's default.
     shm_size: 1gb
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
-    healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/health || exit 1']
-      interval: 30s
-      timeout: 10s
-      retries: 3
     restart: unless-stopped
 
 volumes:

@@ -1,8 +1,12 @@
 import { ticketOptions, tickets, ticketSyncs, type Db, type TicketOption } from '@praamipiletid/db'
+import { logger } from '@praamipiletid/logger'
 import type { Praamid, PraamidEvent } from '@praamipiletid/praamidee'
-import { and, eq, isNull, lte, or } from 'drizzle-orm'
+import { and, asc, eq, isNull, lte, or } from 'drizzle-orm'
 
 import { syncUser } from './sync'
+
+const log = logger.child({ scope: 'cycle' })
+const message = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
 // How long a user's copy of their tickets is trusted before re-fetching.
 const SYNC_EVERY_MS = 5 * 60_000
@@ -28,7 +32,11 @@ export async function syncStaleUsers(db: Db, praamid: Praamid, now: Date): Promi
   for (const userId of userIds) {
     const last = syncedAt.get(userId)
     if (last !== undefined && now.getTime() - last < SYNC_EVERY_MS) continue
-    await syncUser(db, praamid, userId, now)
+    try {
+      await syncUser(db, praamid, userId, now)
+    } catch (err) {
+      log.warn({ userId, err: message(err) }, 'sync failed')
+    }
   }
 }
 
@@ -39,6 +47,7 @@ export async function findSwaps(db: Db, praamid: Praamid, now: Date): Promise<Pl
     .from(ticketOptions)
     .innerJoin(tickets, eq(tickets.id, ticketOptions.ticketId))
     .where(or(isNull(tickets.nextSwapAt), lte(tickets.nextSwapAt, now)))
+    .orderBy(asc(ticketOptions.eventDtstart))
 
   const events = await fetchEvents(
     praamid,
@@ -117,7 +126,11 @@ async function fetchEvents(
   const byUid = new Map<string, PraamidEvent>()
   const buckets = new Map(options.map((o) => [`${o.direction}|${o.date}`, o]))
   for (const { direction, date } of buckets.values()) {
-    for (const event of await praamid.events(direction, date)) byUid.set(event.uid, event)
+    try {
+      for (const event of await praamid.events(direction, date)) byUid.set(event.uid, event)
+    } catch (err) {
+      log.warn({ direction, date, err: message(err) }, 'departures unavailable')
+    }
   }
   return byUid
 }

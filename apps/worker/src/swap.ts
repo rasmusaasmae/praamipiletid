@@ -18,6 +18,7 @@ export type SwapOutcome =
   | { kind: 'swapped' }
   | { kind: 'ticket_inactive' }
   | { kind: 'would_cost'; unpaid: number }
+  | { kind: 'failed' }
 
 // Moves one ticket to `target` on praamid.ee. Durable: after a crash DBOS
 // resumes it from the last finished step, so a committed change is never
@@ -33,24 +34,33 @@ async function swap(input: SwapInput): Promise<SwapOutcome> {
   await DBOS.runStep(() => user.editTicket(input.ticketCode, moveTo(current, input.target)), {
     name: 'editTicket',
   })
-  // Never pay: anything owed means the change is undone before committing.
-  const { unpaidAmount } = await DBOS.runStep(() => user.balance(input.bookingUid), {
+  // Undoes the edit, so the ticket is never left half-changed on praamid.ee.
+  const revert = () =>
+    DBOS.runStep(() => user.editTicket(input.ticketCode, current), { name: 'revert' })
+
+  // Never pay: anything owed, or not knowing, means the change is undone.
+  const balance = await DBOS.runStep(() => user.balance(input.bookingUid), {
     name: 'balance',
-  })
-  if (unpaidAmount > 0) {
-    await DBOS.runStep(() => user.editTicket(input.ticketCode, current), { name: 'revert' })
-    return { kind: 'would_cost', unpaid: unpaidAmount }
+  }).catch(() => null)
+  if (!balance || balance.unpaidAmount > 0) {
+    await revert()
+    return balance ? { kind: 'would_cost', unpaid: balance.unpaidAmount } : { kind: 'failed' }
   }
 
-  const { invoiceNumber } = await DBOS.runStep(() => user.commitZeroSum(input.bookingUid), {
+  const commit = await DBOS.runStep(() => user.commitZeroSum(input.bookingUid), {
     name: 'commit',
-  })
+  }).catch(() => null)
+  if (!commit) {
+    await revert()
+    return { kind: 'failed' }
+  }
   await DBOS.runStep(() => syncUser(db, praamid, input.userId, new Date(input.now)), {
     name: 'sync',
     ...RETRY,
   })
   await DBOS.runStep(
-    async () => mailer.send(await swapMail(db, input.userId, current, input.target, invoiceNumber)),
+    async () =>
+      mailer.send(await swapMail(db, input.userId, current, input.target, commit.invoiceNumber)),
     { name: 'email', ...RETRY },
   )
   return { kind: 'swapped' }
