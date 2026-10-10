@@ -15,9 +15,6 @@ node_modules
 .env*
 !.env.example
 
-# editor
-.claude/
-
 # typescript
 *.tsbuildinfo
 
