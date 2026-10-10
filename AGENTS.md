@@ -10,6 +10,7 @@ Agent skills live in `.agents/skills/<name>/SKILL.md`; `.claude/skills` is a sym
 
 - `tdd`: from [mattpocock/skills](https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd). Use it for any feature or bug fix. The seams it asks you to agree on are already fixed in the Tests section below.
 - `apple-design`: from [emilkowalski/skills](https://github.com/emilkowalski/skills/tree/main/skills/apple-design). Use it for UI, motion and typography work in `apps/web`.
+- `ponytail`: from [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail/SKILL.md). Use it on any coding task: the smallest change that fully solves it.
 
 These are vendored copies, kept unformatted (`.agents/**` is in the oxfmt ignore list). To update one, copy it over again from upstream.
 
