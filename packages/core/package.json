@@ -1,0 +1,17 @@
+{
+  "name": "@praamipiletid/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@praamipiletid/db": "workspace:*",
+    "@praamipiletid/praamidee": "workspace:*",
+    "drizzle-orm": "0.45.4"
+  }
+}

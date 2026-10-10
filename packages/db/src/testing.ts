@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 
-import { createDb, runMigrations, type Db } from './index'
+import { createDb, runMigrations, user, type Db } from './index'
 
 const DEFAULT_TEST_URL = 'postgres://postgres:postgres@localhost:5432/praamipiletid_test'
 
@@ -29,4 +29,9 @@ export async function resetDb(db: Db): Promise<void> {
   `)
   if (rows.length === 0) return
   await db.execute(sql.raw(`TRUNCATE ${rows.map((r) => r.name).join(', ')} CASCADE`))
+}
+
+// A signed-up app user, as better-auth would create one.
+export async function createUser(db: Db, id: string): Promise<void> {
+  await db.insert(user).values({ id, name: id, email: `${id}@example.com`, emailVerified: true })
 }

@@ -1,0 +1,18 @@
+{
+  "name": "@praamipiletid/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dbos-inc/dbos-sdk": "5.2.11",
+    "@praamipiletid/core": "workspace:*",
+    "@praamipiletid/db": "workspace:*",
+    "@praamipiletid/praamidee": "workspace:*",
+    "drizzle-orm": "0.45.4"
+  }
+}

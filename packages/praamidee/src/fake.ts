@@ -5,7 +5,8 @@ import type { Booking, Capacities, EditTicketBody, PraamidEvent, Ticket } from '
 // In-memory praamid.ee for tests. Models the parts the app relies on:
 // departures with capacity and price, tickets in bookings, and the
 // edit → balance → commit sequence of a ticket change, where an edit stays a
-// draft until committed and a commit fails while anything is owed.
+// draft until committed. A commit while something is owed goes through and
+// bills the user — the worst case the app must avoid.
 
 export type FakeDeparture = {
   uid: string
@@ -29,6 +30,7 @@ export function createFakePraamid() {
   const drafts = new Map<string, string>()
   const failures = new Map<Operation, number>()
   const holds = new Map<Operation, Hold>()
+  const owed = new Map<string, number>()
   let nextId = 1000
 
   async function enter(op: Operation): Promise<void> {
@@ -137,9 +139,9 @@ export function createFakePraamid() {
 
       async commitZeroSum(bookingUid) {
         await authed('commitZeroSum')
-        if (balanceOf(bookingUid) > 0) {
-          throw new PraamidAuthError(409, 'fake://commit', 'booking has an unpaid amount')
-        }
+        // Worst case: the change goes through and the difference is billed.
+        const unpaid = balanceOf(bookingUid)
+        if (unpaid > 0) owed.set(userId, (owed.get(userId) ?? 0) + unpaid)
         for (const [ticketCode, uid] of drafts) {
           const old = tickets.find((e) => e.ticket.ticketCode === ticketCode)
           if (!old || old.ticket.bookingUid !== bookingUid) continue
@@ -281,6 +283,11 @@ export function createFakePraamid() {
       return tickets
         .filter((e) => e.userId === userId && e.ticket.status.code === 'ACTIVE')
         .map((e) => structuredClone(e.ticket))
+    },
+
+    // What the user has been billed for ticket changes.
+    owed(userId: string): number {
+      return owed.get(userId) ?? 0
     },
 
     // Tickets with an uncommitted edit.
