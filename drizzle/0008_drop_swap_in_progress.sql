@@ -1,1 +1,0 @@
-ALTER TABLE "tickets" DROP COLUMN "swap_in_progress";

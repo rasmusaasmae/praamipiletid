@@ -1,0 +1,19 @@
+{
+  "name": "@praamipiletid/praamidee",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./bot": "./src/bot.ts",
+    "./fake": "./src/fake.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@praamipiletid/db": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "playwright": "1.59.1"
+  }
+}
