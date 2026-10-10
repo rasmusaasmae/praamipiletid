@@ -61,10 +61,17 @@ export function createLoginBot({ credentials, tokens, state, onError }: Deps) {
     await cancel(userId)
     await state.set(userId, 'loading')
 
-    const context = await (
-      await getBrowser()
-    ).newContext({ locale: 'et-EE', viewport: { width: 1280, height: 900 } })
-    const session: Session = { userId, context, page: await context.newPage(), cancelled: false }
+    let session: Session
+    try {
+      const context = await (
+        await getBrowser()
+      ).newContext({ locale: 'et-EE', viewport: { width: 1280, height: 900 } })
+      session = { userId, context, page: await context.newPage(), cancelled: false }
+    } catch (err) {
+      // Without a browser nothing will ever move the login on; say so.
+      await state.settle(userId, err instanceof Error ? err.message : String(err))
+      throw err
+    }
     sessions.set(userId, session)
 
     void drive(session, isikukood).catch(async (err) => {
@@ -82,6 +89,9 @@ export function createLoginBot({ credentials, tokens, state, onError }: Deps) {
     // SPA fires POST /openid-connect/token right after the OIDC redirect
     // lands, and we'd miss it if we armed the listener later.
     const tokensPromise = waitForTokenExchange(page)
+    // If a later step fails first, this rejects unobserved; that must not
+    // take the worker down with it.
+    tokensPromise.catch(() => {})
 
     await page.goto(ENTRY_URL, { waitUntil: 'domcontentloaded' })
     if (session.cancelled) return

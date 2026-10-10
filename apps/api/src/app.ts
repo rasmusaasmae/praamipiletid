@@ -46,8 +46,11 @@ export function createApp(deps: AppDeps) {
     .get('/tickets', async (c) => c.json(await tickets.list(c.var.userId)))
     // Server-sent events: `changed` whenever the user's tickets or praamid.ee
     // login change, so the page knows to refetch.
-    .get('/events', (c) =>
-      streamSSE(c, async (stream) => {
+    .get('/events', (c) => {
+      // nginx and similar proxies buffer responses by default, which would
+      // hold every event back.
+      c.header('X-Accel-Buffering', 'no')
+      return streamSSE(c, async (stream) => {
         const unsubscribe = await changes.subscribe(c.var.userId, () => {
           void stream.writeSSE({ event: 'changed', data: '' })
         })
@@ -55,8 +58,8 @@ export function createApp(deps: AppDeps) {
         // Anything that changes from here on is announced.
         await stream.writeSSE({ event: 'ready', data: '' })
         while (!stream.aborted) await stream.sleep(25_000).then(() => stream.write(': ping\n\n'))
-      }),
-    )
+      })
+    })
     .get(
       '/tickets/:ticketId/departures',
       zValidator('param', z.object({ ticketId: z.coerce.number().int().positive() })),
