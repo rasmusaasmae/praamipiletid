@@ -16,7 +16,8 @@ node_modules
 !.env.example
 
 # editor
-.claude/
+.claude/*
+!.claude/skills
 
 # typescript
 *.tsbuildinfo
