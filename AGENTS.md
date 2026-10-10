@@ -4,14 +4,9 @@ Bun workspace: `apps/web` (Vite + React + TanStack Router), `apps/api` (Hono on 
 
 Bun runs everything, including production. Do not add a build step for the API or worker.
 
-# Skills
+# Pull requests
 
-Agent skills live in `.agents/skills/<name>/SKILL.md`; `.claude/skills` is a symlink to that directory. Before starting a task, check whether a skill there covers it, read its `SKILL.md` and follow it.
-
-- `tdd`: from [mattpocock/skills](https://github.com/mattpocock/skills/tree/main/skills/engineering/tdd). Use it for any feature or bug fix. The seams it asks you to agree on are already fixed in the Tests section below.
-- `apple-design`: from [emilkowalski/skills](https://github.com/emilkowalski/skills/tree/main/skills/apple-design). Use it for UI, motion and typography work in `apps/web`.
-
-These are vendored copies, kept unformatted (`.agents/**` is in the oxfmt ignore list). To update one, copy it over again from upstream.
+You may open a PR, watch CI until it is green and squash-merge it without asking. Merging to `main` deploys.
 
 # Libraries
 
