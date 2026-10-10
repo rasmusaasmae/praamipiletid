@@ -43,7 +43,18 @@ export function createApp(deps: AppDeps) {
 
   const api = new Hono()
     .use(signedIn)
-    .get('/tickets', async (c) => c.json(await tickets.list(c.var.userId)))
+    .get('/tickets', async (c) => {
+      const [syncedAt, list] = await Promise.all([
+        tickets.syncedAt(c.var.userId),
+        tickets.list(c.var.userId),
+      ])
+      return c.json({ syncedAt, tickets: list })
+    })
+    // The worker fetches the user's tickets from praamid.ee on its next cycle.
+    .post('/tickets/sync', async (c) => {
+      await tickets.requestSync(c.var.userId)
+      return c.body(null, 202)
+    })
     // Server-sent events: `changed` whenever the user's tickets or praamid.ee
     // login change, so the page knows to refetch.
     .get('/events', (c) => {
